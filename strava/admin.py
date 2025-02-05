@@ -1,6 +1,9 @@
 from django.contrib import admin
 from django.db.models import Count
+from django.urls import reverse_lazy
+from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
+from unfold.contrib.filters.admin import RangeNumericListFilter
 
 from unfold.decorators import action, display
 
@@ -21,16 +24,21 @@ class ActivitySyncFilter(admin.SimpleListFilter):
             return queryset.gear_unsynced()
 
 
+class DistanceFilter(RangeNumericListFilter):
+    parameter_name = "distance"
+    title = _("Distance")
+
+
 @admin.register(Activity)
 class ActivityAdmin(admin.ModelAdmin):
-    search_fields = ("id", "name")
+    search_fields = ("id", "name", "gear__brand_name", "gear__model_name")
     actions = ["update_from_json", "fetch_from_api", "send_to_api"]
     date_hierarchy = "start_date"
     list_display = ("id", "name", "sport_type", "distance", "gear", "is_synced", "is_gear_synced", "start_date")
     list_select_related = ("gear",)
     list_display_links = ("id", "name")
     list_editable = ("gear",)
-    list_filter = (ActivitySyncFilter, "gear", "sport_type")
+    list_filter = (ActivitySyncFilter, DistanceFilter, "gear", "sport_type")
     list_per_page = 300
 
     @action(description=_("Update from JSON"))
@@ -77,4 +85,6 @@ class GearAdmin(admin.ModelAdmin):
 
     @display(description=_("Total activities"))
     def show_activity_count(self, obj):
-        return obj.activity_count
+        url = reverse_lazy("admin:strava_activity_changelist")
+        url += f"?gear__id__exact={obj.id}"
+        return mark_safe(f'<a href="{url}" class="text-primary-600">{obj.activity_count}</a>')
