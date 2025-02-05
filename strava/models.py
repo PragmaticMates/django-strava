@@ -70,6 +70,7 @@ class Activity(models.Model):
   name = models.CharField(_("name"), max_length=100)
   start_date = models.DateTimeField(_("start date"))
   sport_type = models.CharField(_("sport type"), max_length=29, choices=SportType.choices)
+  distance = models.DecimalField(_("distance"), max_digits=12, decimal_places=2)
   gear = models.ForeignKey("Gear", on_delete=models.SET_NULL,
                            blank=True, null=True, default=None)
   json = models.JSONField()
@@ -89,6 +90,7 @@ class Activity(models.Model):
       'name': json['name'],
       'gear_id': json['gear_id'],
       'sport_type': json['sport_type'],
+      'distance': json['distance'],
       'start_date': datetime.fromisoformat(json['start_date'])
     }
 
@@ -115,6 +117,12 @@ class Activity(models.Model):
   def fetch_from_api(self):
     data = StravaApi().get_activity(self.id)
     self.json = data
+    self.save(update_fields=["json"])
+    self.update_from_json()
+
+  def send_to_api(self):
+    StravaApi().update_activity(id=self.id, gear_id=self.gear_id)
+    self.json['gear_id'] = self.gear_id
     self.save(update_fields=["json"])
     self.update_from_json()
 

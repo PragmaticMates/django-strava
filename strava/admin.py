@@ -24,9 +24,9 @@ class ActivitySyncFilter(admin.SimpleListFilter):
 @admin.register(Activity)
 class ActivityAdmin(admin.ModelAdmin):
     search_fields = ("id", "name")
-    actions = ["update_from_json", "fetch_from_api"]
+    actions = ["update_from_json", "fetch_from_api", "send_to_api"]
     date_hierarchy = "start_date"
-    list_display = ("id", "name", "sport_type", "gear", "is_synced", "is_gear_synced", "start_date")
+    list_display = ("id", "name", "sport_type", "distance", "gear", "is_synced", "is_gear_synced", "start_date")
     list_select_related = ("gear",)
     list_display_links = ("id", "name")
     list_editable = ("gear",)
@@ -42,6 +42,11 @@ class ActivityAdmin(admin.ModelAdmin):
     def fetch_from_api(self, request, queryset):
         for obj in queryset:
             obj.fetch_from_api()
+
+    @action(description=_("Send to API"))
+    def send_to_api(self, request, queryset):
+        for obj in queryset:
+            obj.send_to_api()
 
     @display(description=_("Is synced"))
     def is_synced(self, obj):
