@@ -155,12 +155,21 @@ class Gear(models.Model):
   id = models.CharField(max_length=36, primary_key=True, editable=False)  # default=uuid.uuid4
   primary = models.BooleanField(_("primary"), default=False)
   brand_name = models.CharField(_("brand name"), max_length=30)
-  model_name = models.CharField(_("brand name"), max_length=50)
+  model_name = models.CharField(_("model name"), max_length=50)
   description = models.CharField(_("description"), max_length=100)
   json = models.JSONField()
 
   def __str__(self):
       return f'{self.brand_name} {self.model_name}'
+
+  @property
+  def distance(self):
+      return self.activity_set.aggregate(models.Sum('distance'))['distance__sum']
+
+  @property
+  def is_old(self):
+    # TODO: check gear type (shoes only)
+    return self.distance > 400
 
   def fetch_from_api(self):
     data = StravaApi().get_gear(self.id)

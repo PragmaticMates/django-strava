@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.db.models import Count
+from django.db.models import Count, Sum
 from django.urls import reverse_lazy
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
@@ -71,20 +71,33 @@ class ActivityAdmin(admin.ModelAdmin):
 class GearAdmin(admin.ModelAdmin):
     search_fields = ("id", "brand_name", "model_name", "description")
     actions = ["fetch_from_api"]
-    list_display = ("id", "brand_name", "model_name", "description", "show_activity_count")
+    list_display = ("id", "brand_name", "model_name", "description", "show_activity_count", "show_distance", "show_age")
     list_display_links = ("id", "brand_name", "model_name")
     list_filter = ("brand_name",)
 
     def get_queryset(self, request):
-        return super().get_queryset(request).annotate(activity_count=Count("activity"))
+        return super().get_queryset(request).annotate(
+            activity_count=Count("activity"),
+            distance_sum=Sum("activity__distance"),
+        )
 
     @action(description=_("Fetch from API"))
     def fetch_from_api(self, request, queryset):
         for obj in queryset:
             obj.fetch_from_api()
 
-    @display(description=_("Total activities"))
+    @display(description=_("Total activities"), ordering="activity_count")
     def show_activity_count(self, obj):
         url = reverse_lazy("admin:strava_activity_changelist")
         url += f"?gear__id__exact={obj.id}"
         return mark_safe(f'<a href="{url}" class="text-primary-600">{obj.activity_count}</a>')
+
+    @display(description=_("Total distance"), ordering="distance")
+    def show_distance(self, obj):
+        return f'{round(obj.distance_sum/1000, 2)} km'
+
+    @display(description=_("Is old"), ordering="distance")
+    def show_age(self, obj):
+        # TODO: check gear type (shoes only)
+        return obj.distance_sum > 400000
+    show_age.boolean = True

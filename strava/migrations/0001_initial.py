@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
                 ('id', models.CharField(editable=False, max_length=36, primary_key=True, serialize=False)),
                 ('primary', models.BooleanField(default=False, verbose_name='primary')),
                 ('brand_name', models.CharField(max_length=30, verbose_name='brand name')),
-                ('model_name', models.CharField(max_length=50, verbose_name='brand name')),
+                ('model_name', models.CharField(max_length=50, verbose_name='model name')),
                 ('description', models.CharField(max_length=100, verbose_name='description')),
                 ('json', models.JSONField()),
             ],
