@@ -83,6 +83,9 @@ class Activity(models.Model):
   def __str__(self):
       return self.name
 
+  def get_absolute_url(self):
+    return f'https://strava.com/activities/{self.id}'
+
   @classmethod
   def read_json(cls, json):
     return {

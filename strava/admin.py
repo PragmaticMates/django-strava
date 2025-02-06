@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.contrib import admin
 from django.db.models import Count, Sum
 from django.urls import reverse_lazy
+from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from unfold.contrib.filters.admin import RangeNumericListFilter
@@ -37,12 +38,12 @@ class ActivityAdmin(admin.ModelAdmin):
     search_fields = ("id", "name", "gear__brand_name", "gear__model_name")
     actions = ["update_from_json", "fetch_from_api", "send_to_api"]
     date_hierarchy = "start_date"
-    list_display = ("id", "name", "show_sport_type", "show_distance", "show_speed", "gear", "is_synced", "is_gear_synced", "start_date")
+    list_display = ("show_start_date", "name_and_id", "show_sport_type", "show_distance", "show_speed", "gear")
     list_select_related = ("gear",)
-    list_display_links = ("id", "name")
+    list_display_links = ("name_and_id",)
     list_editable = ("gear",)
     list_filter = (ActivitySyncFilter, DistanceFilter, "gear", "sport_type")
-    list_per_page = 300
+    list_per_page = 100
 
     @action(description=_("Update from JSON"))
     def update_from_json(self, request, queryset):
@@ -58,6 +59,13 @@ class ActivityAdmin(admin.ModelAdmin):
     def send_to_api(self, request, queryset):
         for obj in queryset:
             obj.send_to_api()
+
+    @display(description=_("Date"), header=True)
+    def name_and_id(self, obj):
+        return [
+            mark_safe(f'<span class="text-primary-600">{obj.name}</span>'),
+            obj.id
+        ]
 
     @display(description=_("Sport"), ordering="sport_type", label={
         SportType.RUN: "success",  # green
@@ -90,6 +98,14 @@ class ActivityAdmin(admin.ModelAdmin):
         return [
             pace,
             speed,
+        ]
+
+    @display(description=_("Date"), header=True)
+    def show_start_date(self, obj):
+        start_date = timezone.localtime(obj.start_date)
+        return [
+            start_date.strftime("%Y-%m-%d"),
+            start_date.strftime("%H:%M"),
         ]
 
     @display(description=_("Is synced"))
