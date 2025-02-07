@@ -44,6 +44,7 @@ class ActivityAdmin(admin.ModelAdmin):
     list_editable = ("gear",)
     list_filter = (ActivitySyncFilter, DistanceFilter, "gear", "sport_type")
     list_per_page = 100
+    readonly_fields = ('distance', 'json', 'start_date')
 
     @action(description=_("Update from JSON"))
     def update_from_json(self, request, queryset):

@@ -5,7 +5,7 @@ import json
 from django.core.management.base import BaseCommand
 
 from strava.api import StravaApi
-from strava.models import Activity
+from strava.models import Activity, Gear
 
 logger = logging.getLogger("file")
 
@@ -15,8 +15,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         # self.import_activities_from_file()
-        # self.import_activities_from_api()
-        pass
+        self.import_activities_from_api()
 
     def import_activities_from_file(self):
         file_path = "/data/strava/activities.json"
@@ -33,7 +32,8 @@ class Command(BaseCommand):
 
     def import_activities_from_api(self):
         api = StravaApi()
-        activities = api.get_activities()
+        after = Activity.objects.latest().start_date if Activity.objects.exists() else None
+        activities = api.get_activities(after=after)
         self.create_activities(activities)
 
     def create_activities(self, activities):
@@ -46,12 +46,13 @@ class Command(BaseCommand):
 
         Activity.objects.filter(id=json_data["id"]).update(json=json_data)
 
-        obj, created = Activity.objects.update_or_create(
+        Gear.get_or_create(data.get('gear_id', None))
+        activity, created = Activity.objects.update_or_create(
             id=json_data["id"],
             defaults=data,
         )
 
         if created:
-            logger.info(f"Added: {obj}")
+            logger.info(f"Added: {activity}")
         else:
-            logger.info(f"Skipped (exists): {obj}")
+            logger.info(f"Skipped (exists): {activity}")
