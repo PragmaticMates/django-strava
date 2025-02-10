@@ -38,6 +38,7 @@ class ActivityAdmin(admin.ModelAdmin):
     search_fields = ("id", "name", "gear__brand_name", "gear__model_name")
     actions = ["update_from_json", "fetch_from_api", "send_to_api"]
     date_hierarchy = "start_date"
+    # TODO: time, elevation
     list_display = ("show_start_date", "name_and_id", "show_sport_type", "show_distance", "show_speed", "gear")
     list_select_related = ("gear",)
     list_display_links = ("name_and_id",)
@@ -45,6 +46,7 @@ class ActivityAdmin(admin.ModelAdmin):
     list_filter = (ActivitySyncFilter, DistanceFilter, "gear", "sport_type")
     list_per_page = 100
     readonly_fields = ('distance', 'json', 'start_date')
+    autocomplete_fields = ('gear',)
 
     @action(description=_("Update from JSON"))
     def update_from_json(self, request, queryset):

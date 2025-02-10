@@ -68,10 +68,13 @@ class Activity(models.Model):
     self.update_from_json()
 
   def send_to_api(self):
-    StravaApi().update_activity(id=self.id, gear_id=self.gear_id)
-    self.json['gear_id'] = self.gear_id
-    self.save(update_fields=["json"])
-    self.update_from_json()
+    StravaApi().update_activity(
+      id=self.id,
+      name=self.name,
+      sport_type=self.sport_type,
+      gear_id=self.gear_id
+    )
+    self.fetch_from_api()
 
   def is_synced(self):
       conditions = [
