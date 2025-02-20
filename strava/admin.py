@@ -1,7 +1,9 @@
 from decimal import Decimal
 
 from django.contrib import admin
+from django.core.management import call_command
 from django.db.models import Count, Sum
+from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.utils.safestring import mark_safe
@@ -37,6 +39,7 @@ class DistanceFilter(RangeNumericListFilter):
 class ActivityAdmin(admin.ModelAdmin):
     search_fields = ("id", "name", "gear__brand_name", "gear__model_name")
     actions = ["update_from_json", "fetch_from_api", "send_to_api"]
+    actions_list = ["import_strava"]
     date_hierarchy = "start_date"
     # TODO: time, elevation
     list_display = ("show_start_date", "name_and_id", "show_sport_type", "show_distance", "show_speed", "gear")
@@ -47,6 +50,11 @@ class ActivityAdmin(admin.ModelAdmin):
     list_per_page = 100
     readonly_fields = ('distance', 'json', 'start_date')
     autocomplete_fields = ('gear',)
+
+    @action(description=_("Import from Strava"), url_path="import-strava")
+    def import_strava(self, request, *args):
+        call_command('import_strava')
+        return redirect(request.META.get("HTTP_REFERER", reverse_lazy("admin:strava_activity_changelist")))
 
     @action(description=_("Update from JSON"))
     def update_from_json(self, request, queryset):
