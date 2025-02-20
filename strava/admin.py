@@ -162,10 +162,12 @@ class ActivityAdmin(admin.ModelAdmin):
 class GearAdmin(admin.ModelAdmin):
     search_fields = ("id", "brand_name", "model_name", "description")
     actions = ["fetch_from_api"]
+    actions_list = ["open_strava_gear"]
     list_display = ("id", "brand_and_model", "description",
-                    "show_activity_count", "show_distance", "show_age")
+                    "show_activity_count", "show_distance", "show_age", "primary")
     list_display_links = ("id", "brand_and_model")
     list_filter = ("brand_name",)
+    readonly_fields = ("primary", "brand_name", "model_name", "description", "json")
 
     def get_queryset(self, request):
         return super().get_queryset(request).annotate(
@@ -173,6 +175,10 @@ class GearAdmin(admin.ModelAdmin):
             distance_sum=Sum("activity__distance"),
             distance_avg=Sum("activity__distance")/Count("activity"),
         )
+
+    @action(description=_("Show gear on Strava"), url_path="open-strava-gear")
+    def open_strava_gear(self, request, *args):
+        return redirect('https://www.strava.com/settings/gear')
 
     @action(description=_("Fetch from API"))
     def fetch_from_api(self, request, queryset):
