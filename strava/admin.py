@@ -42,7 +42,7 @@ class ActivityAdmin(admin.ModelAdmin):
     actions_list = ["import_strava"]
     date_hierarchy = "start_date"
     # TODO: time, elevation
-    list_display = ("show_start_date", "name_and_id", "show_sport_type", "show_distance", "show_speed", "gear")
+    list_display = ("show_start_date", "name_and_id", "show_sport_type", "show_distance", "show_speed", "show_heartrate", "gear")
     list_select_related = ("gear",)
     list_display_links = ("name_and_id",)
     list_editable = ("gear",)
@@ -109,6 +109,17 @@ class ActivityAdmin(admin.ModelAdmin):
         return [
             pace,
             speed,
+        ]
+
+    @display(description=_("Heartrate"), header=True, ordering="json__average_heartrate",)
+    def show_heartrate(self, obj):
+        if not obj.json.get("has_heartrate", False):
+            return ['-', '']
+
+        return [
+            f'Avg: {obj.json["average_heartrate"]}',
+            f'Max: {obj.json["max_heartrate"]}',
+            # '♥'
         ]
 
     @display(description=_("Date"), header=True)
