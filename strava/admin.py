@@ -37,12 +37,12 @@ class DistanceFilter(RangeNumericListFilter):
 
 @admin.register(Activity)
 class ActivityAdmin(admin.ModelAdmin):
-    search_fields = ("id", "name", "gear__brand_name", "gear__model_name")
+    search_fields = ("id", "name__unaccent", "gear__brand_name", "gear__model_name")
     actions = ["update_from_json", "fetch_from_api", "send_to_api"]
-    actions_list = ["import_strava"]
+    actions_list = ["import_strava", "open_strava_activities"]
     date_hierarchy = "start_date"
     # TODO: time, elevation
-    list_display = ("show_start_date", "name_and_id", "show_sport_type", "show_distance", "show_speed", "show_heartrate", "gear")
+    list_display = ("show_start_date", "name_and_id", "show_sport_type", "show_distance", "show_elevation", "show_speed", "show_heartrate", "gear")
     list_select_related = ("gear",)
     list_display_links = ("name_and_id",)
     list_editable = ("gear",)
@@ -55,6 +55,10 @@ class ActivityAdmin(admin.ModelAdmin):
     def import_strava(self, request, *args):
         call_command('import_strava')
         return redirect(request.META.get("HTTP_REFERER", reverse_lazy("admin:strava_activity_changelist")))
+
+    @action(description=_("Show activities on Strava"), url_path="open-strava-activities")
+    def open_strava_activities(self, request, *args):
+        return redirect('https://www.strava.com/athlete/training')
 
     @action(description=_("Update from JSON"))
     def update_from_json(self, request, queryset):
@@ -91,6 +95,10 @@ class ActivityAdmin(admin.ModelAdmin):
     def show_distance(self, obj):
         return f'{round(obj.distance / 1000, 2)} km'
 
+    @display(description=_("Elevation"), ordering="json__total_elevation_gain")
+    def show_elevation(self, obj):
+        return f'{round(obj.json['total_elevation_gain'])} m'
+
     @display(description=_("Pace / speed"), header=True)
     def show_speed(self, obj):
         if obj.distance == 0:
@@ -126,7 +134,7 @@ class ActivityAdmin(admin.ModelAdmin):
     def show_start_date(self, obj):
         start_date = timezone.localtime(obj.start_date)
         return [
-            start_date.strftime("%Y-%m-%d"),
+            mark_safe(f'<span class="whitespace-nowrap">{start_date.strftime("%Y-%m-%d")}</span>'),
             start_date.strftime("%H:%M"),
         ]
 
