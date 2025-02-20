@@ -1,3 +1,5 @@
+import datetime
+
 from decimal import Decimal
 
 from django.contrib import admin
@@ -41,8 +43,8 @@ class ActivityAdmin(admin.ModelAdmin):
     actions = ["update_from_json", "fetch_from_api", "send_to_api"]
     actions_list = ["import_strava", "open_strava_activities"]
     date_hierarchy = "start_date"
-    # TODO: time, elevation
-    list_display = ("show_start_date", "name_and_id", "show_sport_type", "show_distance", "show_elevation", "show_speed", "show_heartrate", "gear")
+    list_display = ("show_start_date", "name_and_id", "show_sport_type", "show_distance", "show_elevation", "show_time",
+                    "show_speed", "show_heartrate", "gear")
     list_select_related = ("gear",)
     list_display_links = ("name_and_id",)
     list_editable = ("gear",)
@@ -98,6 +100,13 @@ class ActivityAdmin(admin.ModelAdmin):
     @display(description=_("Elevation"), ordering="json__total_elevation_gain")
     def show_elevation(self, obj):
         return f'{round(obj.json['total_elevation_gain'])} m'
+
+    @display(description=_("Time"), header=True, ordering="json__elapsed_time", )
+    def show_time(self, obj):
+        return [
+            f'Elapsed: {datetime.timedelta(seconds=obj.json["elapsed_time"])}',
+            f'Moving: {datetime.timedelta(seconds=obj.json["moving_time"])}',
+        ]
 
     @display(description=_("Pace / speed"), header=True)
     def show_speed(self, obj):
