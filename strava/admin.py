@@ -51,7 +51,17 @@ class ActivityAdmin(admin.ModelAdmin):
     list_filter = (ActivitySyncFilter, DistanceFilter, "gear", "sport_type")
     list_per_page = 100
     readonly_fields = ('distance', 'json', 'start_date')
-    autocomplete_fields = ('gear',)
+    # autocomplete_fields = ("gear",)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "gear":
+            formfield = super().formfield_for_foreignkey(db_field, request, **kwargs)
+            formfield.empty_label = ""
+            if not hasattr(request, "_gear_choices"):
+                request._gear_choices = list(formfield.choices)
+            formfield.choices = request._gear_choices
+            return formfield
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     @action(description=_("Import from Strava"), url_path="import-strava")
     def import_strava(self, request, *args):

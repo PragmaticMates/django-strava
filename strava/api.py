@@ -60,9 +60,6 @@ class StravaApi:
       data = json.loads(data)
     return json.dumps(data, indent=4, ensure_ascii=False)
 
-  def refresh_expired_token(self):
-    self.client.refresh_expired_token()
-
   def refresh_access_token(self):
     token_response = self.client.refresh_access_token(
       client_id=STRAVA_CLIENT_ID,
