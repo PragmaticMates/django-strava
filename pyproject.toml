@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "django-strava"
+version = "0.1.0"
+description = "Reusable Django app for Strava API integration"
+readme = "README.md"
+license = "GPL-3.0-or-later"
+requires-python = ">=3.10"
+authors = [
+    { name = "PragmaticMates" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Web Environment",
+    "Framework :: Django",
+    "Framework :: Django :: 5.1",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Internet :: WWW/HTTP",
+]
+dependencies = [
+    "Django>=5.1",
+    "stravalib",
+    "django-environ",
+    "django-unfold",
+]
+
+[project.urls]
+Homepage = "https://github.com/PragmaticMates/django-strava"
+Repository = "https://github.com/PragmaticMates/django-strava"
+Issues = "https://github.com/PragmaticMates/django-strava/issues"
+
+[project.optional-dependencies]
+test = ["pytest", "pytest-django"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.settings"
+pythonpath = ["."]
+
+[tool.setuptools.packages.find]
+include = ["strava*"]

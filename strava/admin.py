@@ -11,7 +11,6 @@ from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from unfold.contrib.filters.admin import RangeNumericListFilter
-
 from unfold.decorators import action, display
 
 from strava.choices import SportType
