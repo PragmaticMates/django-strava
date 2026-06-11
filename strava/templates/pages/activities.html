@@ -107,7 +107,12 @@
 </main>
 
 {% block extra_js %}
+<script src="{% static 'js/charts.js' %}"></script>
 <script>
+  document.querySelectorAll('.fc-route[data-polyline]').forEach(function(svg) {
+    var pts = window.DSCharts.decodePolyline(svg.dataset.polyline);
+    if (pts.length) window.DSCharts.renderRoute(svg, pts);
+  });
 function setView(view) {
   document.getElementById('view-grid').classList.toggle('active', view === 'grid');
   document.getElementById('view-table').classList.toggle('active', view === 'table');

@@ -89,7 +89,7 @@ body {
 .avatar-slot { width: 36px; height: 36px; flex: none; }
 
 /* ============ Map hero ============ */
-.maphero { position: relative; height: 560px; background: #D7E9F4; overflow: hidden; }
+.maphero { position: relative; height: 700px; background: #D7E9F4; overflow: hidden; }
 .maphero image-slot.mapfill { position: absolute; inset: 0; width: 100%; height: 100%; }
 /* Sports dropdown */
 .sports-dd {
@@ -230,8 +230,8 @@ body {
 }
 .fc-banner svg { width: 15px; height: 15px; stroke: var(--accent); flex: none; }
 /* map */
-.fc-map { position: relative; height: 148px; background: var(--paper);
-  background-image: radial-gradient(rgba(0,0,0,0.07) 1px, transparent 1px);
+.fc-map { position: relative; height: 300px; background: #bbbbbb;
+  background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px);
   background-size: 16px 16px;
 }
 .fc-route { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -759,7 +759,7 @@ body {
 .act-gcard-pr {
   position: absolute; top: 10px; right: 10px;
   font-size: 11px; font-weight: 700;
-  color: #B07400; background: #F5A62328; border: 1px solid #F5A62350;
+  color: #ffffff; background: #f5a623bd; border: 1px solid #fbad2c;
   padding: 3px 8px; border-radius: 999px;
 }
 

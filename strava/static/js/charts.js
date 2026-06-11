@@ -222,5 +222,19 @@ window.DSCharts = (function () {
     host.appendChild(svg);
   }
 
-  return { renderRoute, renderProfile, renderDensity, renderTrends, renderCalendar };
+  function decodePolyline(str) {
+    let idx = 0, lat = 0, lng = 0, pts = [];
+    while (idx < str.length) {
+      let b, shift = 0, result = 0;
+      do { b = str.charCodeAt(idx++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+      lat += (result & 1) ? ~(result >> 1) : (result >> 1);
+      shift = result = 0;
+      do { b = str.charCodeAt(idx++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+      lng += (result & 1) ? ~(result >> 1) : (result >> 1);
+      pts.push([lng / 1e5, -lat / 1e5]);
+    }
+    return pts;
+  }
+
+  return { renderRoute, renderProfile, renderDensity, renderTrends, renderCalendar, decodePolyline };
 })();

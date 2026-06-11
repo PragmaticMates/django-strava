@@ -151,6 +151,10 @@ class Activity(models.Model):
     urls = primary.get('urls') or {}
     return urls.get('600') or urls.get('100')
 
+  @property
+  def polyline(self):
+    return (self.json.get('map') or {}).get('summary_polyline', '')
+
 
 class Gear(models.Model):
   id = models.CharField(max_length=36, primary_key=True, editable=False)  # default=uuid.uuid4

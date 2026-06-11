@@ -6,7 +6,7 @@
   {% endif %}
   <div class="fc-map">
     {% if activity.photo %}<img class="fc-photo" src="{{ activity.photo }}" alt="" aria-hidden="true">{% endif %}
-    <svg class="fc-route" role="img" aria-label="Route trace"></svg>
+    <svg class="fc-route" role="img" aria-label="Route trace"{% if activity.polyline %} data-polyline="{{ activity.polyline }}"{% endif %}></svg>
     {% if activity.pb %}<span class="act-gcard-pr">★ PR</span>{% endif %}
     <div class="fc-pills">
       <span class="fc-pill">
