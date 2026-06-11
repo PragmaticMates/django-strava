@@ -100,6 +100,8 @@ class Activity(models.Model):
       return 'hike'
     if 'Ride' in s:
       return 'ride'
+    if 'Swim' in s:
+      return 'swim'
     return 'run'
 
   @property
@@ -114,17 +116,28 @@ class Activity(models.Model):
     return f'{h}h {m:02d}m' if h else f'{m}m {s:02d}s'
 
   @property
-  def pace(self):
+  def pace_parts(self):
     t = self.json.get('moving_time', 0)
     d = float(self.distance)
     if not t or not d:
-      return '-'
+      return '-', ''
     d_km = d / 1000
     if self.type == 'ride':
-      return f'{d_km / (t / 3600):.1f} km/h'
+      return f'{d_km / (t / 3600):.1f}', 'km/h'
+    if self.type == 'swim':
+      pace_s = t / (d / 100)
+      m, s = divmod(int(pace_s), 60)
+      return f'{m}:{s:02d}', '/100m'
     pace_s = t / d_km
     m, s = divmod(int(pace_s), 60)
-    return f'{m}:{s:02d}/km'
+    return f'{m}:{s:02d}', '/km'
+
+  @property
+  def pace(self):
+    val, unit = self.pace_parts
+    if not unit:
+      return val
+    return f'{val} {unit}'
 
   @property
   def elev(self):

@@ -1,4 +1,4 @@
-<div class="float-card" data-screen-label="Activity card" data-name="{{ activity.name|lower }}">
+<div class="float-card" data-screen-label="Activity card" data-name="{{ activity.name|lower }}" data-dist="{{ activity.dist }}" data-elev="{{ activity.elev }}" data-time="{{ activity.json.moving_time|default:0 }}" data-date="{{ activity.start_date|date:'Y-m-d' }}">
   {% if show_close %}
   <button class="fc-close" onclick="this.closest('.float-card').style.display='none'" aria-label="Close">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -37,17 +37,19 @@
       </div>
       <div class="fc-stat-group">
         <div class="fc-stat">
-          <span class="fc-val">{{ activity.pace }}</span>
+          <span class="fc-val">{{ activity.pace_parts.0 }} <small>{{ activity.pace_parts.1 }}</small></span>
           <span class="fc-lbl">{% if activity.type == 'ride' %}Speed{% else %}Pace{% endif %}</span>
         </div>
         <div class="fc-stat">
           <span class="fc-val">{{ activity.dur }}</span>
           <span class="fc-lbl">Time</span>
         </div>
+        {% if activity.type != 'swim' %}
         <div class="fc-stat">
           <span class="fc-val">{{ activity.elev }} <small>m</small></span>
           <span class="fc-lbl">Elev.</span>
         </div>
+        {% endif %}
       </div>
     </div>
     <div class="fc-engage">

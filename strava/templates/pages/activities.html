@@ -27,19 +27,19 @@
       <span class="acts-summary-lbl">Activities</span>
     </div>
     <div class="acts-summary-item">
-      <span class="acts-summary-val">{{ summary.distance_km|intcomma }}<span style="font-size:16px;font-weight:600;color:var(--ink-3)"> km</span></span>
+      <span class="acts-summary-val"><span id="sum-dist">{{ summary.distance_km|intcomma }}</span><span style="font-size:16px;font-weight:600;color:var(--ink-3)"> km</span></span>
       <span class="acts-summary-lbl">Distance</span>
     </div>
     <div class="acts-summary-item">
-      <span class="acts-summary-val">{{ summary.elevation_m|intcomma }}<span style="font-size:16px;font-weight:600;color:var(--ink-3)"> m</span></span>
+      <span class="acts-summary-val"><span id="sum-elev">{{ summary.elevation_m|intcomma }}</span><span style="font-size:16px;font-weight:600;color:var(--ink-3)"> m</span></span>
       <span class="acts-summary-lbl">Elevation</span>
     </div>
     <div class="acts-summary-item">
-      <span class="acts-summary-val">{{ summary.time_h|intcomma }}<span style="font-size:16px;font-weight:600;color:var(--ink-3)"> h</span></span>
+      <span class="acts-summary-val"><span id="sum-time">{{ summary.time_h|intcomma }}</span><span style="font-size:16px;font-weight:600;color:var(--ink-3)"> h</span></span>
       <span class="acts-summary-lbl">Time</span>
     </div>
     <div class="acts-summary-item">
-      <span class="acts-summary-val">{{ summary.this_week }}</span>
+      <span class="acts-summary-val" id="sum-week">{{ summary.this_week }}</span>
       <span class="acts-summary-lbl">This week</span>
     </div>
   </div>
@@ -136,6 +136,26 @@ function filterActivities() {
   document.querySelectorAll('#feed-table tbody tr').forEach(function(row) {
     row.style.display = !tokens.length || matchesQuery(row.dataset.name, tokens) ? '' : 'none';
   });
+  updateStats();
+}
+function updateStats() {
+  var now = new Date();
+  var weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
+  var count = 0, dist = 0, elev = 0, secs = 0, week = 0;
+  document.querySelectorAll('#feed-grid .float-card').forEach(function(card) {
+    if (card.style.display === 'none') return;
+    count++;
+    dist += parseFloat(card.dataset.dist) || 0;
+    elev += parseInt(card.dataset.elev) || 0;
+    secs += parseInt(card.dataset.time) || 0;
+    if (new Date(card.dataset.date) >= weekStart) week++;
+  });
+  document.getElementById('sum-acts').textContent = count.toLocaleString();
+  document.getElementById('sum-dist').textContent = Math.round(dist).toLocaleString();
+  document.getElementById('sum-elev').textContent = Math.round(elev).toLocaleString();
+  document.getElementById('sum-time').textContent = Math.round(secs / 3600).toLocaleString();
+  document.getElementById('sum-week').textContent = week;
+  document.getElementById('hero-sub').textContent = count.toLocaleString() + ' activities';
 }
 function setFilterSelect() {}
 function setGearFilter() {}
