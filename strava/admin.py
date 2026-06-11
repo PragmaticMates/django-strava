@@ -86,7 +86,7 @@ class ActivityAdmin(admin.ModelAdmin):
         for obj in queryset:
             obj.send_to_api()
 
-    @display(description=_("Date"), header=True)
+    @display(description=_("Name"), header=True, ordering="name")
     def name_and_id(self, obj):
         return [
             mark_safe(f'<span class="text-primary-600">{obj.name}</span>'),
@@ -117,7 +117,7 @@ class ActivityAdmin(admin.ModelAdmin):
             f'Moving: {datetime.timedelta(seconds=obj.json["moving_time"])}',
         ]
 
-    @display(description=_("Pace / speed"), header=True)
+    @display(description=_("Pace / speed"), header=True, ordering="json__average_speed")
     def show_speed(self, obj):
         if obj.distance == 0:
             return ['-', '']
@@ -148,7 +148,7 @@ class ActivityAdmin(admin.ModelAdmin):
             # '♥'
         ]
 
-    @display(description=_("Date"), header=True)
+    @display(description=_("Date"), header=True, ordering="start_date")
     def show_start_date(self, obj):
         start_date = timezone.localtime(obj.start_date)
         return [

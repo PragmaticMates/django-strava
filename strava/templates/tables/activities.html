@@ -3,19 +3,19 @@
     <thead>
       <tr>
         <th class="at-icon-cell"></th>
-        <th>Name</th>
-        <th>Date</th>
-        <th>Distance</th>
-        <th>Time</th>
-        <th>Pace</th>
-        <th>Elev.</th>
-        <th>Gear</th>
+        <th data-sort="name">Name</th>
+        <th data-sort="date">Date</th>
+        <th data-sort="dist">Distance</th>
+        <th data-sort="time">Time</th>
+        <th data-sort="pace">Pace</th>
+        <th data-sort="elev">Elev.</th>
+        <th data-sort="gear">Gear</th>
         <th></th>
       </tr>
     </thead>
     <tbody>
       {% for activity in activities %}
-      <tr data-name="{{ activity.name|lower }}" data-dist="{{ activity.dist }}" data-elev="{{ activity.elev }}" data-time="{{ activity.json.moving_time|default:0 }}" data-date="{{ activity.start_date|date:'Y-m-d' }}">
+      <tr data-name="{{ activity.name|lower }}" data-dist="{{ activity.dist }}" data-elev="{{ activity.elev }}" data-time="{{ activity.json.moving_time|default:0 }}" data-date="{{ activity.start_date|date:'Y-m-d' }}" data-gear="{{ activity.gear|default:'' }}">
         <td class="at-icon-cell">
           <div class="at-type-icon">
             {% if activity.type == 'ride' %}
@@ -45,3 +45,35 @@
     </tbody>
   </table>
 </div>
+<script>
+(function () {
+  const table = document.querySelector('#feed-table .acts-table');
+  if (!table) return;
+  let sortKey = null, sortAsc = true;
+  const numeric = new Set(['dist', 'time', 'pace', 'elev']);
+  function val(row, key) {
+    if (key === 'pace') {
+      const t = parseFloat(row.dataset.time) || 0;
+      const d = parseFloat(row.dataset.dist) || 0;
+      return d > 0 ? t / d : Infinity;
+    }
+    const v = row.dataset[key] ?? '';
+    return numeric.has(key) ? parseFloat(v) || 0 : v;
+  }
+  table.querySelector('thead').addEventListener('click', function (e) {
+    const th = e.target.closest('th[data-sort]');
+    if (!th) return;
+    const key = th.dataset.sort;
+    sortAsc = sortKey === key ? !sortAsc : true;
+    sortKey = key;
+    table.querySelectorAll('thead th[data-sort]').forEach(h => h.removeAttribute('aria-sort'));
+    th.setAttribute('aria-sort', sortAsc ? 'ascending' : 'descending');
+    const tbody = table.querySelector('tbody');
+    [...tbody.querySelectorAll('tr')].sort(function (a, b) {
+      const va = val(a, key), vb = val(b, key);
+      const cmp = numeric.has(key) ? va - vb : va.localeCompare(vb, undefined, {sensitivity: 'base'});
+      return sortAsc ? cmp : -cmp;
+    }).forEach(r => tbody.appendChild(r));
+  });
+})();
+</script>

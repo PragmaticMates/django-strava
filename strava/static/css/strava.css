@@ -878,6 +878,13 @@ body {
 .at-gear-cell { font-size: 12px; font-weight: 500; color: var(--ink-3); white-space: nowrap; }
 .at-pr-pip { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #F5A623; margin-left: 4px; vertical-align: middle; }
 
+/* ——— Sortable column headers ——— */
+.acts-table thead th[data-sort] { cursor: pointer; user-select: none; }
+.acts-table thead th[data-sort]:hover { color: var(--ink-2); }
+.acts-table thead th[data-sort]::after { content: " ↕"; opacity: 0.25; font-size: 9px; }
+.acts-table thead th[aria-sort="ascending"]::after { content: " ↑"; opacity: 1; color: var(--accent); }
+.acts-table thead th[aria-sort="descending"]::after { content: " ↓"; opacity: 1; color: var(--accent); }
+
 /* ——— Week group header ——— */
 .acts-week {
   margin-bottom: 6px;
