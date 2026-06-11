@@ -1,4 +1,4 @@
-<div class="float-card" data-screen-label="Activity card">
+<div class="float-card" data-screen-label="Activity card" data-name="{{ activity.name|lower }}">
   {% if show_close %}
   <button class="fc-close" onclick="this.closest('.float-card').style.display='none'" aria-label="Close">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -57,12 +57,14 @@
       </button>
       <button class="fc-engbtn" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-        {% if activity.comments %}{{ activity.comments }}{% endif %}
+        {{ activity.comments }}
       </button>
-      <span class="fc-gear-tag">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18h18"></path><path d="M5 18V9c0-1 .5-2 2-2h4l4 3h2c1 0 2 .5 2 2v6"></path><path d="M9 7V6"></path><path d="M5 14h14"></path></svg>
-        {{ activity.gear }}
-      </span>
+      {% if activity.gear %}
+        <span class="fc-gear-tag">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18h18"></path><path d="M5 18V9c0-1 .5-2 2-2h4l4 3h2c1 0 2 .5 2 2v6"></path><path d="M9 7V6"></path><path d="M5 14h14"></path></svg>
+          {{ activity.gear }}
+        </span>
+      {% endif %}
     </div>
   </div>
 </div>

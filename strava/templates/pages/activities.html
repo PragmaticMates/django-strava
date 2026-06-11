@@ -119,7 +119,24 @@ function setView(view) {
   document.getElementById('feed-grid').style.display  = view === 'grid'  ? '' : 'none';
   document.getElementById('feed-table').style.display = view === 'table' ? '' : 'none';
 }
-function filterActivities() {}
+function unaccent(s) {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+function matchesQuery(name, tokens) {
+  var words = unaccent(name).split(/\s+/);
+  return tokens.every(function(token) {
+    return words.some(function(word) { return word.startsWith(token); });
+  });
+}
+function filterActivities() {
+  var tokens = unaccent(document.getElementById('search-input').value.toLowerCase().trim()).split(/\s+/).filter(Boolean);
+  document.querySelectorAll('#feed-grid .float-card').forEach(function(card) {
+    card.style.display = !tokens.length || matchesQuery(card.dataset.name, tokens) ? '' : 'none';
+  });
+  document.querySelectorAll('#feed-table tbody tr').forEach(function(row) {
+    row.style.display = !tokens.length || matchesQuery(row.dataset.name, tokens) ? '' : 'none';
+  });
+}
 function setFilterSelect() {}
 function setGearFilter() {}
 </script>

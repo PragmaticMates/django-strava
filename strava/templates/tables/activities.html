@@ -15,7 +15,7 @@
     </thead>
     <tbody>
       {% for activity in activities %}
-      <tr>
+      <tr data-name="{{ activity.name|lower }}">
         <td class="at-icon-cell">
           <div class="at-type-icon">
             {% if activity.type == 'ride' %}
@@ -38,7 +38,7 @@
         <td class="at-num">{{ activity.dur }}</td>
         <td class="at-num">{{ activity.pace }}</td>
         <td class="at-num">{{ activity.elev }} <small>m</small></td>
-        <td class="at-gear-cell">{{ activity.gear }}</td>
+        <td class="at-gear-cell">{{ activity.gear|default:'' }}</td>
         <td></td>
       </tr>
       {% endfor %}

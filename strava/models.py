@@ -153,7 +153,8 @@ class Activity(models.Model):
 
   @property
   def polyline(self):
-    return (self.json.get('map') or {}).get('summary_polyline', '')
+    m = self.json.get('map') or {}
+    return m.get('polyline') or m.get('summary_polyline', '')
 
 
 class Gear(models.Model):
