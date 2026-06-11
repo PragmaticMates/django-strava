@@ -91,6 +91,57 @@ class Activity(models.Model):
       return all(conditions)
   is_gear_synced.boolean = True
 
+  @property
+  def type(self):
+    s = self.sport_type
+    if 'Trail' in s:
+      return 'trail'
+    if s in ('Hike', 'Snowshoe'):
+      return 'hike'
+    if 'Ride' in s:
+      return 'ride'
+    return 'run'
+
+  @property
+  def dist(self):
+    return round(float(self.distance) / 1000, 1)
+
+  @property
+  def dur(self):
+    t = self.json.get('elapsed_time', 0)
+    h, r = divmod(t, 3600)
+    m, s = divmod(r, 60)
+    return f'{h}h {m:02d}m' if h else f'{m}m {s:02d}s'
+
+  @property
+  def pace(self):
+    t = self.json.get('elapsed_time', 0)
+    d = float(self.distance)
+    if not t or not d:
+      return '-'
+    d_km = d / 1000
+    if self.type == 'ride':
+      return f'{d_km / (t / 3600):.1f} km/h'
+    pace_s = t / d_km
+    m, s = divmod(int(pace_s), 60)
+    return f'{m}:{s:02d}/km'
+
+  @property
+  def elev(self):
+    return round(self.json.get('total_elevation_gain', 0))
+
+  @property
+  def kudos(self):
+    return self.json.get('kudos_count', 0)
+
+  @property
+  def comments(self):
+    return self.json.get('comment_count', 0)
+
+  @property
+  def pb(self):
+    return bool(self.json.get('pr_count', 0))
+
 
 class Gear(models.Model):
   id = models.CharField(max_length=36, primary_key=True, editable=False)  # default=uuid.uuid4

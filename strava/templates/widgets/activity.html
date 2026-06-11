@@ -26,7 +26,7 @@
   <div class="fc-body">
     <a href="#" class="fc-header-bg">
       <h1 class="fc-title">{{ activity.name }}</h1>
-      <p class="fc-datetime">{{ activity.date }}, {{ activity.time }}</p>
+      <p class="fc-datetime">{{ activity.start_date|date:"M j, Y" }}, {{ activity.start_date|time:"g:i A" }}</p>
     </a>
     <div class="fc-stats">
       <div class="fc-stat-big">

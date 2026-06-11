@@ -33,7 +33,7 @@
           {{ activity.name }}
           {% if activity.pb %}<span class="at-pr-pip" title="Personal Record"></span>{% endif %}
         </td>
-        <td class="at-date">{{ activity.date }}</td>
+        <td class="at-date">{{ activity.start_date|date:"M j, Y" }}</td>
         <td class="at-num">{{ activity.dist }} <small>km</small></td>
         <td class="at-num">{{ activity.dur }}</td>
         <td class="at-num">{{ activity.pace }}</td>
