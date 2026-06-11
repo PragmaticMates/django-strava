@@ -44,66 +44,7 @@
     </button>
     <button class="pill-btn" type="button">All Gear <span class="caret">▾</span></button>
   </div>
-  <div class="float-card" data-screen-label="Latest activity card" id="activity-modal">
-    <button class="fc-close" onclick="document.getElementById('activity-modal').style.display='none'" aria-label="Close">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-    </button>
-    <div class="fc-map">
-      <svg class="fc-route" id="fc-route-svg" role="img" aria-label="Route trace"></svg>
-      <div class="fc-pills">
-        <span class="fc-pill">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="6" cy="18" r="2.4"></circle><circle cx="18" cy="6" r="2.4"></circle><path d="M8 17 C 13 15, 11 8, 16 7"></path></svg>
-          Trail Run
-        </span>
-        <span class="fc-pill">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="12" x2="15" y2="14"></line></svg>
-          Training
-        </span>
-      </div>
-    </div>
-    <div class="fc-body">
-      <div class="fc-header-bg">
-        <h1 class="fc-title">Morning run in High Tatras</h1>
-        <p class="fc-datetime">Today, 7:14 AM</p>
-      </div>
-      <div class="fc-stats">
-        <div class="fc-stat-big">
-          <span class="fc-big-val">12.4 <span class="fc-big-unit">KM</span></span>
-        </div>
-        <div class="fc-stat-group">
-          <div class="fc-stat">
-            <span class="fc-val">5:01 <small>/km</small></span>
-            <span class="fc-lbl">Pace</span>
-          </div>
-          <div class="fc-stat">
-            <span class="fc-val">1:02:14</span>
-            <span class="fc-lbl">Time</span>
-          </div>
-          <div class="fc-stat">
-            <span class="fc-val">430 <small>m</small></span>
-            <span class="fc-lbl">Elev.</span>
-          </div>
-        </div>
-      </div>
-      <div class="fc-engage">
-        <button class="fc-engbtn" type="button">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-          14
-        </button>
-        <button class="fc-engbtn" type="button">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-          3
-        </button>
-        <button class="fc-engbtn" type="button">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"></rect><polyline points="8 7 9.5 4.5 14.5 4.5 16 7"></polyline><circle cx="12" cy="13" r="3.4"></circle></svg>
-          8
-        </button>
-        <button class="fc-engbtn fc-share" type="button" aria-label="Share">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 4 4 4 4 20 20 20 20 15"></polyline><line x1="13" y1="11" x2="20" y2="4"></line><polyline points="14 4 20 4 20 10"></polyline></svg>
-        </button>
-      </div>
-    </div>
-  </div>
+  {% include "widgets/activity.html" with activity=latest_activity %}
 </section>
 
 <main class="page">
@@ -751,7 +692,7 @@ let selectedSport = "trail_run";
 let dropdownOpen = false;
 
 function showActivityModal() {
-  const modal = document.getElementById('activity-modal');
+  const modal = document.querySelector('.maphero .float-card');
   if (modal) modal.style.display = '';
 }
 

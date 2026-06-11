@@ -1,0 +1,65 @@
+<div class="float-card" data-screen-label="Activity card">
+  <button class="fc-close" onclick="this.closest('.float-card').style.display='none'" aria-label="Close">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+  </button>
+  <div class="fc-map">
+    <svg class="fc-route" role="img" aria-label="Route trace"></svg>
+    {% if activity.pb %}<span class="act-gcard-pr">★ PR</span>{% endif %}
+    <div class="fc-pills">
+      <span class="fc-pill">
+        {% if activity.type == 'ride' %}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5.5" cy="15" r="3.5"></circle><circle cx="18.5" cy="15" r="3.5"></circle><polyline points="5.5 11.5 5.5 5.5 11.5 3.5 15.5 8.5 18.5 11.5"></polyline><line x1="10" y1="5.5" x2="10" y2="15"></line></svg>
+          Ride
+        {% elif activity.type == 'trail' %}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 18 Q6 8 10 12 Q14 16 18 6"></path><polyline points="17 3 21 7 17 11"></polyline></svg>
+          Trail Run
+        {% elif activity.type == 'hike' %}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="3 20 10 7 14 13 17 9 21 20"></polyline><circle cx="17" cy="6" r="1.5"></circle></svg>
+          Hike
+        {% else %}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="6" cy="18" r="2.4"></circle><circle cx="18" cy="6" r="2.4"></circle><path d="M8 17 C 13 15, 11 8, 16 7"></path></svg>
+          Run
+        {% endif %}
+      </span>
+    </div>
+  </div>
+  <div class="fc-body">
+    <a href="#" class="fc-header-bg">
+      <h1 class="fc-title">{{ activity.name }}</h1>
+      <p class="fc-datetime">{{ activity.date }}, {{ activity.time }}</p>
+    </a>
+    <div class="fc-stats">
+      <div class="fc-stat-big">
+        <span class="fc-big-val">{{ activity.dist }} <span class="fc-big-unit">KM</span></span>
+      </div>
+      <div class="fc-stat-group">
+        <div class="fc-stat">
+          <span class="fc-val">{{ activity.pace }}</span>
+          <span class="fc-lbl">{% if activity.type == 'ride' %}Speed{% else %}Pace{% endif %}</span>
+        </div>
+        <div class="fc-stat">
+          <span class="fc-val">{{ activity.dur }}</span>
+          <span class="fc-lbl">Time</span>
+        </div>
+        <div class="fc-stat">
+          <span class="fc-val">{{ activity.elev }} <small>m</small></span>
+          <span class="fc-lbl">Elev.</span>
+        </div>
+      </div>
+    </div>
+    <div class="fc-engage">
+      <button class="fc-engbtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+        {{ activity.kudos }}
+      </button>
+      <button class="fc-engbtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        {% if activity.comments %}{{ activity.comments }}{% endif %}
+      </button>
+      <span class="fc-gear-tag">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18h18"></path><path d="M5 18V9c0-1 .5-2 2-2h4l4 3h2c1 0 2 .5 2 2v6"></path><path d="M9 7V6"></path><path d="M5 14h14"></path></svg>
+        {{ activity.gear }}
+      </span>
+    </div>
+  </div>
+</div>

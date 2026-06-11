@@ -3,10 +3,6 @@
 
 {% block title %}Activities{% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/activities.css' %}">
-{% endblock %}
-
 {% block content %}
 <!-- ============ Activities Page ============ -->
 <main class="acts-page" data-screen-label="Activities">
@@ -98,363 +94,75 @@
     </div>
   </div>
 
-  <!-- Activity feed -->
-  <div id="acts-feed"></div>
-
-  <div class="acts-empty" id="acts-empty">
-    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-    <h3>No activities found</h3>
-    <p>Try adjusting your filters or search term.</p>
+  <!-- Activity feed — grid view -->
+  <div class="acts-feed" id="feed-grid">
+    {% for activity in activities %}
+      {% include "widgets/activity.html" with activity=activity %}
+    {% endfor %}
   </div>
 
-  <div class="acts-load-more">
-    <button class="load-more-btn" onclick="loadMore()">Load more activities</button>
+  <!-- Activity feed — table view -->
+  <div class="acts-table-wrap" id="feed-table" style="display:none">
+    <table class="acts-table">
+      <thead>
+        <tr>
+          <th class="at-icon-cell"></th>
+          <th>Name</th>
+          <th>Date</th>
+          <th>Distance</th>
+          <th>Time</th>
+          <th>Pace</th>
+          <th>Elev.</th>
+          <th>Gear</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for activity in activities %}
+        <tr>
+          <td class="at-icon-cell">
+            <div class="at-type-icon">
+              {% if activity.type == 'ride' %}
+                <svg viewBox="0 0 24 24"><circle cx="5.5" cy="15" r="3.5"></circle><circle cx="18.5" cy="15" r="3.5"></circle><polyline points="5.5 11.5 5.5 5.5 11.5 3.5 15.5 8.5 18.5 11.5"></polyline><line x1="10" y1="5.5" x2="10" y2="15"></line></svg>
+              {% elif activity.type == 'trail' %}
+                <svg viewBox="0 0 24 24"><path d="M3 18 Q6 8 10 12 Q14 16 18 6"></path><polyline points="17 3 21 7 17 11"></polyline></svg>
+              {% elif activity.type == 'hike' %}
+                <svg viewBox="0 0 24 24"><polyline points="3 20 10 7 14 13 17 9 21 20"></polyline><circle cx="17" cy="6" r="1.5"></circle></svg>
+              {% else %}
+                <svg viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.4"></circle><circle cx="18" cy="6" r="2.4"></circle><path d="M8 17 C 13 15, 11 8, 16 7"></path></svg>
+              {% endif %}
+            </div>
+          </td>
+          <td class="at-name">
+            {{ activity.name }}
+            {% if activity.pb %}<span class="at-pr-pip" title="Personal Record"></span>{% endif %}
+          </td>
+          <td class="at-date">{{ activity.date }}</td>
+          <td class="at-num">{{ activity.dist }} <small>km</small></td>
+          <td class="at-num">{{ activity.dur }}</td>
+          <td class="at-num">{{ activity.pace }}</td>
+          <td class="at-num">{{ activity.elev }} <small>m</small></td>
+          <td class="at-gear-cell">{{ activity.gear }}</td>
+          <td></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
 
 </main>
-{% endblock %}
 
 {% block extra_js %}
 <script>
-// ============ Activity data ============
-const ACTIVITIES = [
-  // Week of Jun 9–15 2026
-  { id:1, type:'ride', name:'Morning Sufferfest', date:'Jun 11, 2026', time:'7:04 AM', dist:'62.4', dur:'2h 08m', elev:'940', pace:'29.2 km/h', gear:'Cervélo R5', kudos:14, comments:3, pb:false },
-  { id:2, type:'run',  name:'Lunch Tempo',        date:'Jun 10, 2026', time:'12:18 PM', dist:'12.1', dur:'54m 22s', elev:'88',  pace:'4:30/km',  gear:'Nike Vaporfly 3', kudos:7,  comments:1, pb:false },
-  { id:3, type:'ride', name:'Evening Spin',        date:'Jun 9, 2026',  time:'6:40 PM', dist:'38.7', dur:'1h 21m', elev:'420', pace:'28.6 km/h', gear:'Cannondale Topstone', kudos:9, comments:0, pb:false },
-
-  // Week of Jun 2–8 2026
-  { id:4, type:'run',  name:'Sunday Long Run',     date:'Jun 8, 2026',  time:'8:15 AM', dist:'21.0', dur:'1h 44m', elev:'310', pace:'4:57/km',  gear:'Nike Vaporfly 3', kudos:22, comments:5, pb:true },
-  { id:5, type:'ride', name:'Gran Fondo – Malá Fatra', date:'Jun 7, 2026', time:'7:00 AM', dist:'118.0', dur:'4h 22m', elev:'2,180', pace:'27.0 km/h', gear:'Cervélo R5', kudos:41, comments:12, pb:true },
-  { id:6, type:'trail',name:'Veľká Fatra Trails',  date:'Jun 6, 2026',  time:'6:50 AM', dist:'24.3', dur:'3h 12m', elev:'1,240', pace:'7:55/km',  gear:'Hoka Speedgoat 5', kudos:18, comments:4, pb:false },
-  { id:7, type:'run',  name:'Recovery Jog',        date:'Jun 4, 2026',  time:'7:30 AM', dist:'6.8',  dur:'35m 10s', elev:'42',  pace:'5:10/km',  gear:'Nike Pegasus 41', kudos:3, comments:0, pb:false },
-  { id:8, type:'ride', name:'Coffee Ride',         date:'Jun 3, 2026',  time:'9:00 AM', dist:'44.5', dur:'1h 38m', elev:'580', pace:'27.2 km/h', gear:'Cannondale Topstone', kudos:11, comments:2, pb:false },
-
-  // Week of May 26 – Jun 1 2026
-  { id:9,  type:'ride', name:'Tatry Switchbacks',   date:'Jun 1, 2026',  time:'7:20 AM', dist:'88.0', dur:'3h 14m', elev:'1,680', pace:'27.2 km/h', gear:'Cervélo R5', kudos:29, comments:7, pb:false },
-  { id:10, type:'run',  name:'Parkrun – Bánov',     date:'May 31, 2026', time:'9:02 AM', dist:'5.0',  dur:'19m 58s', elev:'12',  pace:'3:59/km',  gear:'Nike Vaporfly 3', kudos:31, comments:9, pb:true },
-  { id:11, type:'trail',name:'Forest Loops',        date:'May 30, 2026', time:'6:30 AM', dist:'18.2', dur:'2h 24m', elev:'810', pace:'7:55/km',  gear:'Hoka Speedgoat 5', kudos:8, comments:1, pb:false },
-  { id:12, type:'ride', name:'Club Ride',           date:'May 28, 2026', time:'8:00 AM', dist:'72.1', dur:'2h 35m', elev:'1,040', pace:'27.9 km/h', gear:'Cervélo R5', kudos:15, comments:3, pb:false },
-  { id:13, type:'run',  name:'Track Session',       date:'May 27, 2026', time:'6:00 PM', dist:'10.0', dur:'39m 45s', elev:'18', pace:'3:58/km',  gear:'Nike Vaporfly 3', kudos:12, comments:2, pb:false },
-
-  // Week of May 19–25 2026
-  { id:14, type:'ride', name:'Záhorie Loop',        date:'May 25, 2026', time:'8:30 AM', dist:'101.2', dur:'3h 42m', elev:'860', pace:'27.4 km/h', gear:'Cervélo R5', kudos:18, comments:4, pb:false },
-  { id:15, type:'run',  name:'Half Marathon Prep',  date:'May 24, 2026', time:'7:10 AM', dist:'18.0', dur:'1h 26m', elev:'195', pace:'4:47/km',  gear:'Nike Pegasus 41', kudos:9, comments:1, pb:false },
-  { id:16, type:'trail',name:'Devín Castle Climb',  date:'May 22, 2026', time:'7:00 AM', dist:'14.8', dur:'1h 58m', elev:'680', pace:'7:58/km',  gear:'Hoka Speedgoat 5', kudos:21, comments:6, pb:false },
-];
-
-// ============ Routing by week ============
-function isoWeek(dateStr) {
-  const d = new Date(dateStr);
-  const day = d.getDay() || 7;
-  const thu = new Date(d);
-  thu.setDate(d.getDate() + 4 - day);
-  const jan1 = new Date(thu.getFullYear(), 0, 1);
-  return Math.ceil(((thu - jan1) / 86400000 + 1) / 7);
+function setView(view) {
+  document.getElementById('view-grid').classList.toggle('active', view === 'grid');
+  document.getElementById('view-table').classList.toggle('active', view === 'table');
+  document.getElementById('feed-grid').style.display  = view === 'grid'  ? '' : 'none';
+  document.getElementById('feed-table').style.display = view === 'table' ? '' : 'none';
 }
-function weekKey(dateStr) {
-  const d = new Date(dateStr);
-  const day = d.getDay() || 7;
-  const mon = new Date(d); mon.setDate(d.getDate() - (day - 1));
-  const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
-  const fmtShort = dt => dt.toLocaleDateString('en-GB', { day:'numeric', month:'short' });
-  return fmtShort(mon) + ' – ' + fmtShort(sun) + ', ' + sun.getFullYear();
-}
-
-// ============ State ============
-let currentFilter = 'all';
-let currentSearch  = '';
-let currentView    = 'grid';
-let currentGear    = 'all';
-let visibleCount   = 20;
-let likedSet = new Set();
-
-function getFiltered() {
-  return ACTIVITIES.filter(a => {
-    const matchType   = currentFilter === 'all' || a.type === currentFilter;
-    const matchGear   = currentGear === 'all'   || a.gear === currentGear;
-    const matchSearch = !currentSearch || a.name.toLowerCase().includes(currentSearch.toLowerCase());
-    return matchType && matchGear && matchSearch;
-  });
-}
-
-// ============ Render ============
-const TYPE_LABELS = { ride:'Ride', run:'Run', trail:'Trail Run', walk:'Walk' };
-const TYPE_ICONS = {
-  ride: `<svg viewBox="0 0 24 24"><circle cx="5.5" cy="15" r="3.5"></circle><circle cx="18.5" cy="15" r="3.5"></circle><polyline points="5.5 11.5 5.5 5.5 11.5 3.5 15.5 8.5 18.5 11.5"></polyline><line x1="10" y1="5.5" x2="10" y2="15"></line></svg>`,
-  run:  `<svg viewBox="0 0 24 24"><circle cx="13" cy="4" r="1.8"></circle><path d="M10 21l1.5-6-2.5-3.5 4.5 2 4.5-3.5" stroke-linejoin="round"></path><path d="M13 11l1 4.5 2.5 2"></path><path d="M9 21l-2-4"></path></svg>`,
-  trail:`<svg viewBox="0 0 24 24"><path d="M3 18 Q6 8 10 12 Q14 16 18 6"></path><polyline points="17 3 21 7 17 11"></polyline></svg>`,
-  walk: `<svg viewBox="0 0 24 24"><circle cx="12" cy="4" r="1.8"></circle><path d="M10 10l2 4 3-2"></path><path d="M9 20l1-5-2-3"></path><path d="M14 20l-1-5"></path></svg>`,
-};
-const GEAR_ICONS = {
-  bike: `<svg viewBox="0 0 24 24"><circle cx="5.5" cy="15" r="3.5"></circle><circle cx="18.5" cy="15" r="3.5"></circle><polyline points="5.5 11.5 5.5 5.5 11.5 3.5 15.5 8.5 18.5 11.5"></polyline><line x1="10" y1="5.5" x2="10" y2="15"></line></svg>`,
-  shoe: `<svg viewBox="0 0 24 24"><path d="M2 17h13l5-5-3-2-3 3H9L6 9H3a1 1 0 0 0-1 1v6"></path><path d="M9 17v2h11v-2"></path></svg>`,
-};
-function gearIcon(g) {
-  if (g.includes('Cervélo') || g.includes('Cannondale')) return GEAR_ICONS.bike;
-  return GEAR_ICONS.shoe;
-}
-
-function drawRouteLine(canvas, type) {
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
-  ctx.clearRect(0,0,W,H);
-
-  // Gentle random-ish route path
-  const seeds = { ride:[0.1,0.7,0.25,0.4,0.5,0.2,0.75,0.5,0.9,0.3], run:[0.1,0.5,0.3,0.8,0.5,0.3,0.7,0.6,0.9,0.45], trail:[0.1,0.6,0.2,0.85,0.4,0.3,0.65,0.2,0.9,0.55] };
-  const ys = (seeds[type] || seeds.run);
-  const pts = ys.map((y, i) => [i * W / (ys.length - 1), y * H * 0.7 + H * 0.15]);
-
-  const accentColor = type === 'ride' ? 'oklch(50% 0.18 30)' : type === 'run' ? 'oklch(45% 0.16 160)' : 'oklch(48% 0.14 85)';
-
-  ctx.strokeStyle = accentColor;
-  ctx.lineWidth = 2.5;
-  ctx.lineJoin = 'round';
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(pts[0][0], pts[0][1]);
-  for (let i = 1; i < pts.length - 1; i++) {
-    const mx = (pts[i][0] + pts[i+1][0]) / 2;
-    const my = (pts[i][1] + pts[i+1][1]) / 2;
-    ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my);
-  }
-  ctx.lineTo(pts[pts.length-1][0], pts[pts.length-1][1]);
-  ctx.stroke();
-
-  // Start/end dots
-  ctx.fillStyle = accentColor;
-  ctx.beginPath(); ctx.arc(pts[0][0], pts[0][1], 4, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(pts[pts.length-1][0], pts[pts.length-1][1], 4, 0, Math.PI*2); ctx.fill();
-}
-
-function renderFeed() {
-  const feed = document.getElementById('acts-feed');
-  const empty = document.getElementById('acts-empty');
-  const filtered = getFiltered();
-  const visible = filtered.slice(0, visibleCount);
-
-  if (!filtered.length) {
-    feed.innerHTML = '';
-    empty.style.display = 'block';
-    return;
-  }
-  empty.style.display = 'none';
-
-  if (currentView === 'list') renderList(feed, visible);
-  else if (currentView === 'grid') renderGrid(feed, visible);
-  else renderTable(feed, visible);
-}
-
-function groupByWeek(visible) {
-  const groups = {}, groupOrder = [];
-  visible.forEach(a => {
-    const wk = weekKey(a.date);
-    if (!groups[wk]) { groups[wk] = []; groupOrder.push(wk); }
-    groups[wk].push(a);
-  });
-  return { groups, groupOrder };
-}
-
-function weekHeaderHtml(wk, acts) {
-  const totalDist = acts.reduce((s,a) => s + parseFloat(a.dist.replace(',','')), 0).toFixed(1);
-  const totalElev = acts.reduce((s,a) => s + parseInt(a.elev.replace(',','')), 0);
-  return `<div class="acts-week-header">
-    <span class="acts-week-label">${wk}</span>
-    <div class="acts-week-totals">
-      <span class="acts-week-total"><svg viewBox="0 0 24 24"><line x1="4" y1="12" x2="20" y2="12"></line><polyline points="14 6 20 12 14 18"></polyline></svg>${totalDist} km</span>
-      <span class="acts-week-total"><svg viewBox="0 0 24 24"><polyline points="3 17 9 11 13 15 23 5"></polyline><polyline points="14 5 23 5 23 14"></polyline></svg>${totalElev.toLocaleString()} m</span>
-    </div>
-  </div>`;
-}
-
-function renderList(feed, visible) {
-  const { groups, groupOrder } = groupByWeek(visible);
-  let html = '';
-  groupOrder.forEach(wk => {
-    const acts = groups[wk];
-    html += `<div class="acts-week">${weekHeaderHtml(wk, acts)}`;
-    acts.forEach(a => {
-      const liked = likedSet.has(a.id);
-      html += `<div class="act-row" data-id="${a.id}" onclick="openActivity(${a.id})">
-        <div class="act-icon act-icon-${a.type}">${TYPE_ICONS[a.type]||TYPE_ICONS.run}</div>
-        <div class="act-main">
-          <div class="act-top-row">
-            <span class="act-name">${a.name}</span>
-            <span class="act-type-badge badge-${a.type}">${TYPE_LABELS[a.type]||a.type}</span>
-          </div>
-          <div class="act-meta"><span>${a.date}</span><span class="act-meta-dot"></span><span>${a.time}</span></div>
-          <div class="act-stats">
-            <div class="act-stat"><span class="act-stat-val">${a.dist}</span><span class="act-stat-unit">km</span></div>
-            <div class="act-stat"><span class="act-stat-val">${a.dur}</span><span class="act-stat-unit"></span></div>
-            <div class="act-stat"><span class="act-stat-val">${a.elev}</span><span class="act-stat-unit">m↑</span></div>
-            <div class="act-stat"><span class="act-stat-val">${a.pace}</span><span class="act-stat-unit"></span></div>
-          </div>
-          <div class="act-gear-pill">${gearIcon(a.gear)}${a.gear}</div>
-          <div class="act-footer-row" onclick="event.stopPropagation()">
-            <button class="act-kudos-btn ${liked?'liked':''}" onclick="toggleKudos(${a.id},this)">
-              <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-              <span class="kudos-count">${a.kudos + (liked?1:0)}</span>
-            </button>
-            <button class="act-comment-btn"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></button>
-            ${a.pb ? `<span class="act-personal-best"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>PR</span>` : ''}
-          </div>
-        </div>
-        <div class="act-map"><canvas width="240" height="180" data-type="${a.type}" data-id="${a.id}"></canvas></div>
-      </div>`;
-    });
-    html += `</div>`;
-  });
-  feed.innerHTML = html;
-  feed.querySelectorAll('canvas[data-type]').forEach(c => drawRouteLine(c, c.dataset.type));
-}
-
-function renderGrid(feed, visible) {
-  const { groups, groupOrder } = groupByWeek(visible);
-  let html = '';
-  groupOrder.forEach(wk => {
-    const acts = groups[wk];
-    html += `<div class="acts-week">${weekHeaderHtml(wk, acts)}<div class="acts-grid">`;
-    acts.forEach(a => {
-      const liked = likedSet.has(a.id);
-      const isBike = a.type === 'ride';
-      const typeIconSvg = TYPE_ICONS[a.type] || TYPE_ICONS.run;
-      html += `<div class="act-gcard" onclick="openActivity(${a.id})">
-        <div class="act-gcard-photo">
-          <canvas width="480" height="320" data-type="${a.type}" data-id="gc-${a.id}"></canvas>
-          <div class="act-gcard-pill">
-            <span class="fc-pill">${typeIconSvg}${TYPE_LABELS[a.type]||a.type}</span>
-          </div>
-          ${a.pb ? `<span class="act-gcard-pr">★ PR</span>` : ''}
-        </div>
-        <div class="act-gcard-body">
-          <div class="act-gcard-header">
-            <p class="act-gcard-name">${a.name}</p>
-            <p class="act-gcard-date">${a.date} · ${a.time}</p>
-          </div>
-          <div class="act-gcard-stats">
-            <div class="act-gcard-big">
-              <span class="act-gcard-big-val">${a.dist}</span>
-              <span class="act-gcard-big-unit">km</span>
-            </div>
-            <div class="act-gcard-sub">
-              <div class="act-gcard-cs">
-                <span class="act-gcard-cv">${a.dur}</span>
-                <span class="act-gcard-cl">Time</span>
-              </div>
-              <div class="act-gcard-cs">
-                <span class="act-gcard-cv">${a.elev} <small>m</small></span>
-                <span class="act-gcard-cl">Elev.</span>
-              </div>
-              <div class="act-gcard-cs">
-                <span class="act-gcard-cv">${a.pace}</span>
-                <span class="act-gcard-cl">${isBike ? 'Speed' : 'Pace'}</span>
-              </div>
-            </div>
-          </div>
-          <div class="act-gcard-engage" onclick="event.stopPropagation()">
-            <button class="act-gcard-engbtn ${liked?'liked':''}" onclick="toggleKudosGrid(${a.id},this)">
-              <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-              <span class="kudos-count">${a.kudos + (liked?1:0)}</span>
-            </button>
-            <button class="act-gcard-engbtn">
-              <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-              ${a.comments > 0 ? a.comments : ''}
-            </button>
-            <span class="act-gcard-view">${a.gear}</span>
-          </div>
-        </div>
-      </div>`;
-    });
-    html += `</div></div>`;
-  });
-  feed.innerHTML = html;
-  feed.querySelectorAll('canvas[data-type]').forEach(c => drawRouteLine(c, c.dataset.type));
-}
-
-function renderTable(feed, visible) {
-  let html = `<div class="acts-table-wrap"><table class="acts-table">
-    <thead><tr>
-      <th class="at-icon-cell"></th>
-      <th>Activity</th>
-      <th>Date</th>
-      <th>Distance</th>
-      <th>Time</th>
-      <th>Elevation</th>
-      <th>Pace</th>
-      <th>Gear</th>
-    </tr></thead>
-    <tbody>`;
-  visible.forEach(a => {
-    html += `<tr onclick="openActivity(${a.id})">
-      <td class="at-icon-cell"><div class="at-type-icon act-icon-${a.type}">${TYPE_ICONS[a.type]||TYPE_ICONS.run}</div></td>
-      <td><span class="at-name">${a.name}${a.pb ? '<span class="at-pr-pip" title="Personal Record"></span>' : ''}</span></td>
-      <td class="at-date">${a.date}</td>
-      <td><span class="at-num">${a.dist} <small>km</small></span></td>
-      <td><span class="at-num">${a.dur}</span></td>
-      <td><span class="at-num">${a.elev} <small>m</small></span></td>
-      <td><span class="at-num">${a.pace}</span></td>
-      <td class="at-gear-cell">${a.gear}</td>
-    </tr>`;
-  });
-  html += `</tbody></table></div>`;
-  feed.innerHTML = html;
-}
-
-// ============ Interactions ============
-function setGearFilter(sel) {
-  currentGear = sel.value;
-  visibleCount = 20;
-  renderFeed();
-}
-
-function setFilterSelect(sel) {
-  currentFilter = sel.value;
-  visibleCount = 20;
-  renderFeed();
-}
-function setFilter(btn, filter) {
-  currentFilter = filter;
-  visibleCount = 20;
-  renderFeed();
-}
-
-function filterActivities() {
-  currentSearch = document.getElementById('search-input').value;
-  visibleCount = 20;
-  renderFeed();
-}
-
-function loadMore() {
-  visibleCount += 10;
-  renderFeed();
-}
-
-function setView(v) {
-  currentView = v;
-  ['list','grid','table'].forEach(id => {
-    const btn = document.getElementById('view-' + id);
-    if (btn) btn.classList.toggle('active', id === v);
-  });
-  visibleCount = 20;
-  renderFeed();
-}
-
-function toggleKudos(id, btn) {
-  if (likedSet.has(id)) { likedSet.delete(id); btn.classList.remove('liked'); }
-  else { likedSet.add(id); btn.classList.add('liked'); }
-  const count = ACTIVITIES.find(a => a.id === id).kudos;
-  btn.querySelector('.kudos-count').textContent = count + (likedSet.has(id) ? 1 : 0);
-}
-
-function toggleKudosGrid(id, btn) {
-  toggleKudos(id, btn);
-}
-
-function openActivity(id) {
-  // stub – would open activity detail
-}
-
-// Initial render
-renderFeed();
+function filterActivities() {}
+function setFilterSelect() {}
+function setGearFilter() {}
 </script>
+{% endblock %}
 {% endblock %}
