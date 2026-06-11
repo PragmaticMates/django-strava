@@ -1,0 +1,563 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-density="comfortable">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>django-strava · Gear</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/classic.css' %}">
+<link rel="stylesheet" href="{% static 'css/gear.css' %}">
+
+</head>
+<body>
+
+<!-- ============ Nav ============ -->
+<header class="nav" data-screen-label="Top nav">
+  <a class="logo" href="{% url 'strava:dashboard' %}">
+    <svg width="178" height="32" viewBox="0 0 178 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="django-strava">
+      <rect x="2" y="8" width="16" height="16" rx="2.5" transform="rotate(45 10 16)" fill="var(--accent)"/>
+      <rect x="5.5" y="11.5" width="9" height="9" rx="1.5" transform="rotate(45 10 16)" fill="white" opacity="0.28"/>
+      <circle cx="10" cy="16" r="2" fill="white" opacity="0.9"/>
+      <text x="30" y="23" font-family="'Barlow Condensed', 'Arial Narrow', sans-serif" font-weight="700" font-size="21" letter-spacing="0.01em">
+        <tspan fill="#1F1B18">django</tspan><tspan fill="var(--accent)">-strava</tspan>
+      </text>
+    </svg>
+  </a>
+  <nav class="nav-items">
+    <a class="nav-item" href="{% url 'strava:dashboard' %}">
+      <svg viewBox="0 0 24 24"><polyline points="3 11 12 4 21 11"></polyline><polyline points="5 10 5 20 19 20 19 10"></polyline></svg>
+      Dashboard
+    </a>
+    <a class="nav-item" href="{% url 'strava:activities' %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"></polygon></svg>
+      Activities
+    </a>
+    <a class="nav-item" href="{% url 'strava:gear' %}" aria-current="page">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18h18"></path><path d="M5 18V9c0-1 .5-2 2-2h4l4 3h2c1 0 2 .5 2 2v6"></path><path d="M9 7V6"></path><path d="M5 14h14"></path></svg>
+      Gear
+    </a>
+    <a class="nav-item" href="{% url 'strava:gallery' %}">
+      <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"></rect><circle cx="8.5" cy="10" r="1.6"></circle><polyline points="5 18 11 12 15 16 18 13 21 16"></polyline></svg>
+      Gallery
+    </a>
+    <a class="nav-item" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><polyline points="8 7 3 12 8 17"></polyline><polyline points="16 7 21 12 16 17"></polyline></svg>
+      Compare
+    </a>
+  </nav>
+  <div class="nav-user" id="user-menu-trigger" onclick="toggleUserMenu(event)" aria-haspopup="true" aria-expanded="false">
+    <image-slot id="avatar" class="avatar-slot" shape="circle" placeholder=""></image-slot>
+    <span class="uname">Erik Telepovsky</span>
+    <span class="caret">▾</span>
+    <div class="user-dropdown" id="user-dropdown" role="menu">
+      <a class="user-dd-item" href="#" role="menuitem">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4.5"></circle><path d="M3 21c0-4 4-7 9-7s9 3 9 7"></path></svg>
+        Profile
+      </a>
+      <a class="user-dd-item" href="#" role="menuitem">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"></circle><path d="M2 21c0-3.5 3.1-6 7-6s7 2.5 7 6"></path><circle cx="18" cy="9" r="2.5"></circle><path d="M16 21c0-2.5 2-4 4.5-4"></path></svg>
+        Followers
+      </a>
+      <a class="user-dd-item" href="#" role="menuitem">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="15" cy="8" r="3.5"></circle><path d="M8 21c0-3.5 3.1-6 7-6s7 2.5 7 6"></path><circle cx="6" cy="9" r="2.5"></circle><path d="M1 21c0-2.5 2-4 4.5-4"></path></svg>
+        Following
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- ============ Gear Page ============ -->
+<main class="gear-page" data-screen-label="Gear">
+
+  <!-- Page header -->
+  <div class="gear-hero">
+    <div>
+      <p class="gear-hero-eyebrow">Equipment</p>
+      <h1>My Gear</h1>
+      <p class="gear-hero-sub">8 items · 4,821 km total</p>
+    </div>
+    <button class="gear-add-btn" onclick="openAddSheet()">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      Add Gear
+    </button>
+  </div>
+
+  <!-- Summary bar -->
+  <div class="gear-summary">
+    <div class="gear-summary-item">
+      <span class="gear-summary-val">3</span>
+      <span class="gear-summary-lbl">Bikes</span>
+    </div>
+    <div class="gear-summary-item">
+      <span class="gear-summary-val">4</span>
+      <span class="gear-summary-lbl">Shoes</span>
+    </div>
+    <div class="gear-summary-item">
+      <span class="gear-summary-val">4,821<span style="font-size:18px;font-weight:600;color:var(--ink-3)"> km</span></span>
+      <span class="gear-summary-lbl">Total logged</span>
+    </div>
+    <div class="gear-summary-item">
+      <span class="gear-summary-val">612</span>
+      <span class="gear-summary-lbl">Activities</span>
+    </div>
+  </div>
+
+  <!-- ——— Bikes ——— -->
+  <section class="gear-section" data-screen-label="Bikes">
+    <div class="gear-section-head">
+      <div class="gear-section-icon">
+        <svg viewBox="0 0 24 24"><circle cx="5.5" cy="15" r="3.5"></circle><circle cx="18.5" cy="15" r="3.5"></circle><polyline points="5.5 11.5 5.5 5.5 11.5 3.5 15.5 8.5 18.5 11.5"></polyline><line x1="10" y1="5.5" x2="10" y2="15"></line></svg>
+      </div>
+      <h2 class="gear-section-title">Bikes</h2>
+      <span class="gear-section-count">3 bikes</span>
+    </div>
+    <div class="gear-grid">
+
+      <!-- Bike 1 — Primary -->
+      <div class="gear-card wear-low" onclick="openSheet('cervelo')" data-gear-id="cervelo">
+        <div class="gear-card-img">
+          <div class="gear-card-img-icon">
+            <svg viewBox="0 0 24 24"><circle cx="5.5" cy="15" r="3.5"></circle><circle cx="18.5" cy="15" r="3.5"></circle><polyline points="5.5 11.5 5.5 5.5 11.5 3.5 15.5 8.5 18.5 11.5"></polyline><line x1="10" y1="5.5" x2="10" y2="15"></line></svg>
+          </div>
+          <span class="gear-status-badge badge-primary">Primary</span>
+          <div class="gear-wear-bar"><div class="gear-wear-bar-fill" style="width:22%"></div></div>
+        </div>
+        <div class="gear-card-body">
+          <p class="gear-card-name">Cervélo R5</p>
+          <p class="gear-card-brand">Cervélo · Road bike · Carbon</p>
+          <div class="gear-stats">
+            <div class="gear-stat">
+              <span class="gear-stat-val">2,140</span>
+              <span class="gear-stat-lbl">km</span>
+            </div>
+            <div class="gear-stat">
+              <span class="gear-stat-val">184</span>
+              <span class="gear-stat-lbl">rides</span>
+            </div>
+            <div class="gear-stat">
+              <span class="gear-stat-val">22%</span>
+              <span class="gear-stat-lbl">wear</span>
+            </div>
+          </div>
+          <div class="gear-card-footer">
+            <span class="gear-last-used">
+              <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"></rect><line x1="8" y1="3" x2="8" y2="7"></line><line x1="16" y1="3" x2="16" y2="7"></line><line x1="4" y1="10" x2="20" y2="10"></line></svg>
+              Jun 6, 2026
+            </span>
+            <div class="gear-card-actions" onclick="event.stopPropagation()">
+              <button class="gc-btn" title="Edit">
+                <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              </button>
+              <button class="gc-btn" title="More">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.2" fill="currentColor" stroke="none"></circle><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"></circle><circle cx="12" cy="19" r="1.2" fill="currentColor" stroke="none"></circle></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bike 2 — Gravel -->
+      <div class="gear-card wear-mid" onclick="openSheet('cannondale')" data-gear-id="cannondale">
+        <div class="gear-card-img">
+          <div class="gear-card-img-icon">
+            <svg viewBox="0 0 24 24"><circle cx="5.5" cy="15" r="3.5"></circle><circle cx="18.5" cy="15" r="3.5"></circle><polyline points="5.5 11.5 5.5 5.5 11.5 3.5 15.5 8.5 18.5 11.5"></polyline><line x1="10" y1="5.5" x2="10" y2="15"></line></svg>
+          </div>
+          <span class="gear-status-badge badge-alert">Service due</span>
+          <div class="gear-wear-bar"><div class="gear-wear-bar-fill" style="width:67%"></div></div>
+        </div>
+        <div class="gear-card-body">
+          <p class="gear-card-name">Cannondale Topstone</p>
+          <p class="gear-card-brand">Cannondale · Gravel bike · Carbon</p>
+          <div class="gear-stats">
+            <div class="gear-stat">
+              <span class="gear-stat-val">1,380</span>
+              <span class="gear-stat-lbl">km</span>
+            </div>
+            <div class="gear-stat">
+              <span class="gear-stat-val">92</span>
+              <span class="gear-stat-lbl">rides</span>
+            </div>
+            <div class="gear-stat">
+              <span class="gear-stat-val">67%</span>
+              <span class="gear-stat-lbl">wear</span>
+            </div>
+          </div>
+          <div class="gear-card-footer">
+            <span class="gear-last-used">
+              <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"></rect><line x1="8" y1="3" x2="8" y2="7"></line><line x1="16" y1="3" x2="16" y2="7"></line><line x1="4" y1="10" x2="20" y2="10"></line></svg>
+              May 30, 2026
+            </span>
+            <div class="gear-card-actions" onclick="event.stopPropagation()">
+              <button class="gc-btn" title="Edit">
+                <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              </button>
+              <button class="gc-btn" title="More">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.2" fill="currentColor" stroke="none"></circle><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"></circle><circle cx="12" cy="19" r="1.2" fill="currentColor" stroke="none"></circle></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bike 3 — Retired -->
+      <div class="gear-card is-retired wear-high" onclick="openSheet('specialized')" data-gear-id="specialized">
+        <div class="gear-card-img">
+          <div class="gear-card-img-icon">
+            <svg viewBox="0 0 24 24"><circle cx="5.5" cy="15" r="3.5"></circle><circle cx="18.5" cy="15" r="3.5"></circle><polyline points="5.5 11.5 5.5 5.5 11.5 3.5 15.5 8.5 18.5 11.5"></polyline><line x1="10" y1="5.5" x2="10" y2="15"></line></svg>
+          </div>
+          <span class="gear-status-badge badge-retired">Retired</span>
+          <div class="gear-wear-bar"><div class="gear-wear-bar-fill" style="width:100%"></div></div>
+        </div>
+        <div class="gear-card-body">
+          <p class="gear-card-name">Specialized Allez</p>
+          <p class="gear-card-brand">Specialized · Road bike · Alloy</p>
+          <div class="gear-stats">
+            <div class="gear-stat">
+              <span class="gear-stat-val">4,820</span>
+              <span class="gear-stat-lbl">km</span>
+            </div>
+            <div class="gear-stat">
+              <span class="gear-stat-val">341</span>
+              <span class="gear-stat-lbl">rides</span>
+            </div>
+            <div class="gear-stat">
+              <span class="gear-stat-val">100%</span>
+              <span class="gear-stat-lbl">wear</span>
+            </div>
+          </div>
+          <div class="gear-card-footer">
+            <span class="gear-last-used">
+              <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"></rect><line x1="8" y1="3" x2="8" y2="7"></line><line x1="16" y1="3" x2="16" y2="7"></line><line x1="4" y1="10" x2="20" y2="10"></line></svg>
+              Nov 12, 2025
+            </span>
+            <div class="gear-card-actions" onclick="event.stopPropagation()">
+              <button class="gc-btn" title="Edit">
+                <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              </button>
+              <button class="gc-btn" title="More">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.2" fill="currentColor" stroke="none"></circle><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"></circle><circle cx="12" cy="19" r="1.2" fill="currentColor" stroke="none"></circle></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ——— Shoes ——— -->
+  <section class="gear-section" data-screen-label="Shoes">
+    <div class="gear-section-head">
+      <div class="gear-section-icon">
+        <!-- shoe icon -->
+        <svg viewBox="0 0 24 24"><path d="M2 17h13l5-5-3-2-3 3H9L6 9H3a1 1 0 0 0-1 1v6a1 1 0 0 0 0 1z" stroke="var(--ink-2)" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path><path d="M9 17v1a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-1" stroke="var(--ink-2)" fill="none" stroke-width="1.8" stroke-linecap="round"></path></svg>
+      </div>
+      <h2 class="gear-section-title">Running Shoes</h2>
+      <span class="gear-section-count">4 pairs</span>
+    </div>
+    <div class="gear-grid">
+
+      <!-- Shoe 1 — Primary, low wear -->
+      <div class="gear-card wear-low" onclick="openSheet('vaporfly')" data-gear-id="vaporfly">
+        <div class="gear-card-img">
+          <div class="gear-card-img-icon">
+            <svg viewBox="0 0 24 24"><path d="M2 17h13l5-5-3-2-3 3H9L6 9H3a1 1 0 0 0-1 1v6a1 1 0 0 0 0 1z" fill="none" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"></path><path d="M9 17v1a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-1" fill="none" stroke-width="1.0" stroke-linecap="round"></path></svg>
+          </div>
+          <span class="gear-status-badge badge-primary">Primary</span>
+          <div class="gear-wear-bar"><div class="gear-wear-bar-fill" style="width:31%"></div></div>
+        </div>
+        <div class="gear-card-body">
+          <p class="gear-card-name">Nike Vaporfly 3</p>
+          <p class="gear-card-brand">Nike · Race day · Carbon plate</p>
+          <div class="gear-stats">
+            <div class="gear-stat">
+              <span class="gear-stat-val">248</span>
+              <span class="gear-stat-lbl">km</span>
+            </div>
+            <div class="gear-stat">
+              <span class="gear-stat-val">38</span>
+              <span class="gear-stat-lbl">runs</span>
+            </div>
+            <div class="gear-stat">
+              <span class="gear-stat-val">31%</span>
+              <span class="gear-stat-lbl">wear</span>
+            </div>
+          </div>
+          <div class="gear-card-footer">
+            <span class="gear-last-used">
+              <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"></rect><line x1="8" y1="3" x2="8" y2="7"></line><line x1="16" y1="3" x2="16" y2="7"></line><line x1="4" y1="10" x2="20" y2="10"></line></svg>
+              Jun 8, 2026
+            </span>
+            <div class="gear-card-actions" onclick="event.stopPropagation()">
+              <button class="gc-btn" title="Edit">
+                <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              </button>
+              <button class="gc-btn" title="More">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.2" fill="currentColor" stroke="none"></circle><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"></circle><circle cx="12" cy="19" r="1.2" fill="currentColor" stroke="none"></circle></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Shoe 2 — Trail, mid wear -->
+      <div class="gear-card wear-mid" onclick="openSheet('speedgoat')" data-gear-id="speedgoat">
+        <div class="gear-card-img">
+          <div class="gear-card-img-icon">
+            <svg viewBox="0 0 24 24"><path d="M2 17h13l5-5-3-2-3 3H9L6 9H3a1 1 0 0 0-1 1v6a1 1 0 0 0 0 1z" fill="none" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"></path><path d="M9 17v1a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-1" fill="none" stroke-width="1.0" stroke-linecap="round"></path></svg>
+          </div>
+          <div class="gear-wear-bar"><div class="gear-wear-bar-fill" style="width:55%"></div></div>
+        </div>
+        <div class="gear-card-body">
+          <p class="gear-card-name">Hoka Speedgoat 5</p>
+          <p class="gear-card-brand">Hoka · Trail · Vibram outsole</p>
+          <div class="gear-stats">
+            <div class="gear-stat">
+              <span class="gear-stat-val">441</span>
+              <span class="gear-stat-lbl">km</span>
+            </div>
+            <div class="gear-stat">
+              <span class="gear-stat-val">64</span>
+              <span class="gear-stat-lbl">runs</span>
+            </div>
+            <div class="gear-stat">
+              <span class="gear-stat-val">55%</span>
+              <span class="gear-stat-lbl">wear</span>
+            </div>
+          </div>
+          <div class="gear-card-footer">
+            <span class="gear-last-used">
+              <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"></rect><line x1="8" y1="3" x2="8" y2="7"></line><line x1="16" y1="3" x2="16" y2="7"></line><line x1="4" y1="10" x2="20" y2="10"></line></svg>
+              Jun 5, 2026
+            </span>
+            <div class="gear-card-actions" onclick="event.stopPropagation()">
+              <button class="gc-btn" title="Edit">
+                <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              </button>
+              <button class="gc-btn" title="More">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.2" fill="currentColor" stroke="none"></circle><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"></circle><circle cx="12" cy="19" r="1.2" fill="currentColor" stroke="none"></circle></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Shoe 3 — High wear, alert -->
+      <div class="gear-card wear-high" onclick="openSheet('pegasus')" data-gear-id="pegasus">
+        <div class="gear-card-img">
+          <div class="gear-card-img-icon">
+            <svg viewBox="0 0 24 24"><path d="M2 17h13l5-5-3-2-3 3H9L6 9H3a1 1 0 0 0-1 1v6a1 1 0 0 0 0 1z" fill="none" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"></path><path d="M9 17v1a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-1" fill="none" stroke-width="1.0" stroke-linecap="round"></path></svg>
+          </div>
+          <span class="gear-status-badge badge-alert">Replace soon</span>
+          <div class="gear-wear-bar"><div class="gear-wear-bar-fill" style="width:88%"></div></div>
+        </div>
+        <div class="gear-card-body">
+          <p class="gear-card-name">Nike Pegasus 41</p>
+          <p class="gear-card-brand">Nike · Daily trainer · Foam midsole</p>
+          <div class="gear-stats">
+            <div class="gear-stat">
+              <span class="gear-stat-val">704</span>
+              <span class="gear-stat-lbl">km</span>
+            </div>
+            <div class="gear-stat">
+              <span class="gear-stat-val">98</span>
+              <span class="gear-stat-lbl">runs</span>
+            </div>
+            <div class="gear-stat">
+              <span class="gear-stat-val">88%</span>
+              <span class="gear-stat-lbl">wear</span>
+            </div>
+          </div>
+          <div class="gear-card-footer">
+            <span class="gear-last-used">
+              <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"></rect><line x1="8" y1="3" x2="8" y2="7"></line><line x1="16" y1="3" x2="16" y2="7"></line><line x1="4" y1="10" x2="20" y2="10"></line></svg>
+              Jun 3, 2026
+            </span>
+            <div class="gear-card-actions" onclick="event.stopPropagation()">
+              <button class="gc-btn" title="Edit">
+                <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              </button>
+              <button class="gc-btn" title="More">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.2" fill="currentColor" stroke="none"></circle><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"></circle><circle cx="12" cy="19" r="1.2" fill="currentColor" stroke="none"></circle></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+
+    </div>
+  </section>
+
+</main>
+
+<!-- ============ Gear Detail Sheet ============ -->
+<div class="gear-sheet" id="gear-sheet" onclick="closeSheetOnBg(event)">
+  <div class="gear-sheet-inner" id="gear-sheet-inner">
+    <div class="gear-sheet-img" id="gs-img">
+      <div class="gear-sheet-img-icon" id="gs-img-icon">
+        <!-- icon injected by JS -->
+      </div>
+      <button class="gear-sheet-close" onclick="closeSheet()">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div class="gear-sheet-body">
+      <h2 class="gear-sheet-name" id="gs-name"></h2>
+      <p class="gear-sheet-brand" id="gs-brand"></p>
+      <div class="gear-sheet-stats" id="gs-stats"></div>
+      <div class="gear-wear-section">
+        <div class="gear-wear-label">
+          <span class="wear-name">Wear</span>
+          <span class="wear-pct" id="gs-wear-pct"></span>
+        </div>
+        <div class="gear-wear-track">
+          <div class="gear-wear-track-fill" id="gs-wear-fill"></div>
+        </div>
+      </div>
+      <div class="gear-sheet-divider"></div>
+      <div class="gear-sheet-row">
+        <span class="gear-sheet-row-label">Last used</span>
+        <span class="gear-sheet-row-val" id="gs-last-used"></span>
+      </div>
+      <div class="gear-sheet-row">
+        <span class="gear-sheet-row-label">Added</span>
+        <span class="gear-sheet-row-val" id="gs-added"></span>
+      </div>
+      <div class="gear-sheet-row">
+        <span class="gear-sheet-row-label">Type</span>
+        <span class="gear-sheet-row-val" id="gs-type"></span>
+      </div>
+      <div class="gear-sheet-divider"></div>
+      <div class="gear-sheet-actions">
+        <button class="gs-btn gs-btn-ghost">
+          <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+          Edit
+        </button>
+        <button class="gs-btn gs-btn-primary">
+          <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+          View Activities
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="{% static 'js/image-slot.js' %}"></script>
+<script>
+// ============ Gear data ============
+const GEAR_DB = {
+  cervelo: {
+    name: "Cervélo R5", brand: "Cervélo · Road bike · Carbon",
+    km: "2,140", rides: "184", wear: 22,
+    lastUsed: "Jun 6, 2026", added: "Mar 2025", type: "Road bike",
+    icon: "bike", stat3label: "Wear"
+  },
+  cannondale: {
+    name: "Cannondale Topstone", brand: "Cannondale · Gravel bike · Carbon",
+    km: "1,380", rides: "92", wear: 67,
+    lastUsed: "May 30, 2026", added: "Jul 2024", type: "Gravel bike",
+    icon: "bike", stat3label: "Wear"
+  },
+  specialized: {
+    name: "Specialized Allez", brand: "Specialized · Road bike · Alloy",
+    km: "4,820", rides: "341", wear: 100,
+    lastUsed: "Nov 12, 2025", added: "Jan 2022", type: "Road bike",
+    icon: "bike", stat3label: "Wear"
+  },
+  vaporfly: {
+    name: "Nike Vaporfly 3", brand: "Nike · Race day · Carbon plate",
+    km: "248", rides: "38", wear: 31,
+    lastUsed: "Jun 8, 2026", added: "Jan 2026", type: "Running shoes",
+    icon: "shoe", stat3label: "Wear"
+  },
+  speedgoat: {
+    name: "Hoka Speedgoat 5", brand: "Hoka · Trail · Vibram outsole",
+    km: "441", rides: "64", wear: 55,
+    lastUsed: "Jun 5, 2026", added: "Sep 2025", type: "Trail shoes",
+    icon: "shoe", stat3label: "Wear"
+  },
+  pegasus: {
+    name: "Nike Pegasus 41", brand: "Nike · Daily trainer · Foam midsole",
+    km: "704", rides: "98", wear: 88,
+    lastUsed: "Jun 3, 2026", added: "Apr 2025", type: "Running shoes",
+    icon: "shoe", stat3label: "Wear"
+  }
+};
+
+const BIKE_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round" style="width:100px;height:100px"><circle cx="5.5" cy="15" r="3.5"></circle><circle cx="18.5" cy="15" r="3.5"></circle><polyline points="5.5 11.5 5.5 5.5 11.5 3.5 15.5 8.5 18.5 11.5"></polyline><line x1="10" y1="5.5" x2="10" y2="15"></line></svg>`;
+const SHOE_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round" style="width:100px;height:100px"><path d="M2 17h13l5-5-3-2-3 3H9L6 9H3a1 1 0 0 0-1 1v6a1 1 0 0 0 0 1z"></path><path d="M9 17v1a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-1"></path></svg>`;
+
+function wearColor(pct) {
+  if (pct < 40) return '#22C065';
+  if (pct < 75) return '#F5A623';
+  return '#EE4D0D';
+}
+
+function openSheet(id) {
+  const g = GEAR_DB[id];
+  if (!g) return;
+  document.getElementById('gs-name').textContent = g.name;
+  document.getElementById('gs-brand').textContent = g.brand;
+  document.getElementById('gs-img-icon').innerHTML = g.icon === 'bike' ? BIKE_SVG : SHOE_SVG;
+  document.getElementById('gs-stats').innerHTML = `
+    <div class="gear-sheet-stat">
+      <div class="gear-sheet-stat-val">${g.km}</div>
+      <div class="gear-sheet-stat-lbl">km logged</div>
+    </div>
+    <div class="gear-sheet-stat">
+      <div class="gear-sheet-stat-val">${g.rides}</div>
+      <div class="gear-sheet-stat-lbl">${g.icon === 'bike' ? 'rides' : 'runs'}</div>
+    </div>
+    <div class="gear-sheet-stat">
+      <div class="gear-sheet-stat-val">${g.wear}%</div>
+      <div class="gear-sheet-stat-lbl">wear</div>
+    </div>`;
+  document.getElementById('gs-wear-pct').textContent = g.wear + '%';
+  const fill = document.getElementById('gs-wear-fill');
+  fill.style.width = g.wear + '%';
+  fill.style.background = wearColor(g.wear);
+  document.getElementById('gs-last-used').textContent = g.lastUsed;
+  document.getElementById('gs-added').textContent = g.added;
+  document.getElementById('gs-type').textContent = g.type;
+  document.getElementById('gear-sheet').classList.add('open');
+  document.addEventListener('keydown', sheetKeyHandler);
+}
+
+function closeSheet() {
+  document.getElementById('gear-sheet').classList.remove('open');
+  document.removeEventListener('keydown', sheetKeyHandler);
+}
+function closeSheetOnBg(e) {
+  if (e.target === document.getElementById('gear-sheet')) closeSheet();
+}
+function sheetKeyHandler(e) {
+  if (e.key === 'Escape') closeSheet();
+}
+
+function openAddSheet() {
+  // stub — would open an add-gear form
+  alert('Add Gear — coming soon');
+}
+
+// Nav user menu
+function toggleUserMenu(e) {
+  e.stopPropagation();
+  const trigger = document.getElementById('user-menu-trigger');
+  const isOpen = trigger.getAttribute('aria-expanded') === 'true';
+  trigger.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+}
+document.addEventListener('click', function(e) {
+  const trigger = document.getElementById('user-menu-trigger');
+  if (trigger && !trigger.contains(e.target)) trigger.setAttribute('aria-expanded', 'false');
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.getElementById('user-menu-trigger').setAttribute('aria-expanded', 'false');
+});
+</script>
+</body>
+</html>

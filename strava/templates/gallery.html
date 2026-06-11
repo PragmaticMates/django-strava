@@ -1,0 +1,475 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-density="comfortable">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>django-strava · Gallery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/classic.css' %}">
+<link rel="stylesheet" href="{% static 'css/gallery.css' %}">
+
+</head>
+<body>
+
+<!-- ============ Nav ============ -->
+<header class="nav" data-screen-label="Top nav">
+  <a class="logo" href="{% url 'strava:dashboard' %}">
+    <svg width="178" height="32" viewBox="0 0 178 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="django-strava">
+      <rect x="2" y="8" width="16" height="16" rx="2.5" transform="rotate(45 10 16)" fill="var(--accent)"/>
+      <rect x="5.5" y="11.5" width="9" height="9" rx="1.5" transform="rotate(45 10 16)" fill="white" opacity="0.28"/>
+      <circle cx="10" cy="16" r="2" fill="white" opacity="0.9"/>
+      <text x="30" y="23" font-family="'Barlow Condensed', 'Arial Narrow', sans-serif" font-weight="700" font-size="21" letter-spacing="0.01em">
+        <tspan fill="#1F1B18">django</tspan><tspan fill="var(--accent)">-strava</tspan>
+      </text>
+    </svg>
+  </a>
+  <nav class="nav-items">
+    <a class="nav-item" href="{% url 'strava:dashboard' %}">
+      <svg viewBox="0 0 24 24"><polyline points="3 11 12 4 21 11"></polyline><polyline points="5 10 5 20 19 20 19 10"></polyline></svg>
+      Dashboard
+    </a>
+    <a class="nav-item" href="{% url 'strava:activities' %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"></polygon></svg>
+      Activities
+    </a>
+    <a class="nav-item" href="{% url 'strava:gear' %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18h18"></path><path d="M5 18V9c0-1 .5-2 2-2h4l4 3h2c1 0 2 .5 2 2v6"></path><path d="M9 7V6"></path><path d="M5 14h14"></path></svg>
+      Gear
+    </a>
+    <a class="nav-item" href="{% url 'strava:gallery' %}" aria-current="page">
+      <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"></rect><circle cx="8.5" cy="10" r="1.6"></circle><polyline points="5 18 11 12 15 16 18 13 21 16"></polyline></svg>
+      Gallery
+    </a>
+    <a class="nav-item" href="#">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><polyline points="8 7 3 12 8 17"></polyline><polyline points="16 7 21 12 16 17"></polyline></svg>
+      Compare
+    </a>
+  </nav>
+  <div class="nav-user" id="user-menu-trigger" onclick="toggleUserMenu(event)" aria-haspopup="true" aria-expanded="false">
+    <image-slot id="avatar" class="avatar-slot" shape="circle" placeholder=""></image-slot>
+    <span class="uname">Erik Telepovsky</span>
+    <span class="caret" id="user-caret">▾</span>
+    <div class="user-dropdown" id="user-dropdown" role="menu">
+      <a class="user-dd-item" href="#" role="menuitem">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4.5"></circle><path d="M3 21c0-4 4-7 9-7s9 3 9 7"></path></svg>
+        Profile
+      </a>
+      <a class="user-dd-item" href="#" role="menuitem">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"></circle><path d="M2 21c0-3.5 3.1-6 7-6s7 2.5 7 6"></path><circle cx="18" cy="9" r="2.5"></circle><path d="M16 21c0-2.5 2-4 4.5-4"></path></svg>
+        Followers
+      </a>
+      <a class="user-dd-item" href="#" role="menuitem">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="15" cy="8" r="3.5"></circle><path d="M8 21c0-3.5 3.1-6 7-6s7 2.5 7 6"></path><circle cx="6" cy="9" r="2.5"></circle><path d="M1 21c0-2.5 2-4 4.5-4"></path></svg>
+        Following
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- ============ Gallery Page ============ -->
+<main class="gallery-page" data-screen-label="Gallery">
+
+  <!-- Hero / header -->
+  <div class="gallery-hero">
+    <div class="gallery-hero-left">
+      <p class="gallery-hero-eyebrow">Media Library</p>
+      <h1>Gallery</h1>
+      <p class="gallery-hero-count" id="gallery-count">2,340 photos &amp; videos</p>
+    </div>
+    <div class="gallery-filters">
+      <div class="gf-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" placeholder="Search photos &amp; videos…" id="gallery-search" oninput="filterGallery()">
+      </div>
+      <button class="gf-btn" id="btn-year" onclick="toggleDropdown('year-dd', this)">
+        <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"></rect><line x1="8" y1="3" x2="8" y2="7"></line><line x1="16" y1="3" x2="16" y2="7"></line><line x1="4" y1="10" x2="20" y2="10"></line></svg>
+        2026 <span class="caret">▾</span>
+      </button>
+      <button class="gf-btn" id="btn-sort" onclick="toggleDropdown('sort-dd', this)">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="6" y1="12" x2="18" y2="12"></line><line x1="9" y1="18" x2="15" y2="18"></line></svg>
+        Newest first <span class="caret">▾</span>
+      </button>
+      <div class="view-toggle" id="view-toggle">
+        <button class="active" data-view="grid" onclick="setView('grid', this)" title="Grid — with activity info">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <rect x="3" y="3" width="8" height="8" rx="1"></rect>
+            <line x1="3" y1="14" x2="11" y2="14"></line><line x1="3" y1="17" x2="9" y2="17"></line>
+            <rect x="13" y="3" width="8" height="8" rx="1"></rect>
+            <line x1="13" y1="14" x2="21" y2="14"></line><line x1="13" y1="17" x2="19" y2="17"></line>
+          </svg>
+        </button>
+        <button data-view="squares" onclick="setView('squares', this)" title="Squares — photo only, 1:1">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <rect x="3" y="3" width="8" height="8" rx="1"></rect>
+            <rect x="13" y="3" width="8" height="8" rx="1"></rect>
+            <rect x="3" y="13" width="8" height="8" rx="1"></rect>
+            <rect x="13" y="13" width="8" height="8" rx="1"></rect>
+          </svg>
+        </button>
+        <button data-view="wall" onclick="setView('wall', this)" title="Wall — original ratio">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <rect x="3" y="3" width="8" height="12" rx="1"></rect>
+            <rect x="13" y="3" width="8" height="7" rx="1"></rect>
+            <rect x="13" y="12" width="8" height="9" rx="1"></rect>
+            <rect x="3" y="17" width="8" height="4" rx="1"></rect>
+          </svg>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Sport filter tabs -->
+  <div class="sport-tabs" id="sport-tabs">
+    <button class="sport-tab active" data-sport="all" onclick="setSport('all', this)">
+      All Media
+    </button>
+    <button class="sport-tab" data-sport="run" onclick="setSport('run', this)">
+      <svg viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.4"></circle><circle cx="18" cy="6" r="2.4"></circle><path d="M8 17 C 13 15, 11 8, 16 7"></path></svg>
+      Run
+    </button>
+    <button class="sport-tab" data-sport="ride" onclick="setSport('ride', this)">
+      <svg viewBox="0 0 24 24"><circle cx="6" cy="15" r="3"></circle><circle cx="18" cy="15" r="3"></circle><polyline points="6 12 6 6 12 4 16 8 18 12"></polyline></svg>
+      Ride
+    </button>
+    <button class="sport-tab" data-sport="trail" onclick="setSport('trail', this)">
+      <svg viewBox="0 0 24 24"><polyline points="3 20 10 7 14 13 17 9 21 20"></polyline></svg>
+      Trail Run
+    </button>
+    <button class="sport-tab" data-sport="hike" onclick="setSport('hike', this)">
+      <svg viewBox="0 0 24 24"><polyline points="3 20 10 7 14 13 17 9 21 20"></polyline><circle cx="17" cy="6" r="1.5"></circle></svg>
+      Hike
+    </button>
+    <button class="sport-tab" data-sport="swim" onclick="setSport('swim', this)">
+      <svg viewBox="0 0 24 24"><path d="M2 17c2-2 4-2 6 0s4 2 6 0 4-2 6 0"></path><path d="M2 12c2-2 4-2 6 0s4 2 6 0 4-2 6 0"></path></svg>
+      Swim
+    </button>
+    <button class="sport-tab" data-sport="video" onclick="setSport('video', this)">
+      <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+      Videos
+    </button>
+  </div>
+
+  <!-- Grid -->
+  <div class="gallery-grid" id="gallery-grid">
+    <!-- Dynamically populated by JS -->
+  </div>
+
+  <div class="gallery-empty" id="gallery-empty">
+    <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"></rect><circle cx="8.5" cy="10" r="1.6"></circle><polyline points="5 18 11 12 15 16 18 13 21 16"></polyline></svg>
+    <h3>No media found</h3>
+    <p>Try a different sport or search term</p>
+  </div>
+
+  <div class="load-more-wrap" id="load-more-wrap">
+    <button class="load-more-btn" onclick="loadMore()">Load more</button>
+  </div>
+
+</main>
+
+<!-- ============ Lightbox ============ -->
+<div class="lightbox" id="lightbox" onclick="closeLightboxOnBg(event)">
+  <div class="lightbox-inner">
+    <div class="lightbox-media">
+      <div class="lightbox-media-inner" id="lb-media-inner">
+        <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"></rect><circle cx="8.5" cy="10" r="1.6"></circle><polyline points="5 18 11 12 15 16 18 13 21 16"></polyline></svg>
+        <span id="lb-placeholder-label">photo</span>
+      </div>
+      <button class="lightbox-close" onclick="closeLightbox()">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+      <button class="lightbox-nav lightbox-prev" onclick="lbNav(-1)">
+        <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      </button>
+      <button class="lightbox-nav lightbox-next" onclick="lbNav(1)">
+        <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </button>
+    </div>
+    <div class="lightbox-footer">
+      <div class="lightbox-info">
+        <h2 class="lightbox-title" id="lb-title">Photo Title</h2>
+        <div class="lightbox-meta">
+          <span id="lb-meta-date">
+            <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"></rect><line x1="8" y1="3" x2="8" y2="7"></line><line x1="16" y1="3" x2="16" y2="7"></line><line x1="4" y1="10" x2="20" y2="10"></line></svg>
+            Jun 8, 2026
+          </span>
+          <span id="lb-meta-act">
+            <svg viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.4"></circle><circle cx="18" cy="6" r="2.4"></circle><path d="M8 17 C 13 15, 11 8, 16 7"></path></svg>
+            Run
+          </span>
+          <span id="lb-meta-dist">
+            <svg viewBox="0 0 24 24"><polyline points="3 20 10 7 14 13 17 9 21 20"></polyline></svg>
+            12.4 km
+          </span>
+        </div>
+      </div>
+      <div class="lightbox-actions">
+        <button class="lb-btn lb-btn-ghost">
+          <svg viewBox="0 0 24 24"><polyline points="9 4 4 4 4 20 20 20 20 15"></polyline><line x1="13" y1="11" x2="20" y2="4"></line><polyline points="14 4 20 4 20 10"></polyline></svg>
+          Share
+        </button>
+        <button class="lb-btn lb-btn-primary">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          Download
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="{% static 'js/image-slot.js' %}"></script>
+<script>
+// ============ Gallery data ============
+const GALLERY_DATA = [
+  { id:1,  title:"Summit view — High Tatras",       sport:"trail", date:"Jun 8, 2026",  dist:"32.4 km", type:"photo", liked:true,  kudos:24, comments:5 },
+  { id:2,  title:"Road climb, Malá Fatra",          sport:"ride",  date:"Jun 6, 2026",  dist:"45.2 km", type:"photo", liked:false, kudos:11, comments:2 },
+  { id:3,  title:"Finish line sprint",              sport:"run",   date:"Jun 4, 2026",  dist:"7.2 km",  type:"video", liked:true,  kudos:38, comments:9, duration:"0:42" },
+  { id:4,  title:"Open water — Štrkovec lake",      sport:"swim",  date:"Jun 4, 2026",  dist:"2.4 km",  type:"photo", liked:false, kudos:6,  comments:1 },
+  { id:5,  title:"Ridge trail, Malé Karpaty",       sport:"hike",  date:"Jun 5, 2026",  dist:"18.4 km", type:"photo", liked:true,  kudos:17, comments:3 },
+  { id:6,  title:"Morning run — Bratislava",        sport:"run",   date:"Jun 3, 2026",  dist:"5.5 km",  type:"photo", liked:false, kudos:4,  comments:0 },
+  { id:7,  title:"Gravel grind — Záhorie loop",     sport:"ride",  date:"May 30, 2026", dist:"61.0 km", type:"video", liked:true,  kudos:52, comments:14, duration:"2:14" },
+  { id:8,  title:"Trail run — Devínska Kobyla",     sport:"trail", date:"May 28, 2026", dist:"12.1 km", type:"photo", liked:false, kudos:9,  comments:2 },
+  { id:9,  title:"Recovery jog — riverside",        sport:"run",   date:"May 26, 2026", dist:"4.8 km",  type:"photo", liked:true,  kudos:3,  comments:0 },
+  { id:10, title:"Mountain pass, Chopok",           sport:"hike",  date:"May 23, 2026", dist:"22.1 km", type:"photo", liked:false, kudos:21, comments:6 },
+  { id:11, title:"Interval session — track",       sport:"run",   date:"May 21, 2026", dist:"8.0 km",  type:"video", liked:true,  kudos:15, comments:4, duration:"1:08" },
+  { id:12, title:"Sunday century — Danube route",  sport:"ride",  date:"May 18, 2026", dist:"103 km",  type:"photo", liked:false, kudos:44, comments:11 },
+  { id:13, title:"Trail descent — Tatranská Lomnica", sport:"trail", date:"May 15, 2026", dist:"9.6 km", type:"photo", liked:true, kudos:31, comments:7 },
+  { id:14, title:"Pool swim — 3 km",               sport:"swim",  date:"May 13, 2026", dist:"3.0 km",  type:"photo", liked:false, kudos:2,  comments:0 },
+  { id:15, title:"Pre-race warmup",                sport:"run",   date:"May 10, 2026", dist:"3.2 km",  type:"video", liked:true,  kudos:8,  comments:2, duration:"0:28" },
+  { id:16, title:"Alpine meadow — Roháče",         sport:"hike",  date:"May 7, 2026",  dist:"15.0 km", type:"photo", liked:false, kudos:19, comments:5 },
+  { id:17, title:"Evening ride — city loop",       sport:"ride",  date:"May 4, 2026",  dist:"28.6 km", type:"photo", liked:true,  kudos:7,  comments:1 },
+  { id:18, title:"Podgorica trail race",           sport:"trail", date:"Apr 28, 2026", dist:"21.4 km", type:"photo", liked:false, kudos:55, comments:18 },
+  { id:19, title:"Cross-country skiing convert",   sport:"run",   date:"Apr 22, 2026", dist:"10.0 km", type:"photo", liked:true,  kudos:12, comments:3 },
+  { id:20, title:"Bikepacking — 2 day trip",       sport:"ride",  date:"Apr 18, 2026", dist:"178 km",  type:"video", liked:true,  kudos:87, comments:22, duration:"4:51" },
+];
+
+const SPORT_LABELS = { run:"Run", ride:"Ride", trail:"Trail Run", hike:"Hike", swim:"Swim" };
+const SPORT_ICONS = {
+  run:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="6" cy="18" r="2.4"></circle><circle cx="18" cy="6" r="2.4"></circle><path d="M8 17 C 13 15, 11 8, 16 7"></path></svg>`,
+  ride: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="6" cy="15" r="3"></circle><circle cx="18" cy="15" r="3"></circle><polyline points="6 12 6 6 12 4 16 8 18 12"></polyline></svg>`,
+  trail:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="3 20 10 7 14 13 17 9 21 20"></polyline></svg>`,
+  hike: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="3 20 10 7 14 13 17 9 21 20"></polyline><circle cx="17" cy="6" r="1.5"></circle></svg>`,
+  swim: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 17c2-2 4-2 6 0s4 2 6 0 4-2 6 0"></path><path d="M2 12c2-2 4-2 6 0s4 2 6 0 4-2 6 0"></path></svg>`,
+};
+
+let currentSport = "all";
+let currentSearch = "";
+let lbIndex = 0;
+let visibleItems = [];
+
+function getFiltered() {
+  return GALLERY_DATA.filter(item => {
+    const matchSport = currentSport === "all"
+      || (currentSport === "video" ? item.type === "video" : item.sport === currentSport);
+    const q = currentSearch.trim().toLowerCase();
+    const matchSearch = !q || item.title.toLowerCase().includes(q) || item.sport.includes(q);
+    return matchSport && matchSearch;
+  });
+}
+
+function renderGallery() {
+  const grid = document.getElementById('gallery-grid');
+  const empty = document.getElementById('gallery-empty');
+  const loadWrap = document.getElementById('load-more-wrap');
+  visibleItems = getFiltered();
+
+  document.getElementById('gallery-count').textContent =
+    visibleItems.length === GALLERY_DATA.length
+      ? `${GALLERY_DATA.length} photos & videos`
+      : `${visibleItems.length} of ${GALLERY_DATA.length} shown`;
+
+  if (visibleItems.length === 0) {
+    grid.innerHTML = '';
+    empty.style.display = 'flex';
+    loadWrap.style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  loadWrap.style.display = visibleItems.length >= 12 ? 'flex' : 'none';
+
+  grid.innerHTML = visibleItems.map((item, idx) => buildCard(item, idx)).join('');
+}
+
+function buildCard(item, idx) {
+  const isVideo = item.type === 'video';
+  const label = SPORT_LABELS[item.sport] || item.sport;
+  const icon = SPORT_ICONS[item.sport] || '';
+  const likedClass = item.liked ? 'liked' : '';
+
+  const badgeHtml = `
+    <div class="gallery-type-badge">
+      <span class="fc-pill">${icon} ${label}</span>
+    </div>`;
+
+  const videoOverlay = isVideo ? `
+    <div class="video-play-btn">
+      <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+    </div>
+    <span class="video-duration">${item.duration}</span>` : '';
+
+  const photoSvg = isVideo
+    ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`
+    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="5" width="18" height="14" rx="2"></rect><circle cx="8.5" cy="10" r="1.6"></circle><polyline points="5 18 11 12 15 16 18 13 21 16"></polyline></svg>`;
+
+  return `
+    <div class="gallery-item${isVideo ? ' is-video' : ''}" onclick="openLightbox(${idx})" data-id="${item.id}">
+      <div class="gallery-img">
+        <div class="gallery-img-inner">
+          ${photoSvg}
+          <span>${item.title}</span>
+        </div>
+        ${badgeHtml}
+        ${videoOverlay}
+        <div class="gallery-hover-overlay">
+          <div class="hov-title">${item.title}</div>
+          <div class="hov-meta">
+            ${icon} ${SPORT_LABELS[item.sport] || item.sport} · ${item.dist}
+            <span class="hov-kudos">
+              <svg viewBox="0 0 24 24" fill="${item.liked ? '#fff' : 'none'}" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+              ${item.kudos}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div class="gallery-item-footer">
+        <h3 class="gallery-item-title">${item.title}</h3>
+        <div class="gallery-item-meta">
+          <span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="5" width="16" height="15" rx="2"></rect><line x1="8" y1="3" x2="8" y2="7"></line><line x1="16" y1="3" x2="16" y2="7"></line><line x1="4" y1="10" x2="20" y2="10"></line></svg>
+            ${item.date}
+          </span>
+          <span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="3 20 10 7 14 13 17 9 21 20"></polyline></svg>
+            ${item.dist}
+          </span>
+        </div>
+        <div class="gallery-item-actions" onclick="event.stopPropagation()">
+          <button class="gi-act-btn ${likedClass}" onclick="toggleLike(${item.id}, this)">
+            <svg viewBox="0 0 24 24" fill="${item.liked ? 'var(--accent)' : 'none'}" stroke="${item.liked ? 'var(--accent)' : 'currentColor'}" stroke-width="1.8" stroke-linecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+            <span>${item.kudos}</span>
+          </button>
+          <button class="gi-act-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            <span>${item.comments}</span>
+          </button>
+          <button class="gi-act-btn" style="margin-left:auto;" title="Share">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="9 4 4 4 4 20 20 20 20 15"></polyline><line x1="13" y1="11" x2="20" y2="4"></line><polyline points="14 4 20 4 20 10"></polyline></svg>
+          </button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function toggleLike(id, btn) {
+  const item = GALLERY_DATA.find(d => d.id === id);
+  if (!item) return;
+  item.liked = !item.liked;
+  item.kudos += item.liked ? 1 : -1;
+  const svgEl = btn.querySelector('svg');
+  const numEl = btn.querySelector('span');
+  btn.classList.toggle('liked', item.liked);
+  svgEl.setAttribute('fill', item.liked ? 'var(--accent)' : 'none');
+  svgEl.setAttribute('stroke', item.liked ? 'var(--accent)' : 'currentColor');
+  numEl.textContent = item.kudos;
+}
+
+function setSport(sport, btn) {
+  currentSport = sport;
+  document.querySelectorAll('.sport-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderGallery();
+}
+
+function filterGallery() {
+  currentSearch = document.getElementById('gallery-search').value;
+  renderGallery();
+}
+
+function setView(view, btn) {
+  document.querySelectorAll('.view-toggle button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const grid = document.getElementById('gallery-grid');
+  grid.className = 'gallery-grid';
+  if (view === 'squares' || view === 'wall') {
+    grid.setAttribute('data-view', view);
+  } else {
+    grid.removeAttribute('data-view');
+  }
+}
+
+function loadMore() {
+  document.getElementById('load-more-wrap').style.display = 'none';
+}
+
+// Lightbox
+function openLightbox(idx) {
+  lbIndex = idx;
+  updateLightbox();
+  document.getElementById('lightbox').classList.add('open');
+  document.addEventListener('keydown', lbKeyHandler);
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+  document.removeEventListener('keydown', lbKeyHandler);
+}
+function closeLightboxOnBg(e) {
+  if (e.target === document.getElementById('lightbox')) closeLightbox();
+}
+function lbNav(dir) {
+  lbIndex = (lbIndex + dir + visibleItems.length) % visibleItems.length;
+  updateLightbox();
+}
+function lbKeyHandler(e) {
+  if (e.key === 'Escape') closeLightbox();
+  if (e.key === 'ArrowRight') lbNav(1);
+  if (e.key === 'ArrowLeft')  lbNav(-1);
+}
+function updateLightbox() {
+  const item = visibleItems[lbIndex];
+  if (!item) return;
+  document.getElementById('lb-title').textContent = item.title;
+  document.getElementById('lb-placeholder-label').textContent =
+    item.type === 'video' ? '▶  ' + item.title : item.title;
+  document.getElementById('lb-meta-date').innerHTML = `
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="5" width="16" height="15" rx="2"></rect><line x1="8" y1="3" x2="8" y2="7"></line><line x1="16" y1="3" x2="16" y2="7"></line><line x1="4" y1="10" x2="20" y2="10"></line></svg>
+    ${item.date}`;
+  document.getElementById('lb-meta-act').innerHTML = `
+    ${SPORT_ICONS[item.sport] || ''}
+    ${SPORT_LABELS[item.sport] || item.sport}`;
+  document.getElementById('lb-meta-dist').innerHTML = `
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="3 20 10 7 14 13 17 9 21 20"></polyline></svg>
+    ${item.dist}`;
+}
+
+// Dropdown stubs
+function toggleDropdown(id, btn) {
+  btn.classList.toggle('active');
+}
+
+// Nav user menu
+function toggleUserMenu(e) {
+  e.stopPropagation();
+  const trigger = document.getElementById('user-menu-trigger');
+  const isOpen = trigger.getAttribute('aria-expanded') === 'true';
+  trigger.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+}
+document.addEventListener('click', function(e) {
+  const trigger = document.getElementById('user-menu-trigger');
+  if (trigger && !trigger.contains(e.target)) trigger.setAttribute('aria-expanded', 'false');
+  // close filter dropdowns
+  document.querySelectorAll('.gf-btn.active').forEach(b => {
+    if (!b.contains(e.target)) b.classList.remove('active');
+  });
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.getElementById('user-menu-trigger').setAttribute('aria-expanded', 'false');
+});
+
+// Init
+renderGallery();
+</script>
+</body>
+</html>
