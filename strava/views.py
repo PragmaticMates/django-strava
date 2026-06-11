@@ -52,6 +52,10 @@ class ActivitiesView(ListView):
         week_start = today - datetime.timedelta(days=today.weekday())
 
         context['gear_list'] = Gear.objects.filter(activity__isnull=False).distinct().order_by('brand_name', 'model_name')
+        context['month_list'] = [
+            (d.strftime('%Y-%m'), d.strftime('%b %Y'))
+            for d in Activity.objects.dates('start_date', 'month', order='DESC')
+        ]
         context['summary'] = {
             'count': qs.count(),
             'distance_km': round((agg['total_distance'] or 0) / 1000),

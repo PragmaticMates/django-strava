@@ -14,10 +14,10 @@
       <h1>Activities</h1>
       <p class="acts-hero-sub" id="hero-sub">{{ summary.count }} activities</p>
     </div>
-    <button class="acts-upload-btn">
+    <a href="https://www.strava.com/upload/device" target="_blank" rel="noopener" class="acts-upload-btn">
       <svg viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path></svg>
       Upload Activity
-    </button>
+    </a>
   </div>
 
   <!-- Summary bar -->
@@ -74,11 +74,13 @@
 
     <div class="af-sep"></div>
 
-    <button class="af-select" onclick="">
-      <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"></rect><line x1="8" y1="3" x2="8" y2="7"></line><line x1="16" y1="3" x2="16" y2="7"></line><line x1="4" y1="10" x2="20" y2="10"></line></svg>
-      Jun 2026
-      <svg viewBox="0 0 24 24" style="opacity:0.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
-    </button>
+    <div class="af-sport-wrap">
+      <select class="af-sport-select" id="month-select" onchange="filterActivities()">
+        <option value="all">All Months</option>
+        {% for value, label in month_list %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+      </select>
+      <span class="af-sport-caret"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
+    </div>
 
     <div class="af-view-toggle">
       <button class="af-view-btn active" id="view-grid" onclick="setView('grid')" title="Grid view">
@@ -127,10 +129,12 @@ function matchesQuery(name, tokens) {
 function filterActivities() {
   var tokens = unaccent(document.getElementById('search-input').value.toLowerCase().trim()).split(/\s+/).filter(Boolean);
   var gear = document.getElementById('gear-select').value;
+  var month = document.getElementById('month-select').value;
   function visible(el) {
     var nameOk = !tokens.length || matchesQuery(el.dataset.name, tokens);
     var gearOk = gear === 'all' || el.dataset.gear === gear;
-    return nameOk && gearOk;
+    var monthOk = month === 'all' || (el.dataset.date || '').startsWith(month);
+    return nameOk && gearOk && monthOk;
   }
   document.querySelectorAll('#feed-grid .float-card').forEach(function(card) {
     card.style.display = visible(card) ? '' : 'none';
