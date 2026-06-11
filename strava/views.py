@@ -7,7 +7,7 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.views.generic import ListView
 
-from strava.models import Activity
+from strava.models import Activity, Gear
 
 
 def dashboard(request):
@@ -51,6 +51,7 @@ class ActivitiesView(ListView):
         today = timezone.now().date()
         week_start = today - datetime.timedelta(days=today.weekday())
 
+        context['gear_list'] = Gear.objects.filter(activity__isnull=False).distinct().order_by('brand_name', 'model_name')
         context['summary'] = {
             'count': qs.count(),
             'distance_km': round((agg['total_distance'] or 0) / 1000),

@@ -65,13 +65,9 @@
     </div>
 
     <div class="af-sport-wrap">
-      <select class="af-sport-select" id="gear-select" onchange="setGearFilter(this)">
+      <select class="af-sport-select" id="gear-select" onchange="filterActivities()">
         <option value="all">All Gear</option>
-        <option value="Cervélo R5">Cervélo R5</option>
-        <option value="Cannondale Topstone">Cannondale Topstone</option>
-        <option value="Nike Vaporfly 3">Nike Vaporfly 3</option>
-        <option value="Hoka Speedgoat 5">Hoka Speedgoat 5</option>
-        <option value="Nike Pegasus 41">Nike Pegasus 41</option>
+        {% for g in gear_list %}<option value="{{ g }}">{{ g }}</option>{% endfor %}
       </select>
       <span class="af-sport-caret"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
     </div>
@@ -130,11 +126,17 @@ function matchesQuery(name, tokens) {
 }
 function filterActivities() {
   var tokens = unaccent(document.getElementById('search-input').value.toLowerCase().trim()).split(/\s+/).filter(Boolean);
+  var gear = document.getElementById('gear-select').value;
+  function visible(el) {
+    var nameOk = !tokens.length || matchesQuery(el.dataset.name, tokens);
+    var gearOk = gear === 'all' || el.dataset.gear === gear;
+    return nameOk && gearOk;
+  }
   document.querySelectorAll('#feed-grid .float-card').forEach(function(card) {
-    card.style.display = !tokens.length || matchesQuery(card.dataset.name, tokens) ? '' : 'none';
+    card.style.display = visible(card) ? '' : 'none';
   });
   document.querySelectorAll('#feed-table tbody tr').forEach(function(row) {
-    row.style.display = !tokens.length || matchesQuery(row.dataset.name, tokens) ? '' : 'none';
+    row.style.display = visible(row) ? '' : 'none';
   });
   updateStats();
 }
@@ -157,8 +159,7 @@ function updateStats() {
   document.getElementById('sum-week').textContent = week;
   document.getElementById('hero-sub').textContent = count.toLocaleString() + ' activities';
 }
-function setFilterSelect() {}
-function setGearFilter() {}
+function setFilterSelect() { filterActivities(); }
 </script>
 {% endblock %}
 {% endblock %}

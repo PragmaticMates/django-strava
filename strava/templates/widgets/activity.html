@@ -1,4 +1,4 @@
-<div class="float-card" data-screen-label="Activity card" data-name="{{ activity.name|lower }}" data-dist="{{ activity.dist }}" data-elev="{{ activity.elev }}" data-time="{{ activity.json.moving_time|default:0 }}" data-date="{{ activity.start_date|date:'Y-m-d' }}">
+<div class="float-card" data-screen-label="Activity card" data-name="{{ activity.name|lower }}" data-dist="{{ activity.dist }}" data-elev="{{ activity.elev }}" data-time="{{ activity.json.moving_time|default:0 }}" data-date="{{ activity.start_date|date:'Y-m-d' }}" data-gear="{{ activity.gear|default:'' }}">
   {% if show_close %}
   <button class="fc-close" onclick="this.closest('.float-card').style.display='none'" aria-label="Close">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
