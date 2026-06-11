@@ -15,7 +15,7 @@
     </thead>
     <tbody>
       {% for activity in activities %}
-      <tr data-name="{{ activity.name|lower }}" data-dist="{{ activity.dist }}" data-elev="{{ activity.elev }}" data-time="{{ activity.json.moving_time|default:0 }}" data-date="{{ activity.start_date|date:'Y-m-d' }}" data-gear="{{ activity.gear|default:'' }}">
+      <tr data-name="{{ activity.name|lower }}" data-dist="{{ activity.dist }}" data-elev="{{ activity.elev }}" data-time="{{ activity.json.moving_time|default:0 }}" data-date="{{ activity.start_date|date:'Y-m-d' }}" data-gear="{{ activity.gear|default:'' }}" data-type="{{ activity.sport_type }}">
         <td class="at-icon-cell">
           <div class="at-type-icon">
             {% if activity.type == 'ride' %}

@@ -581,6 +581,7 @@ body {
   background: var(--accent); border: none; border-radius: 10px;
   font: 600 14px var(--font-body); color: #fff; padding: 10px 20px;
   white-space: nowrap; transition: opacity 0.15s; flex: none;
+  text-decoration: none;
 }
 .acts-upload-btn:hover { opacity: 0.88; }
 .acts-upload-btn svg { width: 16px; height: 16px; stroke: #fff; fill: none; stroke-width: 2.2; stroke-linecap: round; }

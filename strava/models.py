@@ -98,6 +98,8 @@ class Activity(models.Model):
       return 'trail'
     if s in ('Hike', 'Snowshoe'):
       return 'hike'
+    if s == 'Walk':
+      return 'walk'
     if 'Ride' in s:
       return 'ride'
     if 'Swim' in s:

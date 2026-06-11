@@ -51,6 +51,11 @@ class ActivitiesView(ListView):
         today = timezone.now().date()
         week_start = today - datetime.timedelta(days=today.weekday())
 
+        from strava.choices import SportType
+        context['sport_type_list'] = [
+            (st, SportType(st).label)
+            for st in Activity.objects.values_list('sport_type', flat=True).distinct().order_by('sport_type')
+        ]
         context['gear_list'] = Gear.objects.filter(activity__isnull=False).distinct().order_by('brand_name', 'model_name')
         context['month_list'] = [
             (d.strftime('%Y-%m'), d.strftime('%b %Y'))

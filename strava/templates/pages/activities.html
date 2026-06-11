@@ -54,12 +54,9 @@
     <div class="af-sep"></div>
 
     <div class="af-sport-wrap">
-      <select class="af-sport-select" id="sport-select" onchange="setFilterSelect(this)">
+      <select class="af-sport-select" id="sport-select" onchange="filterActivities()">
         <option value="all">All Sports</option>
-        <option value="ride">Ride</option>
-        <option value="run">Run</option>
-        <option value="trail">Trail Run</option>
-        <option value="walk">Walk</option>
+        {% for value, label in sport_type_list %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
       </select>
       <span class="af-sport-caret"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
     </div>
@@ -130,11 +127,13 @@ function filterActivities() {
   var tokens = unaccent(document.getElementById('search-input').value.toLowerCase().trim()).split(/\s+/).filter(Boolean);
   var gear = document.getElementById('gear-select').value;
   var month = document.getElementById('month-select').value;
+  var sport = document.getElementById('sport-select').value;
   function visible(el) {
     var nameOk = !tokens.length || matchesQuery(el.dataset.name, tokens);
     var gearOk = gear === 'all' || el.dataset.gear === gear;
     var monthOk = month === 'all' || (el.dataset.date || '').startsWith(month);
-    return nameOk && gearOk && monthOk;
+    var sportOk = sport === 'all' || el.dataset.type === sport;
+    return nameOk && gearOk && monthOk && sportOk;
   }
   document.querySelectorAll('#feed-grid .float-card').forEach(function(card) {
     card.style.display = visible(card) ? '' : 'none';
@@ -163,7 +162,6 @@ function updateStats() {
   document.getElementById('sum-week').textContent = week;
   document.getElementById('hero-sub').textContent = count.toLocaleString() + ' activities';
 }
-function setFilterSelect() { filterActivities(); }
 </script>
 {% endblock %}
 {% endblock %}
