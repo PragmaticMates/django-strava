@@ -1,5 +1,5 @@
-{% extends "base.html" %}
-{% load static %}
+{% extends "pages/base.html" %}
+{% load static humanize %}
 
 {% block title %}Activities{% endblock %}
 
@@ -12,7 +12,7 @@
     <div>
       <p class="acts-hero-eyebrow">Training log</p>
       <h1>Activities</h1>
-      <p class="acts-hero-sub" id="hero-sub">612 activities · 2026</p>
+      <p class="acts-hero-sub" id="hero-sub">{{ summary.count }} activities</p>
     </div>
     <button class="acts-upload-btn">
       <svg viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path></svg>
@@ -23,23 +23,23 @@
   <!-- Summary bar -->
   <div class="acts-summary">
     <div class="acts-summary-item">
-      <span class="acts-summary-val" id="sum-acts">612</span>
+      <span class="acts-summary-val" id="sum-acts">{{ summary.count|intcomma }}</span>
       <span class="acts-summary-lbl">Activities</span>
     </div>
     <div class="acts-summary-item">
-      <span class="acts-summary-val">3,214<span style="font-size:16px;font-weight:600;color:var(--ink-3)"> km</span></span>
+      <span class="acts-summary-val">{{ summary.distance_km|intcomma }}<span style="font-size:16px;font-weight:600;color:var(--ink-3)"> km</span></span>
       <span class="acts-summary-lbl">Distance</span>
     </div>
     <div class="acts-summary-item">
-      <span class="acts-summary-val">28,640<span style="font-size:16px;font-weight:600;color:var(--ink-3)"> m</span></span>
+      <span class="acts-summary-val">{{ summary.elevation_m|intcomma }}<span style="font-size:16px;font-weight:600;color:var(--ink-3)"> m</span></span>
       <span class="acts-summary-lbl">Elevation</span>
     </div>
     <div class="acts-summary-item">
-      <span class="acts-summary-val">512<span style="font-size:16px;font-weight:600;color:var(--ink-3)"> h</span></span>
+      <span class="acts-summary-val">{{ summary.time_h|intcomma }}<span style="font-size:16px;font-weight:600;color:var(--ink-3)"> h</span></span>
       <span class="acts-summary-lbl">Time</span>
     </div>
     <div class="acts-summary-item">
-      <span class="acts-summary-val">6</span>
+      <span class="acts-summary-val">{{ summary.this_week }}</span>
       <span class="acts-summary-lbl">This week</span>
     </div>
   </div>
@@ -97,7 +97,7 @@
   <!-- Activity feed — grid view -->
   <div class="acts-feed" id="feed-grid">
     {% for activity in activities %}
-      {% include "widgets/activity.html" with activity=activity %}
+      {% include "widgets/activity.html" with activity=activity show_close=False %}
     {% endfor %}
   </div>
 

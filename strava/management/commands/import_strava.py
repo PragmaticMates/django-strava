@@ -33,8 +33,8 @@ class Command(BaseCommand):
     def import_activities_from_api(self):
         api = StravaApi()
         after = Activity.objects.latest().start_date if Activity.objects.exists() else None
-        activities = api.get_activities(after=after)
-        self.create_activities(activities)
+        for summary in api.get_activities(after=after):
+            self.create_activity_from_json(api.get_activity(summary['id']))
 
     def create_activities(self, activities):
         for activity in activities:

@@ -108,14 +108,14 @@ class Activity(models.Model):
 
   @property
   def dur(self):
-    t = self.json.get('elapsed_time', 0)
+    t = self.json.get('moving_time', 0)
     h, r = divmod(t, 3600)
     m, s = divmod(r, 60)
     return f'{h}h {m:02d}m' if h else f'{m}m {s:02d}s'
 
   @property
   def pace(self):
-    t = self.json.get('elapsed_time', 0)
+    t = self.json.get('moving_time', 0)
     d = float(self.distance)
     if not t or not d:
       return '-'
@@ -141,6 +141,15 @@ class Activity(models.Model):
   @property
   def pb(self):
     return bool(self.json.get('pr_count', 0))
+
+  @property
+  def photo(self):
+    photos = self.json.get('photos') or {}
+    primary = photos.get('primary')
+    if not primary:
+      return None
+    urls = primary.get('urls') or {}
+    return urls.get('600') or urls.get('100')
 
 
 class Gear(models.Model):

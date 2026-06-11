@@ -1,8 +1,11 @@
 <div class="float-card" data-screen-label="Activity card">
+  {% if show_close %}
   <button class="fc-close" onclick="this.closest('.float-card').style.display='none'" aria-label="Close">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
   </button>
+  {% endif %}
   <div class="fc-map">
+    {% if activity.photo %}<img class="fc-photo" src="{{ activity.photo }}" alt="" aria-hidden="true">{% endif %}
     <svg class="fc-route" role="img" aria-label="Route trace"></svg>
     {% if activity.pb %}<span class="act-gcard-pr">★ PR</span>{% endif %}
     <div class="fc-pills">
@@ -24,7 +27,7 @@
     </div>
   </div>
   <div class="fc-body">
-    <a href="#" class="fc-header-bg">
+    <a href="{{ activity.get_absolute_url|default:'#' }}" class="fc-header-bg" target="_blank" rel="noopener">
       <h1 class="fc-title">{{ activity.name }}</h1>
       <p class="fc-datetime">{{ activity.start_date|date:"M j, Y" }}, {{ activity.start_date|time:"g:i A" }}</p>
     </a>

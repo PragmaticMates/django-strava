@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "pages/base.html" %}
 {% load static %}
 
 {% block title %}Dashboard{% endblock %}
@@ -44,7 +44,7 @@
     </button>
     <button class="pill-btn" type="button">All Gear <span class="caret">▾</span></button>
   </div>
-  {% include "widgets/activity.html" with activity=latest_activity %}
+  {% include "widgets/activity.html" with activity=latest_activity show_close=True %}
 </section>
 
 <main class="page">

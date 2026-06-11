@@ -235,6 +235,7 @@ body {
   background-size: 16px 16px;
 }
 .fc-route { position: absolute; inset: 0; width: 100%; height: 100%; }
+.fc-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
 .fc-map .act-gcard-pr { right: auto; left: 12px; }
 .fc-pills { position: absolute; bottom: 10px; left: 12px; display: flex; gap: 7px; }
 .fc-pill {
@@ -871,7 +872,7 @@ body {
 .at-date { color: var(--ink-3); font-size: 12.5px; white-space: nowrap; }
 .at-num {
   font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
-  font-size: 16px; font-weight: 700; letter-spacing: -0.01em; color: var(--ink);
+  font-size: 16px; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); white-space: nowrap;
 }
 .at-num small { font-size: 11px; font-weight: 600; color: var(--ink-3); font-family: var(--font-body); letter-spacing: 0; }
 .at-gear-cell { font-size: 12px; font-weight: 500; color: var(--ink-3); white-space: nowrap; }
