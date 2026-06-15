@@ -7,6 +7,6 @@ app_name = 'strava'
 urlpatterns = [
     path('',              views.dashboard,   name='dashboard'),
     path('activities/',   views.ActivitiesView.as_view(),  name='activities'),
-    path('gear/',         views.gear,        name='gear'),
+    path('gear/',         views.GearView.as_view(),  name='gear'),
     path('gallery/',      views.gallery,     name='gallery'),
 ]

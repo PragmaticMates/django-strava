@@ -61,3 +61,40 @@ class ActivityQuerySet(models.QuerySet):
         expression = fields[key]
         order = expression.desc(nulls_last=True) if direction == 'desc' else expression.asc(nulls_last=True)
         return self.order_by(order)
+
+
+class GearQuerySet(models.QuerySet):
+    def search(self, query):
+        qs = self
+        for token in (query or '').split():
+            qs = qs.filter(
+                Q(brand_name__unaccent__icontains=token)
+                | Q(model_name__unaccent__icontains=token)
+            )
+        return qs
+
+    def of_type(self, gear_type):
+        # Per the Strava API, only bikes carry a frame_type (DetailedGear); shoes return
+        # frame_type=null. A bike therefore has the key present with a non-null value;
+        # everything else (json null or missing key) is a shoe. This matches both a missing
+        # key and a present-but-null value without relying on DB-specific null extraction.
+        has_frame_type = Q(json__has_key='frame_type') & ~Q(json__frame_type=None)
+        if gear_type == 'bike':
+            return self.filter(has_frame_type)
+        if gear_type == 'shoe':
+            return self.exclude(has_frame_type)
+        return self
+
+    def sorted_by(self, key, direction='asc'):
+        # Sort fields reference annotations added by the view (see GearView).
+        fields = {
+            'name': F('brand_name'),
+            'distance': F('distance_sum'),
+            'rides': F('activity_count'),
+            'recent': F('last_activity'),
+        }
+        if key not in fields:
+            return self.order_by('-primary', 'brand_name', 'model_name')
+        expression = fields[key]
+        order = expression.desc(nulls_last=True) if direction == 'desc' else expression.asc(nulls_last=True)
+        return self.order_by(order)

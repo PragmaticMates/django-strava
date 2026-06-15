@@ -5,7 +5,7 @@ from django.utils.translation import gettext_lazy as _
 
 from strava.api import StravaApi
 from strava.choices import SportType
-from strava.querysets import ActivityQuerySet
+from strava.querysets import ActivityQuerySet, GearQuerySet
 
 
 class Activity(models.Model):
@@ -173,12 +173,16 @@ class Activity(models.Model):
 
 
 class Gear(models.Model):
+  SHOE_LIFESPAN_KM = 700
+  BIKE_LIFESPAN_KM = 12000
+
   id = models.CharField(max_length=36, primary_key=True, editable=False)  # default=uuid.uuid4
   primary = models.BooleanField(_("primary"), default=False)
   brand_name = models.CharField(_("brand name"), max_length=30)
   model_name = models.CharField(_("model name"), max_length=50)
   description = models.CharField(_("description"), max_length=100)
   json = models.JSONField()
+  objects = GearQuerySet.as_manager()
 
   def __str__(self):
       return f'{self.brand_name} {self.model_name}'
@@ -191,6 +195,15 @@ class Gear(models.Model):
   def is_old(self):
     # TODO: check gear type (shoes only)
     return self.distance > 400
+
+  @property
+  def gear_type(self):
+    # Per the Strava API, only bikes carry a frame_type (DetailedGear); shoes have none.
+    return 'bike' if (self.json or {}).get('frame_type') is not None else 'shoe'
+
+  @property
+  def lifespan_km(self):
+    return self.BIKE_LIFESPAN_KM if self.gear_type == 'bike' else self.SHOE_LIFESPAN_KM
 
   @classmethod
   def get_or_create(cls, id):

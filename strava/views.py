@@ -1,6 +1,6 @@
 import datetime
 
-from django.db.models import FloatField, Sum
+from django.db.models import Count, FloatField, Max, Sum
 from django.db.models.fields.json import KeyTextTransform
 from django.db.models.functions import Cast
 from django.shortcuts import render
@@ -93,10 +93,68 @@ class ActivitiesView(ListView):
         return context
 
 
-def gear(request):
-    return render(request, 'pages/gear.html', {
-        'active_page': 'gear',
-    })
+class GearView(ListView):
+    model = Gear
+    template_name = 'pages/gear.html'
+    context_object_name = 'gear_list'
+
+    def get_template_names(self):
+        if getattr(self.request, 'htmx', False):
+            return ['pages/_gear_results.html']
+        return [self.template_name]
+
+    def get_queryset(self):
+        params = self.request.GET
+        return (
+            Gear.objects.annotate(
+                activity_count=Count('activity'),
+                distance_sum=Sum('activity__distance'),
+                last_activity=Max('activity__start_date'),
+            )
+            .search(params.get('q'))
+            .of_type(params.get('type'))
+            .sorted_by(params.get('sort'), params.get('dir', 'asc'))
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['active_page'] = 'gear'
+
+        params = self.request.GET
+        context['q'] = params.get('q', '')
+        context['type'] = params.get('type', 'all')
+        context['sort'] = params.get('sort', '')
+        context['dir'] = params.get('dir', 'asc')
+
+        gear_list = list(context['gear_list'])
+        for g in gear_list:
+            g.distance_km = round((g.distance_sum or 0) / 1000)
+            g.wear_pct = min(100, round(g.distance_km / g.lifespan_km * 100)) if g.lifespan_km else 0
+            g.wear_class = 'wear-low' if g.wear_pct < 40 else 'wear-mid' if g.wear_pct < 75 else 'wear-high'
+            g.is_retired = g.wear_pct >= 100
+            if g.is_retired:
+                g.badge_class, g.badge_label = 'badge-retired', 'Retired'
+            elif g.primary:
+                g.badge_class, g.badge_label = 'badge-primary', 'Primary'
+            elif g.wear_pct >= 75:
+                g.badge_class = 'badge-alert'
+                g.badge_label = 'Service due' if g.gear_type == 'bike' else 'Replace soon'
+            else:
+                g.badge_class = g.badge_label = ''
+
+        bikes = [g for g in gear_list if g.gear_type == 'bike']
+        shoes = [g for g in gear_list if g.gear_type == 'shoe']
+        context['gear_list'] = gear_list
+        context['bikes'] = bikes
+        context['shoes'] = shoes
+        context['total_items'] = len(gear_list)
+        context['summary'] = {
+            'bikes': len(bikes),
+            'shoes': len(shoes),
+            'total_km': sum(g.distance_km for g in gear_list),
+            'activities': sum(g.activity_count for g in gear_list),
+        }
+        return context
 
 
 def gallery(request):
