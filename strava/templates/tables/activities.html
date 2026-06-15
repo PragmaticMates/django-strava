@@ -1,15 +1,15 @@
-<div class="acts-table-wrap" id="feed-table" style="display:none">
+<div class="acts-table-wrap" id="feed-table">
   <table class="acts-table">
     <thead>
       <tr>
         <th class="at-icon-cell"></th>
-        <th data-sort="name">Name</th>
-        <th data-sort="date">Date</th>
-        <th data-sort="dist">Distance</th>
-        <th data-sort="time">Time</th>
-        <th data-sort="pace">Pace</th>
-        <th data-sort="elev">Elev.</th>
-        <th data-sort="gear">Gear</th>
+        <th data-sort="name" onclick="setSort('name')"{% if sort == 'name' %} aria-sort="{% if dir == 'asc' %}ascending{% else %}descending{% endif %}"{% endif %}>Name</th>
+        <th data-sort="date" onclick="setSort('date')"{% if sort == 'date' %} aria-sort="{% if dir == 'asc' %}ascending{% else %}descending{% endif %}"{% endif %}>Date</th>
+        <th data-sort="dist" onclick="setSort('dist')"{% if sort == 'dist' %} aria-sort="{% if dir == 'asc' %}ascending{% else %}descending{% endif %}"{% endif %}>Distance</th>
+        <th data-sort="time" onclick="setSort('time')"{% if sort == 'time' %} aria-sort="{% if dir == 'asc' %}ascending{% else %}descending{% endif %}"{% endif %}>Time</th>
+        <th data-sort="pace" onclick="setSort('pace')"{% if sort == 'pace' %} aria-sort="{% if dir == 'asc' %}ascending{% else %}descending{% endif %}"{% endif %}>Pace</th>
+        <th data-sort="elev" onclick="setSort('elev')"{% if sort == 'elev' %} aria-sort="{% if dir == 'asc' %}ascending{% else %}descending{% endif %}"{% endif %}>Elev.</th>
+        <th>Gear</th>
         <th></th>
       </tr>
     </thead>
@@ -45,35 +45,3 @@
     </tbody>
   </table>
 </div>
-<script>
-(function () {
-  const table = document.querySelector('#feed-table .acts-table');
-  if (!table) return;
-  let sortKey = null, sortAsc = true;
-  const numeric = new Set(['dist', 'time', 'pace', 'elev']);
-  function val(row, key) {
-    if (key === 'pace') {
-      const t = parseFloat(row.dataset.time) || 0;
-      const d = parseFloat(row.dataset.dist) || 0;
-      return d > 0 ? t / d : Infinity;
-    }
-    const v = row.dataset[key] ?? '';
-    return numeric.has(key) ? parseFloat(v) || 0 : v;
-  }
-  table.querySelector('thead').addEventListener('click', function (e) {
-    const th = e.target.closest('th[data-sort]');
-    if (!th) return;
-    const key = th.dataset.sort;
-    sortAsc = sortKey === key ? !sortAsc : true;
-    sortKey = key;
-    table.querySelectorAll('thead th[data-sort]').forEach(h => h.removeAttribute('aria-sort'));
-    th.setAttribute('aria-sort', sortAsc ? 'ascending' : 'descending');
-    const tbody = table.querySelector('tbody');
-    [...tbody.querySelectorAll('tr')].sort(function (a, b) {
-      const va = val(a, key), vb = val(b, key);
-      const cmp = numeric.has(key) ? va - vb : va.localeCompare(vb, undefined, {sensitivity: 'base'});
-      return sortAsc ? cmp : -cmp;
-    }).forEach(r => tbody.appendChild(r));
-  });
-})();
-</script>

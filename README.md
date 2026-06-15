@@ -14,15 +14,26 @@ Reusable Django app for Strava API integration. Provides models for Activities a
 pip install django-strava
 ```
 
-Add `strava` to `INSTALLED_APPS`:
+Add `strava`, `django.contrib.humanize` and `django_htmx` to `INSTALLED_APPS`, and the htmx middleware to `MIDDLEWARE`:
 
 ```python
 INSTALLED_APPS = [
     # ...
     "unfold",
+    "django.contrib.humanize",
+    "django_htmx",
     "strava",
 ]
+
+MIDDLEWARE = [
+    # ...
+    "django_htmx.middleware.HtmxMiddleware",
+]
 ```
+
+The activities page uses [htmx](https://htmx.org/) (via
+[django-htmx](https://github.com/adamchainz/django-htmx)) for server-side filtering, sorting and
+stat calculation. The htmx runtime is served by `{% htmx_script %}` — no CDN required.
 
 Run migrations:
 

@@ -1,4 +1,4 @@
-{% load static %}
+{% load static django_htmx %}
 <!DOCTYPE html>
 <html lang="en" data-density="comfortable">
 <head>
@@ -70,6 +70,7 @@
 {% block content %}{% endblock %}
 
 <script src="{% static 'js/image-slot.js' %}"></script>
+{% htmx_script %}
 <script>
 function toggleUserMenu(e) {
   e.stopPropagation();

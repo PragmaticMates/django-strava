@@ -4,7 +4,6 @@
 {% block title %}Activities{% endblock %}
 
 {% block content %}
-<!-- ============ Activities Page ============ -->
 <main class="acts-page" data-screen-label="Activities">
 
   <!-- Hero -->
@@ -20,51 +19,36 @@
     </a>
   </div>
 
-  <!-- Summary bar -->
-  <div class="acts-summary">
-    <div class="acts-summary-item">
-      <span class="acts-summary-val" id="sum-acts">{{ summary.count|intcomma }}</span>
-      <span class="acts-summary-lbl">Activities</span>
-    </div>
-    <div class="acts-summary-item">
-      <span class="acts-summary-val"><span id="sum-dist">{{ summary.distance_km|intcomma }}</span><span style="font-size:16px;font-weight:600;color:var(--ink-3)"> km</span></span>
-      <span class="acts-summary-lbl">Distance</span>
-    </div>
-    <div class="acts-summary-item">
-      <span class="acts-summary-val"><span id="sum-elev">{{ summary.elevation_m|intcomma }}</span><span style="font-size:16px;font-weight:600;color:var(--ink-3)"> m</span></span>
-      <span class="acts-summary-lbl">Elevation</span>
-    </div>
-    <div class="acts-summary-item">
-      <span class="acts-summary-val"><span id="sum-time">{{ summary.time_h|intcomma }}</span><span style="font-size:16px;font-weight:600;color:var(--ink-3)"> h</span></span>
-      <span class="acts-summary-lbl">Time</span>
-    </div>
-    <div class="acts-summary-item">
-      <span class="acts-summary-val" id="sum-week">{{ summary.this_week }}</span>
-      <span class="acts-summary-lbl">This week</span>
-    </div>
-  </div>
-
   <!-- Filter bar -->
-  <div class="acts-filters">
+  <form class="acts-filters" id="acts-filters"
+        hx-get="{% url 'strava:activities' %}"
+        hx-target="#acts-results"
+        hx-swap="innerHTML"
+        hx-push-url="true"
+        hx-trigger="change, keyup delay:300ms from:#search-input">
+    <input type="hidden" name="view" id="f-view" value="{{ view }}">
+    <input type="hidden" name="sort" id="f-sort" value="{{ sort }}">
+    <input type="hidden" name="dir" id="f-dir" value="{{ dir }}">
+
     <div class="af-search">
       <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-      <input type="text" placeholder="Search activities…" id="search-input" oninput="filterActivities()">
+      <input type="text" placeholder="Search activities…" id="search-input" name="q" value="{{ q }}">
     </div>
 
     <div class="af-sep"></div>
 
     <div class="af-sport-wrap">
-      <select class="af-sport-select" id="sport-select" onchange="filterActivities()">
+      <select class="af-sport-select" id="sport-select" name="sport">
         <option value="all">All Sports</option>
-        {% for value, label in sport_type_list %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+        {% for value, label in sport_type_list %}<option value="{{ value }}"{% if sport == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
       </select>
       <span class="af-sport-caret"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
     </div>
 
     <div class="af-sport-wrap">
-      <select class="af-sport-select" id="gear-select" onchange="filterActivities()">
+      <select class="af-sport-select" id="gear-select" name="gear">
         <option value="all">All Gear</option>
-        {% for g in gear_list %}<option value="{{ g }}">{{ g }}</option>{% endfor %}
+        {% for g in gear_list %}<option value="{{ g.pk }}"{% if gear == g.pk|stringformat:'s' %} selected{% endif %}>{{ g }}</option>{% endfor %}
       </select>
       <span class="af-sport-caret"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
     </div>
@@ -72,95 +56,58 @@
     <div class="af-sep"></div>
 
     <div class="af-sport-wrap">
-      <select class="af-sport-select" id="month-select" onchange="filterActivities()">
+      <select class="af-sport-select" id="month-select" name="month">
         <option value="all">All Months</option>
-        {% for value, label in month_list %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+        {% for value, label in month_list %}<option value="{{ value }}"{% if month == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
       </select>
       <span class="af-sport-caret"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
     </div>
 
     <div class="af-view-toggle">
-      <button class="af-view-btn active" id="view-grid" onclick="setView('grid')" title="Grid view">
+      <button type="button" class="af-view-btn{% if view != 'table' %} active{% endif %}" id="view-grid" onclick="setView('grid')" title="Grid view">
         <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>
       </button>
-      <button class="af-view-btn" id="view-table" onclick="setView('table')" title="Table view">
+      <button type="button" class="af-view-btn{% if view == 'table' %} active{% endif %}" id="view-table" onclick="setView('table')" title="Table view">
         <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="9" x2="9" y2="21"></line></svg>
       </button>
     </div>
-  </div>
+  </form>
 
-  <!-- Activity feed — grid view -->
-  <div class="acts-feed" id="feed-grid">
-    {% for activity in activities %}
-      {% include "widgets/activity.html" with activity=activity show_close=False %}
-    {% endfor %}
+  <!-- Activity feed — rendered server-side, swapped by htmx -->
+  <div id="acts-results">
+    {% include "pages/_activities_results.html" %}
   </div>
-
-  <!-- Activity feed — table view -->
-  {% include "tables/activities.html" %}
 
 </main>
 
 {% block extra_js %}
 <script src="{% static 'js/charts.js' %}"></script>
 <script>
-  document.querySelectorAll('.fc-route[data-polyline]').forEach(function(svg) {
+function renderRoutes(root) {
+  (root || document).querySelectorAll('.fc-route[data-polyline]').forEach(function(svg) {
     var pts = window.DSCharts.decodePolyline(svg.dataset.polyline);
     if (pts.length) window.DSCharts.renderRoute(svg, pts);
   });
+}
+renderRoutes(document);
+document.body.addEventListener('htmx:afterSwap', function(e) { renderRoutes(e.target); });
+
 function setView(view) {
   document.getElementById('view-grid').classList.toggle('active', view === 'grid');
   document.getElementById('view-table').classList.toggle('active', view === 'table');
-  document.getElementById('feed-grid').style.display  = view === 'grid'  ? '' : 'none';
-  document.getElementById('feed-table').style.display = view === 'table' ? '' : 'none';
+  document.getElementById('f-view').value = view;
+  document.getElementById('acts-filters').requestSubmit();
 }
-function unaccent(s) {
-  return s.normalize('NFD').replace(/[̀-ͯ]/g, '');
-}
-function matchesQuery(name, tokens) {
-  var words = unaccent(name).split(/\s+/);
-  return tokens.every(function(token) {
-    return words.some(function(word) { return word.startsWith(token); });
-  });
-}
-function filterActivities() {
-  var tokens = unaccent(document.getElementById('search-input').value.toLowerCase().trim()).split(/\s+/).filter(Boolean);
-  var gear = document.getElementById('gear-select').value;
-  var month = document.getElementById('month-select').value;
-  var sport = document.getElementById('sport-select').value;
-  function visible(el) {
-    var nameOk = !tokens.length || matchesQuery(el.dataset.name, tokens);
-    var gearOk = gear === 'all' || el.dataset.gear === gear;
-    var monthOk = month === 'all' || (el.dataset.date || '').startsWith(month);
-    var sportOk = sport === 'all' || el.dataset.type === sport;
-    return nameOk && gearOk && monthOk && sportOk;
+function setSort(key) {
+  var sortInput = document.getElementById('f-sort');
+  var dirInput = document.getElementById('f-dir');
+  if (sortInput.value === key) {
+    dirInput.value = dirInput.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortInput.value = key;
+    dirInput.value = 'asc';
   }
-  document.querySelectorAll('#feed-grid .float-card').forEach(function(card) {
-    card.style.display = visible(card) ? '' : 'none';
-  });
-  document.querySelectorAll('#feed-table tbody tr').forEach(function(row) {
-    row.style.display = visible(row) ? '' : 'none';
-  });
-  updateStats();
-}
-function updateStats() {
-  var now = new Date();
-  var weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
-  var count = 0, dist = 0, elev = 0, secs = 0, week = 0;
-  document.querySelectorAll('#feed-grid .float-card').forEach(function(card) {
-    if (card.style.display === 'none') return;
-    count++;
-    dist += parseFloat(card.dataset.dist) || 0;
-    elev += parseInt(card.dataset.elev) || 0;
-    secs += parseInt(card.dataset.time) || 0;
-    if (new Date(card.dataset.date) >= weekStart) week++;
-  });
-  document.getElementById('sum-acts').textContent = count.toLocaleString();
-  document.getElementById('sum-dist').textContent = Math.round(dist).toLocaleString();
-  document.getElementById('sum-elev').textContent = Math.round(elev).toLocaleString();
-  document.getElementById('sum-time').textContent = Math.round(secs / 3600).toLocaleString();
-  document.getElementById('sum-week').textContent = week;
-  document.getElementById('hero-sub').textContent = count.toLocaleString() + ' activities';
+  document.getElementById('acts-filters').requestSubmit();
 }
 </script>
 {% endblock %}

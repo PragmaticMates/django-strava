@@ -35,12 +35,34 @@ class ActivitiesView(ListView):
     template_name = 'pages/activities.html'
     context_object_name = 'activities'
 
+    def get_template_names(self):
+        if getattr(self.request, 'htmx', False):
+            return ['pages/_activities_results.html']
+        return [self.template_name]
+
     def get_queryset(self):
-        return Activity.objects.select_related('gear')
+        params = self.request.GET
+        return (
+            Activity.objects.select_related('gear')
+            .search(params.get('q'))
+            .for_sport(params.get('sport'))
+            .for_gear(params.get('gear'))
+            .for_month(params.get('month'))
+            .sorted_by(params.get('sort'), params.get('dir', 'desc'))
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['active_page'] = 'activities'
+
+        params = self.request.GET
+        context['q'] = params.get('q', '')
+        context['sport'] = params.get('sport', 'all')
+        context['gear'] = params.get('gear', 'all')
+        context['month'] = params.get('month', 'all')
+        context['sort'] = params.get('sort', '')
+        context['dir'] = params.get('dir', 'desc')
+        context['view'] = params.get('view', 'grid')
 
         qs = self.object_list
         agg = qs.aggregate(

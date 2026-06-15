@@ -18,7 +18,13 @@ DATABASES = {
 INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.auth",
+    "django.contrib.humanize",
+    "django_htmx",
     "strava",
+]
+
+MIDDLEWARE = [
+    "django_htmx.middleware.HtmxMiddleware",
 ]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

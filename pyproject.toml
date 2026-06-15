@@ -32,6 +32,7 @@ dependencies = [
     "stravalib",
     "django-environ",
     "django-unfold",
+    "django-htmx",
 ]
 
 [project.urls]
