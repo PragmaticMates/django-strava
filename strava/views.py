@@ -3,31 +3,138 @@ import datetime
 from django.db.models import Count, FloatField, IntegerField, Max, Sum
 from django.db.models.fields.json import KeyTextTransform
 from django.db.models.functions import Cast
-from django.shortcuts import render
 from django.utils import timezone
-from django.views.generic import ListView
+from django.views.generic import ListView, TemplateView
 
 from strava.models import Activity, Gear
 
 
-def dashboard(request):
-    return render(request, 'pages/dashboard.html', {
-        'active_page': 'dashboard',
-        'latest_activity': {
-            'name': 'Morning run in High Tatras',
-            'date': 'Today',
-            'time': '7:14 AM',
-            'type': 'trail',
-            'dist': '12.4',
-            'pace': '5:01 /km',
-            'dur': '1:02:14',
-            'elev': '430',
-            'kudos': 14,
-            'comments': 3,
-            'gear': 'Asics Gel-Kayano 32',
-            'pb': True,
-        },
-    })
+MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+GEAR_DONUT_PALETTE = [
+    ('#EBE6F2', '#7C4DB8'),
+    ('#D5E5D3', '#3A8050'),
+    ('#BDD8ED', '#007FB6'),
+    ('#F5D0BC', '#FC5200'),
+    ('#F3E1C7', '#C98A1B'),
+    ('#E6D4E8', '#9B4DCA'),
+]
+
+
+class DashboardView(TemplateView):
+    template_name = 'pages/dashboard.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['active_page'] = 'dashboard'
+
+        activities = list(Activity.objects.select_related('gear').order_by('-start_date'))
+        today = timezone.localdate()
+
+        def local_date(activity):
+            return timezone.localtime(activity.start_date).date()
+
+        def seconds(activity):
+            return activity.json.get('moving_time', 0) or 0
+
+        def elevation(activity):
+            return activity.json.get('total_elevation_gain', 0) or 0
+
+        # ---- Season totals (current year) ----
+        year_acts = [a for a in activities if local_date(a).year == today.year]
+        total_secs = sum(seconds(a) for a in year_acts)
+        context['stat'] = {
+            'distance_km': round(sum(float(a.distance) for a in year_acts) / 1000),
+            'elev': round(sum(elevation(a) for a in year_acts)),
+            'time_h': int(total_secs // 3600),
+            'time_m': int(total_secs % 3600 // 60),
+            'activities': len(year_acts),
+            'active_days': len({local_date(a) for a in year_acts}),
+        }
+
+        # ---- Latest activities ----
+        context['latest_activity'] = activities[0] if activities else None
+        context['latest_activities'] = activities[:4]
+
+        # ---- Activity of the year (longest this year, else longest overall) ----
+        pool = year_acts or activities
+        context['aoty'] = max(pool, key=lambda a: a.distance) if pool else None
+
+        # ---- Trends (weekly / monthly / yearly) + activity calendar ----
+        weekly, monthly, yearly = {}, {}, {}
+        day_counts = {}
+        for a in activities:
+            d = local_date(a)
+            km, elev, secs = float(a.distance) / 1000, elevation(a), seconds(a)
+            wk = d - datetime.timedelta(days=d.weekday())
+            for buckets, key in ((weekly, wk), (monthly, (d.year, d.month)), (yearly, d.year)):
+                b = buckets.setdefault(key, {'km': 0.0, 'elev': 0.0, 'secs': 0.0})
+                b['km'] += km
+                b['elev'] += elev
+                b['secs'] += secs
+            day_counts[d] = day_counts.get(d, 0) + 1
+
+        def rows(buckets, label, partial=None):
+            out = []
+            for key in sorted(buckets):
+                b = buckets[key]
+                out.append({
+                    'label': label(key),
+                    'km': round(b['km']),
+                    'elev': round(b['elev']),
+                    'hours': round(b['secs'] / 3600, 1),
+                    'pace': round((b['secs'] / 60) / b['km'], 2) if b['km'] else 0,
+                    **({'partial': True} if partial and partial(key) else {}),
+                })
+            return out
+
+        context['trends'] = {
+            'weekly': rows(weekly, lambda k: f'{MONTHS[k.month - 1]} {k.day}')[-52:],
+            'monthly': rows(monthly, lambda k: f"{MONTHS[k[1] - 1]} '{str(k[0])[2:]}"),
+            'yearly': rows(yearly, str, partial=lambda y: y == today.year),
+        }
+
+        weeks = []
+        week_start = today - datetime.timedelta(days=today.weekday())
+        for w in range(4, -1, -1):
+            ws = week_start - datetime.timedelta(weeks=w)
+            we = ws + datetime.timedelta(days=6)
+            dots = []
+            for i in range(7):
+                c = day_counts.get(ws + datetime.timedelta(days=i), 0)
+                dots.append(2 if c >= 2 else 1 if c == 1 else 0)
+            end = f'{we.day}' if we.month == ws.month else f'{MONTHS[we.month - 1]} {we.day}'
+            weeks.append({'label': f'{MONTHS[ws.month - 1]} {ws.day} – {end}', 'dots': dots})
+        context['calendar'] = weeks
+
+        # ---- Gear health table + usage donut ----
+        gears = list(Gear.objects.annotate(
+            activity_count=Count('activity'),
+            distance_sum=Sum('activity__distance'),
+        ))
+        for g in gears:
+            g.distance_km = round((g.distance_sum or 0) / 1000)
+            g.wear_pct = min(100, round(g.distance_km / g.lifespan_km * 100)) if g.lifespan_km else 0
+            g.wear_alert = 75 <= g.wear_pct < 100
+        context['gear_health'] = sorted(gears, key=lambda g: g.activity_count, reverse=True)
+
+        used = sorted((g for g in gears if g.activity_count), key=lambda g: g.activity_count, reverse=True)
+        context['gear_usage'] = [
+            {
+                'name': str(g),
+                'acts': g.activity_count,
+                'color': GEAR_DONUT_PALETTE[i % len(GEAR_DONUT_PALETTE)][0],
+                'hoverColor': GEAR_DONUT_PALETTE[i % len(GEAR_DONUT_PALETTE)][1],
+            }
+            for i, g in enumerate(used)
+        ]
+
+        # ---- Summary (data-backed rows only) ----
+        context['total_kudos'] = sum((a.json.get('kudos_count', 0) or 0) for a in activities)
+        context['total_photos'] = sum(a.photo_count for a in activities)
+        context['last_updated'] = timezone.localtime()
+        return context
 
 
 class ActivitiesView(ListView):

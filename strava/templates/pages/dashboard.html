@@ -1,5 +1,5 @@
 {% extends "pages/base.html" %}
-{% load static %}
+{% load static humanize %}
 
 {% block title %}Dashboard{% endblock %}
 
@@ -44,7 +44,7 @@
     </button>
     <button class="pill-btn" type="button">All Gear <span class="caret">▾</span></button>
   </div>
-  {% include "widgets/activity.html" with activity=latest_activity show_close=True %}
+  {% if latest_activity %}{% include "widgets/activity.html" with activity=latest_activity show_close=True %}{% endif %}
 </section>
 
 <main class="page">
@@ -53,23 +53,23 @@
   <section class="card statband" data-screen-label="Season totals" aria-label="Season totals">
     <div class="cell">
       <span class="ic"><svg viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.4"></circle><circle cx="18" cy="6" r="2.4"></circle><path d="M8 17 C 13 15, 11 8, 16 7"></path></svg></span>
-      <div><div class="v">1,248 <small>km</small></div><div class="l">Total Distance</div></div>
+      <div><div class="v">{{ stat.distance_km|intcomma }} <small>km</small></div><div class="l">Total Distance</div></div>
     </div>
     <div class="cell">
       <span class="ic"><svg viewBox="0 0 24 24"><polyline points="3 20 10 7 14 13 17 9 21 20"></polyline></svg></span>
-      <div><div class="v">42,300 <small>m</small></div><div class="l">Elevation Gain</div></div>
+      <div><div class="v">{{ stat.elev|intcomma }} <small>m</small></div><div class="l">Elevation Gain</div></div>
     </div>
     <div class="cell">
       <span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="7.5"></circle><line x1="12" y1="13" x2="12" y2="8.5"></line><line x1="10" y1="3" x2="14" y2="3"></line></svg></span>
-      <div><div class="v">118<small>h</small> 24<small>m</small></div><div class="l">Moving Time</div></div>
+      <div><div class="v">{{ stat.time_h }}<small>h</small> {{ stat.time_m }}<small>m</small></div><div class="l">Moving Time</div></div>
     </div>
     <div class="cell">
       <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polygon points="10 8 16 12 10 16 10 8" fill="var(--accent)" stroke="none"></polygon></svg></span>
-      <div><div class="v">146</div><div class="l">Activities</div></div>
+      <div><div class="v">{{ stat.activities|intcomma }}</div><div class="l">Activities</div></div>
     </div>
     <div class="cell">
       <span class="ic"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"></rect><line x1="8" y1="3" x2="8" y2="7"></line><line x1="16" y1="3" x2="16" y2="7"></line><line x1="4" y1="10" x2="20" y2="10"></line></svg></span>
-      <div><div class="v">104</div><div class="l">Active Days</div></div>
+      <div><div class="v">{{ stat.active_days|intcomma }}</div><div class="l">Active Days</div></div>
     </div>
   </section>
 
@@ -125,31 +125,39 @@
         <svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="5.5"></circle><polyline points="9 13.5 7 21 12 18.5 17 21 15 13.5"></polyline></svg>
         <h2 class="card-title">Activity of the Year</h2>
       </div>
+      {% if aoty %}
       <div class="aoty">
         <div>
-          <h3 class="aoty-title">High Tatras Trail Run</h3>
+          <h3 class="aoty-title">{{ aoty.name }}</h3>
           <div class="aoty-stats">
-            <div><div class="v">32.4 <small>km</small></div><div class="l">Distance</div></div>
-            <div><div class="v">2,100 <small>m</small></div><div class="l">Elevation Gain</div></div>
-            <div><div class="v">5<small>h</small> 14<small>m</small></div><div class="l">Moving Time</div></div>
+            <div><div class="v">{{ aoty.dist }} <small>km</small></div><div class="l">Distance</div></div>
+            <div><div class="v">{{ aoty.elev|intcomma }} <small>m</small></div><div class="l">Elevation Gain</div></div>
+            <div><div class="v">{{ aoty.dur }}</div><div class="l">Moving Time</div></div>
           </div>
           <div class="aoty-meta">
             <div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polygon points="10 8 16 12 10 16 10 8" fill="var(--ink-3)" stroke="none"></polygon></svg>
-              Trail Run
+              {{ aoty.get_sport_type_display }}
             </div>
+            {% if aoty.gear %}
             <div>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18h18"></path><path d="M5 18V9c0-1 .5-2 2-2h4l4 3h2c1 0 2 .5 2 2v6"></path><path d="M9 7V6"></path><path d="M5 14h14"></path></svg>
-              Brooks Caldera 8
+              {{ aoty.gear }}
             </div>
+            {% endif %}
             <div>
               <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"></rect><line x1="8" y1="3" x2="8" y2="7"></line><line x1="16" y1="3" x2="16" y2="7"></line><line x1="4" y1="10" x2="20" y2="10"></line></svg>
-              May 23, 2026
+              {{ aoty.start_date|date:"M j, Y" }}
             </div>
           </div>
         </div>
-        <image-slot id="aoty-photo" class="aoty-photo" shape="rounded" radius="12" placeholder="Drop the trail photo here"></image-slot>
+        {% if aoty.photo %}
+        <img class="aoty-photo" src="{{ aoty.photo }}" alt="{{ aoty.name }}">
+        {% else %}
+        <image-slot id="aoty-photo" class="aoty-photo" shape="rounded" radius="12" placeholder="No photo"></image-slot>
+        {% endif %}
       </div>
+      {% endif %}
     </section>
 
   </div>
@@ -159,111 +167,9 @@
     <div class="latest-act-wrap">
       <h2 class="section-title">Latest Activities</h2>
       <div class="act-cards" id="latest-activities">
-
-      <!-- Run -->
-      <div class="act-card">
-        <div class="act-photo-wrap">
-        <image-slot id="act-photo-run" class="act-photo" shape="rect" placeholder="Run photo"></image-slot>
-        <div class="act-photo-pill"><span class="fc-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="6" cy="18" r="2.4"></circle><circle cx="18" cy="6" r="2.4"></circle><path d="M8 17 C 13 15, 11 8, 16 7"></path></svg> Run</span></div>
-      </div>
-        <div class="act-card-body">
-          <div class="act-card-header-bg">
-            <h3 class="act-card-title">Morning sprint</h3>
-            <p class="act-card-date">Jun 8, 7:14 AM</p>
-          </div>
-          <div class="act-card-stats">
-            <div class="act-cs"><span class="act-cv">7.2 <small>km</small></span><span class="act-cl">Distance</span></div>
-            <div class="act-cs"><span class="act-cv">35:18</span><span class="act-cl">Time</span></div>
-            <div class="act-cs"><span class="act-cv">4:54 <small>/km</small></span><span class="act-cl">Pace</span></div>
-            <div class="act-cs"><span class="act-cv">85 <small>m</small></span><span class="act-cl">Elev.</span></div>
-          </div>
-          <div class="act-card-engage">
-            <button class="fc-engbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg> 3</button>
-            <button class="fc-engbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> 1</button>
-            <button class="fc-engbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"></rect><polyline points="8 7 9.5 4.5 14.5 4.5 16 7"></polyline><circle cx="12" cy="13" r="3.4"></circle></svg> 2</button>
-            <a class="fc-engbtn act-view-link" href="#" title="View on Strava"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 4 4 4 4 20 20 20 20 15"></polyline><line x1="13" y1="11" x2="20" y2="4"></line><polyline points="14 4 20 4 20 10"></polyline></svg></a>
-          </div>
-        </div>
-      </div>
-
-      <!-- Ride -->
-      <div class="act-card">
-        <div class="act-photo-wrap">
-        <image-slot id="act-photo-ride" class="act-photo" shape="rect" placeholder="Ride photo"></image-slot>
-        <div class="act-photo-pill"><span class="fc-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="6" cy="15" r="3"></circle><circle cx="18" cy="15" r="3"></circle><polyline points="6 12 6 6 12 4 16 8 18 12"></polyline></svg> Ride</span></div>
-      </div>
-        <div class="act-card-body">
-          <div class="act-card-header-bg">
-            <h3 class="act-card-title">Sunday road ride</h3>
-            <p class="act-card-date">Jun 6, 9:00 AM</p>
-          </div>
-          <div class="act-card-stats">
-            <div class="act-cs"><span class="act-cv">45.2 <small>km</small></span><span class="act-cl">Distance</span></div>
-            <div class="act-cs"><span class="act-cv">1:45:30</span><span class="act-cl">Time</span></div>
-            <div class="act-cs"><span class="act-cv">25.8 <small>km/h</small></span><span class="act-cl">Speed</span></div>
-            <div class="act-cs"><span class="act-cv">540 <small>m</small></span><span class="act-cl">Elev.</span></div>
-          </div>
-          <div class="act-card-engage">
-            <button class="fc-engbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg> 5</button>
-            <button class="fc-engbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> 0</button>
-            <button class="fc-engbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"></rect><polyline points="8 7 9.5 4.5 14.5 4.5 16 7"></polyline><circle cx="12" cy="13" r="3.4"></circle></svg> 4</button>
-            <a class="fc-engbtn act-view-link" href="#" title="View on Strava"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 4 4 4 4 20 20 20 20 15"></polyline><line x1="13" y1="11" x2="20" y2="4"></line><polyline points="14 4 20 4 20 10"></polyline></svg></a>
-          </div>
-        </div>
-      </div>
-
-      <!-- Hike -->
-      <div class="act-card">
-        <div class="act-photo-wrap">
-        <image-slot id="act-photo-hike" class="act-photo" shape="rect" placeholder="Hike photo"></image-slot>
-        <div class="act-photo-pill"><span class="fc-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="3 20 10 7 14 13 17 9 21 20"></polyline><circle cx="17" cy="6" r="1.5"></circle></svg> Hike</span></div>
-      </div>
-        <div class="act-card-body">
-          <div class="act-card-header-bg">
-            <h3 class="act-card-title">Malé Karpaty ridge</h3>
-            <p class="act-card-date">Jun 5, 8:00 AM</p>
-          </div>
-          <div class="act-card-stats">
-            <div class="act-cs"><span class="act-cv">18.4 <small>km</small></span><span class="act-cl">Distance</span></div>
-            <div class="act-cs"><span class="act-cv">5:12:00</span><span class="act-cl">Time</span></div>
-            <div class="act-cs"><span class="act-cv">2.8 <small>km/h</small></span><span class="act-cl">Speed</span></div>
-            <div class="act-cs"><span class="act-cv">1,240 <small>m</small></span><span class="act-cl">Elev.</span></div>
-          </div>
-          <div class="act-card-engage">
-            <button class="fc-engbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg> 7</button>
-            <button class="fc-engbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> 1</button>
-            <button class="fc-engbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"></rect><polyline points="8 7 9.5 4.5 14.5 4.5 16 7"></polyline><circle cx="12" cy="13" r="3.4"></circle></svg> 12</button>
-            <a class="fc-engbtn act-view-link" href="#" title="View on Strava"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 4 4 4 4 20 20 20 20 15"></polyline><line x1="13" y1="11" x2="20" y2="4"></line><polyline points="14 4 20 4 20 10"></polyline></svg></a>
-          </div>
-        </div>
-      </div>
-
-      <!-- Swimming -->
-      <div class="act-card">
-        <div class="act-photo-wrap">
-        <image-slot id="act-photo-swim" class="act-photo" shape="rect" placeholder="Swim photo"></image-slot>
-        <div class="act-photo-pill"><span class="fc-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 17c2-2 4-2 6 0s4 2 6 0 4-2 6 0"></path><path d="M2 12c2-2 4-2 6 0s4 2 6 0 4-2 6 0"></path><path d="M16 6a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"></path><line x1="16" y1="6" x2="16" y2="11"></line></svg> Swim</span></div>
-      </div>
-        <div class="act-card-body">
-          <div class="act-card-header-bg">
-            <h3 class="act-card-title">Open water swim</h3>
-            <p class="act-card-date">Jun 4, 7:00 AM</p>
-          </div>
-          <div class="act-card-stats">
-            <div class="act-cs"><span class="act-cv">2.4 <small>km</small></span><span class="act-cl">Distance</span></div>
-            <div class="act-cs"><span class="act-cv">48:22</span><span class="act-cl">Time</span></div>
-            <div class="act-cs"><span class="act-cv">2:01 <small>/100m</small></span><span class="act-cl">Pace</span></div>
-            <div class="act-cs"><span class="act-cv">—</span><span class="act-cl">Elev.</span></div>
-          </div>
-          <div class="act-card-engage">
-            <button class="fc-engbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg> 9</button>
-            <button class="fc-engbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> 3</button>
-            <button class="fc-engbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"></rect><polyline points="8 7 9.5 4.5 14.5 4.5 16 7"></polyline><circle cx="12" cy="13" r="3.4"></circle></svg> 0</button>
-            <a class="fc-engbtn act-view-link" href="#" title="View on Strava"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 4 4 4 4 20 20 20 20 15"></polyline><line x1="13" y1="11" x2="20" y2="4"></line><polyline points="14 4 20 4 20 10"></polyline></svg></a>
-          </div>
-        </div>
-      </div>
-
+      {% for activity in latest_activities %}
+        {% include "widgets/dashboard_act_card.html" %}
+      {% endfor %}
     </div><!-- /.act-cards -->
     </div><!-- /.latest-act-wrap -->
   </div><!-- /.row -->
@@ -317,44 +223,23 @@
       </div>
       <table class="gear-table">
         <thead>
-          <tr><th>Brand</th><th>Model</th><th>Progress</th><th>Used</th><th>Added</th></tr>
+          <tr><th>Brand</th><th>Model</th><th>Progress</th><th>Used</th></tr>
         </thead>
         <tbody>
+          {% for g in gear_health %}
           <tr>
-            <td class="gname">Brooks</td>
-            <td class="gtype">Speedcross 6</td>
-            <td><div class="prog"><span class="nums">620 <small>/ 800 km</small></span><span class="barline"><span class="prog-bar"><i style="width: 78%;"></i></span><span class="pct">78%</span></span></div><svg viewBox="0 0 24 24" width="15" height="15" fill="#F59E0B" style="display:inline-block;vertical-align:middle;margin-left:6px" title="Replace soon"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="17" x2="12.01" y2="17" stroke="white" stroke-width="2" stroke-linecap="round"/></svg></td>
-            <td class="used">42 activities</td>
-            <td class="added">Feb 2025</td>
+            <td class="gname">{{ g.brand_name }}</td>
+            <td class="gtype">{{ g.model_name }}</td>
+            <td>
+              {% if g.activity_count %}
+              <div class="prog"><span class="nums">{{ g.distance_km|intcomma }} <small>/ {{ g.lifespan_km|intcomma }} km</small></span><span class="barline"><span class="prog-bar"><i style="width: {{ g.wear_pct }}%;"></i></span><span class="pct">{{ g.wear_pct }}%</span></span></div>{% if g.wear_alert %}<svg viewBox="0 0 24 24" width="15" height="15" fill="#F59E0B" style="display:inline-block;vertical-align:middle;margin-left:6px" title="Replace soon"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="17" x2="12.01" y2="17" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>{% endif %}
+              {% else %}<span style="color: var(--ink-3);">—</span>{% endif %}
+            </td>
+            <td class="used">{{ g.activity_count }} activit{{ g.activity_count|pluralize:"y,ies" }}</td>
           </tr>
-          <tr>
-            <td class="gname">Salomon</td>
-            <td class="gtype">Speedcross 6</td>
-            <td><div class="prog"><span class="nums">430 <small>/ 800 km</small></span><span class="barline"><span class="prog-bar"><i style="width: 54%;"></i></span><span class="pct">54%</span></span></div></td>
-            <td class="used">28 activities</td>
-            <td class="added">Aug 2024</td>
-          </tr>
-          <tr>
-            <td class="gname">Merida</td>
-            <td class="gtype">Matts TFS XC 400-D</td>
-            <td><div class="prog"><span class="nums">2,340 <small>/ 5,000 km</small></span><span class="barline"><span class="prog-bar"><i style="width: 47%;"></i></span><span class="pct">47%</span></span></div></td>
-            <td class="used">63 activities</td>
-            <td class="added">Apr 2023</td>
-          </tr>
-          <tr>
-            <td class="gname">Garmin</td>
-            <td class="gtype">Forerunner 955</td>
-            <td><span style="color: var(--ink-3);">—</span></td>
-            <td class="used">146 activities</td>
-            <td class="added">Feb 2025</td>
-          </tr>
-          <tr>
-            <td class="gname">Asics</td>
-            <td class="gtype">Gel-Kayano 32</td>
-            <td><div class="prog"><span class="nums">185 <small>/ 800 km</small></span><span class="barline"><span class="prog-bar"><i style="width: 23%;"></i></span><span class="pct">23%</span></span></div></td>
-            <td class="used">18 activities</td>
-            <td class="added">Mar 2026</td>
-          </tr>
+          {% empty %}
+          <tr><td colspan="4" style="color: var(--ink-3);">No gear yet.</td></tr>
+          {% endfor %}
         </tbody>
       </table>
     </section>
@@ -409,7 +294,7 @@
       <div class="fun-list">
         <div class="fun-row">
           <svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"></rect><polyline points="8 7 9.5 4.5 14.5 4.5 16 7"></polyline><circle cx="12" cy="13" r="3.4"></circle></svg>
-          <span class="k">Photos Taken</span><span class="v">2,340</span>
+          <span class="k">Photos Taken</span><span class="v">{{ total_photos|intcomma }}</span>
         </div>
         <div class="fun-row">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c0 0-5 5-5 10a5 5 0 0 0 10 0c0-2-.8-3.8-2-5 0 2.5-1.5 4-3 4.5 .5-3-1-6 0-9.5z"></path></svg>
@@ -417,7 +302,7 @@
         </div>
         <div class="fun-row">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-          <span class="k">Kudos Received</span><span class="v">876</span>
+          <span class="k">Kudos Received</span><span class="v">{{ total_kudos|intcomma }}</span>
         </div>
         <div class="fun-row">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
@@ -437,16 +322,26 @@
 
   <footer class="foot" data-screen-label="Footer">
     <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"></rect><line x1="8" y1="3" x2="8" y2="7"></line><line x1="16" y1="3" x2="16" y2="7"></line><line x1="4" y1="10" x2="20" y2="10"></line></svg>
-    <span>Last updated: June 8, 2026, 14:32</span>
+    <span>Last updated: {{ last_updated|date:"F j, Y, H:i" }}</span>
     <button type="button" aria-label="Refresh" title="Refresh">⟳</button>
   </footer>
 </main>
 {% endblock %}
 
 {% block extra_js %}
+{{ trends|json_script:"dashboard-trends" }}
+{{ calendar|json_script:"dashboard-calendar" }}
+{{ gear_usage|json_script:"dashboard-gear-usage" }}
 <script src="{% static 'js/data.js' %}"></script>
 <script src="{% static 'js/charts.js' %}"></script>
 <script src="{% static 'js/classic-data.js' %}"></script>
+<script>
+  // Render the route trace on the hero activity float card.
+  document.querySelectorAll('.fc-route[data-polyline]').forEach(function(svg) {
+    var pts = window.DSCharts.decodePolyline(svg.dataset.polyline);
+    if (pts.length) window.DSCharts.renderRoute(svg, pts);
+  });
+</script>
 <script>
   function syncRowHeights() {
     const trends = document.querySelector('.row-trends-aoty section.card:last-child');
@@ -463,12 +358,9 @@
 <script>
   // Gear donut chart
   (function() {
-    const data = [
-      { name: "Brooks Caldera 8",    acts: 42,  color: "#EBE6F2", hoverColor: "#7C4DB8" },
-      { name: "Trek Domane SL 6",    acts: 63,  color: "#D5E5D3", hoverColor: "#3A8050" },
-      { name: "Salomon Speedcross 6",acts: 28,  color: "#BDD8ED", hoverColor: "#007FB6" },
-      { name: "Asics Gel-Kayano 32", acts: 18,  color: "#F5D0BC", hoverColor: "#FC5200" },
-    ];
+    const dataEl = document.getElementById('dashboard-gear-usage');
+    const data = dataEl ? JSON.parse(dataEl.textContent) : [];
+    if (!data.length) return;
     const total = data.reduce((s, d) => s + d.acts, 0);
 
     // Pre-compute saturated colors (darken + saturate each)

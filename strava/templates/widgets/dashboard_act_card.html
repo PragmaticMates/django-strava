@@ -1,0 +1,28 @@
+<div class="act-card">
+  <div class="act-photo-wrap">
+    {% if activity.photo %}
+    <img class="act-photo" src="{{ activity.photo }}" alt="{{ activity.name }}">
+    {% else %}
+    <image-slot class="act-photo" shape="rect" placeholder="{{ activity.get_sport_type_display }} photo"></image-slot>
+    {% endif %}
+    <div class="act-photo-pill"><span class="fc-pill">{% include "widgets/sport_icon.html" with type=activity.type %} {{ activity.get_sport_type_display }}</span></div>
+  </div>
+  <div class="act-card-body">
+    <div class="act-card-header-bg">
+      <h3 class="act-card-title">{{ activity.name }}</h3>
+      <p class="act-card-date">{{ activity.start_date|date:"M j, g:i A" }}</p>
+    </div>
+    <div class="act-card-stats">
+      <div class="act-cs"><span class="act-cv">{{ activity.dist }} <small>km</small></span><span class="act-cl">Distance</span></div>
+      <div class="act-cs"><span class="act-cv">{{ activity.dur }}</span><span class="act-cl">Time</span></div>
+      <div class="act-cs"><span class="act-cv">{{ activity.pace_parts.0 }} <small>{{ activity.pace_parts.1 }}</small></span><span class="act-cl">{% if activity.pace_parts.1 == 'km/h' %}Speed{% else %}Pace{% endif %}</span></div>
+      <div class="act-cs"><span class="act-cv">{% if activity.type == 'swim' %}—{% else %}{{ activity.elev }} <small>m</small>{% endif %}</span><span class="act-cl">Elev.</span></div>
+    </div>
+    <div class="act-card-engage">
+      <button class="fc-engbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg> {{ activity.kudos }}</button>
+      <button class="fc-engbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg> {{ activity.comments }}</button>
+      <button class="fc-engbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"></rect><polyline points="8 7 9.5 4.5 14.5 4.5 16 7"></polyline><circle cx="12" cy="13" r="3.4"></circle></svg> {{ activity.photo_count }}</button>
+      <a class="fc-engbtn act-view-link" href="{{ activity.get_absolute_url }}" target="_blank" rel="noopener" title="View on Strava"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 4 4 4 4 20 20 20 20 15"></polyline><line x1="13" y1="11" x2="20" y2="4"></line><polyline points="14 4 20 4 20 10"></polyline></svg></a>
+    </div>
+  </div>
+</div>

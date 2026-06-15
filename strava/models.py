@@ -154,6 +154,10 @@ class Activity(models.Model):
     return self.json.get('comment_count', 0)
 
   @property
+  def photo_count(self):
+    return self.json.get('total_photo_count', 0)
+
+  @property
   def pb(self):
     return bool(self.json.get('pr_count', 0))
 
