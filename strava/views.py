@@ -1,6 +1,6 @@
 import datetime
 
-from django.db.models import Count, FloatField, Max, Sum
+from django.db.models import Count, FloatField, IntegerField, Max, Sum
 from django.db.models.fields.json import KeyTextTransform
 from django.db.models.functions import Cast
 from django.shortcuts import render
@@ -157,7 +157,46 @@ class GearView(ListView):
         return context
 
 
-def gallery(request):
-    return render(request, 'pages/gallery.html', {
-        'active_page': 'gallery',
-    })
+class GalleryView(ListView):
+    model = Activity
+    template_name = 'pages/gallery.html'
+    context_object_name = 'photos'
+
+    def get_template_names(self):
+        if getattr(self.request, 'htmx', False):
+            return ['pages/_gallery_results.html']
+        return [self.template_name]
+
+    def get_queryset(self):
+        params = self.request.GET
+        qs = (
+            Activity.objects
+            .search(params.get('q'))
+            .for_sport_category(params.get('sport'))
+            .for_year(params.get('year'))
+        )
+        sort = params.get('sort', 'newest')
+        if sort == 'oldest':
+            return qs.order_by('start_date')
+        if sort == 'kudos':
+            kudos = Cast(KeyTextTransform('kudos_count', 'json'), output_field=IntegerField())
+            return qs.annotate(_kudos=kudos).order_by(kudos.desc(nulls_last=True), '-start_date')
+        return qs.order_by('-start_date')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['active_page'] = 'gallery'
+
+        params = self.request.GET
+        context['q'] = params.get('q', '')
+        context['sport'] = params.get('sport', 'all')
+        context['year'] = params.get('year', 'all')
+        context['sort'] = params.get('sort', 'newest')
+
+        # A gallery item is an activity that has a primary photo. Photo presence is read via
+        # the Activity.photo property (json.photos.primary.urls), so it's filtered in Python.
+        photos = [a for a in context['photos'] if a.photo]
+        context['photos'] = photos
+        context['count'] = len(photos)
+        context['year_list'] = [d.year for d in Activity.objects.dates('start_date', 'year', order='DESC')]
+        return context

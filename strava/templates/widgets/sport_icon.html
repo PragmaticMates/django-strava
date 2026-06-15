@@ -1,0 +1,13 @@
+{% if type == 'ride' %}
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="6" cy="15" r="3"></circle><circle cx="18" cy="15" r="3"></circle><polyline points="6 12 6 6 12 4 16 8 18 12"></polyline></svg>
+{% elif type == 'trail' %}
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="3 20 10 7 14 13 17 9 21 20"></polyline></svg>
+{% elif type == 'hike' %}
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="3 20 10 7 14 13 17 9 21 20"></polyline><circle cx="17" cy="6" r="1.5"></circle></svg>
+{% elif type == 'swim' %}
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 17c2-2 4-2 6 0s4 2 6 0 4-2 6 0"></path><path d="M2 12c2-2 4-2 6 0s4 2 6 0 4-2 6 0"></path></svg>
+{% elif type == 'walk' %}
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4" r="1.5"></circle><path d="M9 19l1-6-2-3h6l-2 3 1 6"></path><path d="M7 10l2-3h6"></path></svg>
+{% else %}
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="6" cy="18" r="2.4"></circle><circle cx="18" cy="6" r="2.4"></circle><path d="M8 17 C 13 15, 11 8, 16 7"></path></svg>
+{% endif %}

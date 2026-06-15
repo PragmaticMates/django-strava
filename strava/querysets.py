@@ -42,6 +42,35 @@ class ActivityQuerySet(models.QuerySet):
             return self
         return self.filter(start_date__year=year, start_date__month=month)
 
+    def for_year(self, year):
+        if not year or year == 'all':
+            return self
+        try:
+            return self.filter(start_date__year=int(year))
+        except (ValueError, TypeError):
+            return self
+
+    def for_sport_category(self, sport):
+        # Mirrors the Activity.type property, which buckets sport_type into broad categories.
+        if not sport or sport == 'all':
+            return self
+        if sport == 'trail':
+            return self.filter(sport_type__contains='Trail')
+        if sport == 'hike':
+            return self.filter(sport_type__in=['Hike', 'Snowshoe'])
+        if sport == 'walk':
+            return self.filter(sport_type='Walk')
+        if sport == 'ride':
+            return self.filter(sport_type__contains='Ride')
+        if sport == 'swim':
+            return self.filter(sport_type__contains='Swim')
+        if sport == 'run':
+            return (self.exclude(sport_type__contains='Trail')
+                        .exclude(sport_type__contains='Ride')
+                        .exclude(sport_type__contains='Swim')
+                        .exclude(sport_type__in=['Hike', 'Snowshoe', 'Walk']))
+        return self
+
     def sorted_by(self, key, direction='desc'):
         moving_time = Cast(KeyTextTransform('moving_time', 'json'), output_field=FloatField())
         elevation = Cast(KeyTextTransform('total_elevation_gain', 'json'), output_field=FloatField())
