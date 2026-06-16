@@ -31,7 +31,7 @@
     </button>
     <button class="pill-btn" type="button">All Gear <span class="caret">▾</span></button>
   </div>
-  {% if latest_activity %}{% include "widgets/activity.html" with activity=latest_activity show_close=True %}{% endif %}
+  {% if latest_activity %}{% include "widgets/activity.html" with activity=latest_activity show_close=True hidden=True %}{% endif %}
   {% for activity in map_activities %}{% include "widgets/activity.html" with activity=activity show_close=True map_card=True map_index=forloop.counter0 %}{% endfor %}
 </section>
 
@@ -355,11 +355,44 @@
     });
   }
 
+  // Route stroke color per sport, matching the marker palette.
+  const COLORS = { run: '#FC5200', trail: '#7C4DB8', ride: '#007FB6', hike: '#3A8050', walk: '#3A8050', swim: '#007FB6' };
+
+  // Decode a Google-encoded polyline into [lat, lng] pairs for Leaflet.
+  function decodePolyline(str) {
+    let idx = 0, lat = 0, lng = 0;
+    const coords = [];
+    while (idx < str.length) {
+      let b, shift = 0, result = 0;
+      do { b = str.charCodeAt(idx++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+      lat += (result & 1) ? ~(result >> 1) : (result >> 1);
+      shift = result = 0;
+      do { b = str.charCodeAt(idx++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+      lng += (result & 1) ? ~(result >> 1) : (result >> 1);
+      coords.push([lat / 1e5, lng / 1e5]);
+    }
+    return coords;
+  }
+
+  // Keep markers/routes clear of the overlapping UI: top filter pills + zoom
+  // control, and the bottom strip where the Season totals card overlaps the map.
+  const FIT = { paddingTopLeft: [50, 80], paddingBottomRight: [50, 140] };
+
   const map = L.map(el, { zoomControl: false, scrollWheelZoom: false });
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
     subdomains: 'abcd', maxZoom: 19,
   }).addTo(map);
+
+  // Remember the overview before showing a route, and note any manual map move so
+  // closing the card can restore the previous position/zoom (unless the user moved).
+  let routeLayer = null;
+  let savedView = null;
+  let userMoved = false;
+  function markUserMoved() { userMoved = true; }
+  map.on('dragstart', markUserMoved);
+  map.on('dblclick', markUserMoved);
+  map.on('boxzoomstart', markUserMoved);
 
   // Clicking a marker swaps the hero float card to that activity, closing any open one.
   function openActivityCard(index) {
@@ -367,6 +400,34 @@
     const card = document.querySelector('.maphero .float-card[data-map-index="' + index + '"]');
     if (card) card.style.display = '';
   }
+
+  // Draw the activity's route (replacing any previous one) and frame the map on it.
+  function selectActivity(m, index) {
+    openActivityCard(index);
+    if (!routeLayer) savedView = { center: map.getCenter(), zoom: map.getZoom() };
+    userMoved = false;
+    if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
+    const coords = m.polyline ? decodePolyline(m.polyline) : [];
+    if (!coords.length) return;
+    const color = COLORS[m.type] || COLORS.run;
+    routeLayer = L.layerGroup([
+      L.polyline(coords, { color: '#fff', weight: 7, opacity: 0.85 }),
+      L.polyline(coords, { color: color, weight: 4, opacity: 0.95 }),
+    ]).addTo(map);
+    map.fitBounds(coords, Object.assign({ maxZoom: 16 }, FIT));
+  }
+
+  // Closing a card removes its route and, if the user hasn't manually panned/zoomed,
+  // restores the map to where it was before the route was shown.
+  function onCardClose() {
+    if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
+    if (savedView && !userMoved) map.setView(savedView.center, savedView.zoom);
+    savedView = null;
+    userMoved = false;
+  }
+  document.querySelectorAll('.maphero .fc-close').forEach(function(btn) {
+    btn.addEventListener('click', onCardClose);
+  });
 
   if (markers.length) {
     const clusters = L.markerClusterGroup({
@@ -382,11 +443,11 @@
     markers.forEach(function(m, i) {
       L.marker([m.lat, m.lng], { icon: pinIcon(m.type) })
         .bindTooltip(m.title)
-        .on('click', function() { openActivityCard(i); })
+        .on('click', function() { selectActivity(m, i); })
         .addTo(clusters);
     });
     map.addLayer(clusters);
-    map.fitBounds(clusters.getBounds(), { padding: [50, 50], maxZoom: 14 });
+    map.fitBounds(clusters.getBounds(), Object.assign({ maxZoom: 14 }, FIT));
   } else {
     map.setView([48.6, 18.2], 6);  // default region when no GPS activities exist
   }
@@ -394,8 +455,8 @@
   // Wire the existing styled zoom buttons to the map.
   const zin = document.getElementById('map-zoom-in');
   const zout = document.getElementById('map-zoom-out');
-  if (zin) zin.addEventListener('click', function() { map.zoomIn(); });
-  if (zout) zout.addEventListener('click', function() { map.zoomOut(); });
+  if (zin) zin.addEventListener('click', function() { markUserMoved(); map.zoomIn(); });
+  if (zout) zout.addEventListener('click', function() { markUserMoved(); map.zoomOut(); });
 })();
 </script>
 <script src="{% static 'js/data.js' %}"></script>

@@ -1,4 +1,4 @@
-<div class="float-card" data-screen-label="Activity card"{% if map_card %} data-map-index="{{ map_index }}" style="display:none"{% endif %}>
+<div class="float-card" data-screen-label="Activity card"{% if map_card %} data-map-index="{{ map_index }}"{% endif %}{% if map_card or hidden %} style="display:none"{% endif %}>
   {% if show_close %}
   <button class="fc-close" onclick="this.closest('.float-card').style.display='none'" aria-label="Close">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>

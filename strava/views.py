@@ -12,7 +12,7 @@ from strava.models import Activity, Gear
 MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-MAP_MARKER_LIMIT = 60   # cap markers so a busy map stays readable
+MAP_MARKER_LIMIT = 1000   # cap markers so a busy map stays readable
 
 GEAR_DONUT_PALETTE = [
     ('#EBE6F2', '#7C4DB8'),
@@ -146,8 +146,9 @@ class DashboardView(TemplateView):
         """Collect map markers and their activities from ``start_latlng``.
 
         Returns ``(markers, map_activities)`` where ``markers`` is a list of
-        ``{lat, lng, type, title}`` dicts the Leaflet map plots and fits bounds
-        around, and ``map_activities`` are the matching ``Activity`` objects in
+        ``{lat, lng, type, title, polyline}`` dicts the Leaflet map plots (the
+        encoded ``polyline`` is drawn as the route when a marker is clicked), and
+        ``map_activities`` are the matching ``Activity`` objects in
         the same order (so a marker's list index selects its activity card).
         Activities without GPS (an empty ``start_latlng``) are skipped, and both
         lists are capped at ``MAP_MARKER_LIMIT``.
@@ -161,6 +162,7 @@ class DashboardView(TemplateView):
                     'lng': round(float(latlng[1]), 6),
                     'type': a.type,
                     'title': f'{a.name} · {a.dist} km',
+                    'polyline': a.polyline,
                 })
                 map_activities.append(a)
             if len(markers) >= MAP_MARKER_LIMIT:
