@@ -469,10 +469,10 @@
     const clusters = L.markerClusterGroup({
       showCoverageOnHover: false,
       maxClusterRadius: 60,
-      // Handle cluster clicks ourselves so the fit honours FIT padding (the default
+      // Zoom to clusters ourselves so the fit honours FIT padding (the default
       // zoomToBounds ignores it, leaving the bottom marker under the Season totals).
+      // spiderfyOnMaxZoom stays enabled so coincident markers still fan out.
       zoomToBoundsOnClick: false,
-      spiderfyOnMaxZoom: false,
       iconCreateFunction: function(cluster) {
         return L.divIcon({
           html: '<span class="map-cluster">' + cluster.getChildCount() + '</span>',
@@ -483,17 +483,13 @@
     clusters.on('clusterclick', function(e) {
       closeCard();  // drilling into a cluster dismisses any open activity card
       clearHoverRoute();
-      const bounds = e.layer.getBounds();
-      const pad = L.point(
-        FIT.paddingTopLeft[0] + FIT.paddingBottomRight[0],
-        FIT.paddingTopLeft[1] + FIT.paddingBottomRight[1]
-      );
-      // Zoom in (with our padding) when that separates the points, else spiderfy.
-      if (map.getBoundsZoom(bounds, false, pad) <= map.getZoom()) {
-        e.layer.spiderfy();
-      } else {
-        map.fitBounds(bounds, Object.assign({ maxZoom: 16 }, FIT));
-      }
+      const cluster = e.layer;
+      // If the cluster can only fan out (its markers can't be separated by zooming),
+      // let markercluster's own handler spiderfy it; otherwise zoom in with padding.
+      let bottom = cluster;
+      while (bottom._childClusters.length === 1) bottom = bottom._childClusters[0];
+      if (bottom._zoom === clusters._maxZoom && bottom._childCount === cluster._childCount) return;
+      map.fitBounds(cluster.getBounds(), Object.assign({ maxZoom: clusters._maxZoom }, FIT));
     });
     markers.forEach(function(m, i) {
       L.marker([m.lat, m.lng], { icon: pinIcon(m.type) })
