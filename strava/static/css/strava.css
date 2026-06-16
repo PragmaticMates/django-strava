@@ -209,7 +209,8 @@ body {
   gap: var(--gap, 20px);
   padding: var(--gap, 20px) 0;
 }
-.acts-feed .float-card { position: static; transform: none; width: auto; z-index: auto; }
+.acts-feed .float-card,
+.act-cards .float-card { position: static; transform: none; width: auto; z-index: auto; }
 
 /* header */
 .fc-header { display: flex; align-items: center; gap: 10px; padding: 14px 16px 10px; }

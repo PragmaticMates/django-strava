@@ -168,7 +168,7 @@
       <h2 class="section-title">Latest Activities</h2>
       <div class="act-cards" id="latest-activities">
       {% for activity in latest_activities %}
-        {% include "widgets/dashboard_act_card.html" %}
+        {% include "widgets/activity.html" with activity=activity show_close=False %}
       {% endfor %}
     </div><!-- /.act-cards -->
     </div><!-- /.latest-act-wrap -->
