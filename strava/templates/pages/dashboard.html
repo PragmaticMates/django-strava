@@ -414,7 +414,15 @@
       L.polyline(coords, { color: '#fff', weight: 7, opacity: 0.85 }),
       L.polyline(coords, { color: color, weight: 4, opacity: 0.95 }),
     ]).addTo(map);
-    map.fitBounds(coords, Object.assign({ maxZoom: 16 }, FIT));
+
+    // Frame the route in the left region so it stays visible beside the centered card.
+    const opts = Object.assign({ maxZoom: 16 }, FIT);
+    const card = document.querySelector('.maphero .float-card[data-map-index="' + index + '"]');
+    const size = map.getSize();
+    const cardW = (card && card.offsetWidth) || 360;
+    const rightPad = Math.round(size.x / 2 + cardW / 2 + 30);
+    if (size.x - rightPad > 220) opts.paddingBottomRight = [rightPad, FIT.paddingBottomRight[1]];
+    map.fitBounds(coords, opts);
   }
 
   // Closing a card removes its route and, if the user hasn't manually panned/zoomed,
@@ -433,12 +441,29 @@
     const clusters = L.markerClusterGroup({
       showCoverageOnHover: false,
       maxClusterRadius: 60,
+      // Handle cluster clicks ourselves so the fit honours FIT padding (the default
+      // zoomToBounds ignores it, leaving the bottom marker under the Season totals).
+      zoomToBoundsOnClick: false,
+      spiderfyOnMaxZoom: false,
       iconCreateFunction: function(cluster) {
         return L.divIcon({
           html: '<span class="map-cluster">' + cluster.getChildCount() + '</span>',
           className: '', iconSize: [36, 36], iconAnchor: [18, 18],
         });
       },
+    });
+    clusters.on('clusterclick', function(e) {
+      const bounds = e.layer.getBounds();
+      const pad = L.point(
+        FIT.paddingTopLeft[0] + FIT.paddingBottomRight[0],
+        FIT.paddingTopLeft[1] + FIT.paddingBottomRight[1]
+      );
+      // Zoom in (with our padding) when that separates the points, else spiderfy.
+      if (map.getBoundsZoom(bounds, false, pad) <= map.getZoom()) {
+        e.layer.spiderfy();
+      } else {
+        map.fitBounds(bounds, Object.assign({ maxZoom: 16 }, FIT));
+      }
     });
     markers.forEach(function(m, i) {
       L.marker([m.lat, m.lng], { icon: pinIcon(m.type) })
