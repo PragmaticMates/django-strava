@@ -387,12 +387,33 @@
   // Remember the overview before showing a route, and note any manual map move so
   // closing the card can restore the previous position/zoom (unless the user moved).
   let routeLayer = null;
+  let hoverLayer = null;
   let savedView = null;
   let userMoved = false;
   function markUserMoved() { userMoved = true; }
   map.on('dragstart', markUserMoved);
   map.on('dblclick', markUserMoved);
   map.on('boxzoomstart', markUserMoved);
+
+  // Decode a marker's route once and cache it for reuse on hover and click.
+  function activityCoords(m) {
+    if (m._coords === undefined) m._coords = m.polyline ? decodePolyline(m.polyline) : [];
+    return m._coords;
+  }
+
+  // Preview the route on hover (dashed, no card, no map move); cleared on mouse-out.
+  function showHoverRoute(m) {
+    clearHoverRoute();
+    const coords = activityCoords(m);
+    if (!coords.length) return;
+    hoverLayer = L.layerGroup([
+      L.polyline(coords, { color: '#fff', weight: 5, opacity: 0.7 }),
+      L.polyline(coords, { color: COLORS[m.type] || COLORS.run, weight: 3, opacity: 0.9, dashArray: '4 5' }),
+    ]).addTo(map);
+  }
+  function clearHoverRoute() {
+    if (hoverLayer) { map.removeLayer(hoverLayer); hoverLayer = null; }
+  }
 
   // Clicking a marker swaps the hero float card to that activity, closing any open one.
   function openActivityCard(index) {
@@ -404,10 +425,11 @@
   // Draw the activity's route (replacing any previous one) and frame the map on it.
   function selectActivity(m, index) {
     openActivityCard(index);
+    clearHoverRoute();
     if (!routeLayer) savedView = { center: map.getCenter(), zoom: map.getZoom() };
     userMoved = false;
     if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
-    const coords = m.polyline ? decodePolyline(m.polyline) : [];
+    const coords = activityCoords(m);
     if (!coords.length) return;
     const color = COLORS[m.type] || COLORS.run;
     routeLayer = L.layerGroup([
@@ -460,6 +482,7 @@
     });
     clusters.on('clusterclick', function(e) {
       closeCard();  // drilling into a cluster dismisses any open activity card
+      clearHoverRoute();
       const bounds = e.layer.getBounds();
       const pad = L.point(
         FIT.paddingTopLeft[0] + FIT.paddingBottomRight[0],
@@ -475,6 +498,8 @@
     markers.forEach(function(m, i) {
       L.marker([m.lat, m.lng], { icon: pinIcon(m.type) })
         .bindTooltip(m.title)
+        .on('mouseover', function() { showHoverRoute(m); })
+        .on('mouseout', function() { clearHoverRoute(); })
         .on('click', function() { selectActivity(m, i); })
         .addTo(clusters);
     });
