@@ -115,16 +115,22 @@ body {
 .sports-dd-sel { color: var(--accent); font-weight: 600; }
 .sports-dd-sel svg { color: var(--accent); }
 
-/* Activity markers */
-.act-marker {
-  position: absolute; z-index: 4; transform: translate(-50%, -50%);
+/* Activity map markers (Leaflet divIcon pins) */
+.map-pin {
   width: 34px; height: 34px; border-radius: 50%; cursor: pointer;
   border: 3px solid #fff;
   box-shadow: 0 0 0 4px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.2);
   transition: transform 0.15s;
   display: flex; align-items: center; justify-content: center;
 }
-.act-marker:hover { transform: translate(-50%, -50%) scale(1.5); }
+.map-pin:hover { transform: scale(1.4); }
+.map-cluster {
+  display: flex; align-items: center; justify-content: center;
+  min-width: 36px; height: 36px; padding: 0 8px; border-radius: 999px;
+  background: var(--accent); color: #fff; font-weight: 700; font-size: 13.5px;
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 25%, transparent), 0 2px 6px rgba(0,0,0,0.2);
+  cursor: pointer;
+}
 .act-marker-run { background: #F5D0BC; color: #FC5200; }
 .act-marker-run:hover { background: #FC5200; color: #fff; }
 .act-marker-ride { background: #BDD8ED; color: #007FB6; }
@@ -133,6 +139,10 @@ body {
 .act-marker-hike:hover { background: #3A8050; color: #fff; }
 .act-marker-trail { background: #EBE6F2; color: #7C4DB8; }
 .act-marker-trail:hover { background: #7C4DB8; color: #fff; }
+.act-marker-walk { background: #D5E5D3; color: #3A8050; }
+.act-marker-walk:hover { background: #3A8050; color: #fff; }
+.act-marker-swim { background: #BDD8ED; color: #007FB6; }
+.act-marker-swim:hover { background: #007FB6; color: #fff; }
 .map-search {
   display: flex; align-items: center; gap: 8px;
   background: var(--surface); border: 1px solid var(--line);
@@ -160,7 +170,9 @@ body {
   opacity: var(--map-grad-op);
   pointer-events: none; z-index: 2;
 }
-.maphero iframe.gmap { position: absolute; inset: 0; width: 100%; height: calc(100% + 80px); display: block; filter: grayscale(1) brightness(1.05); }
+.maphero #activity-map { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; background: #E8EEF2; }
+.maphero .leaflet-container { font: inherit; background: #E8EEF2; }
+.maphero .leaflet-control-attribution { font: 400 10px var(--font-body); }
 .zoom {
   position: absolute; left: 18px; top: 18px; z-index: 5;
   display: flex; flex-direction: column; border-radius: 9px; overflow: hidden;
@@ -172,13 +184,6 @@ body {
 }
 .zoom button:first-child { border-bottom: 1px solid var(--line-2); }
 .zoom button:hover { color: var(--ink); }
-.cluster {
-  position: absolute; z-index: 5; transform: translate(-50%, -50%);
-  min-width: 34px; height: 34px; padding: 0 7px; border-radius: 999px;
-  background: var(--accent); color: #fff; font-weight: 700; font-size: 13.5px;
-  display: grid; place-items: center;
-  box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 25%, transparent), 0 2px 6px rgba(0,0,0,0.2);
-}
 .map-filters { position: absolute; right: 18px; top: 18px; z-index: 5; display: flex; gap: 10px; }
 .pill-btn {
   appearance: none; cursor: pointer;

@@ -12,6 +12,8 @@ from strava.models import Activity, Gear
 MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
+MAP_MARKER_LIMIT = 60   # cap markers so a busy map stays readable
+
 GEAR_DONUT_PALETTE = [
     ('#EBE6F2', '#7C4DB8'),
     ('#D5E5D3', '#3A8050'),
@@ -56,6 +58,9 @@ class DashboardView(TemplateView):
         # ---- Latest activities ----
         context['latest_activity'] = activities[0] if activities else None
         context['latest_activities'] = activities[:4]
+
+        # ---- Activity map markers (from each activity's start_latlng) ----
+        context['map_markers'], context['map_activities'] = self._map_data(activities)
 
         # ---- Activity of the year (longest this year, else longest overall) ----
         pool = year_acts or activities
@@ -135,6 +140,32 @@ class DashboardView(TemplateView):
         context['total_photos'] = sum(a.photo_count for a in activities)
         context['last_updated'] = timezone.localtime()
         return context
+
+    @staticmethod
+    def _map_data(activities):
+        """Collect map markers and their activities from ``start_latlng``.
+
+        Returns ``(markers, map_activities)`` where ``markers`` is a list of
+        ``{lat, lng, type, title}`` dicts the Leaflet map plots and fits bounds
+        around, and ``map_activities`` are the matching ``Activity`` objects in
+        the same order (so a marker's list index selects its activity card).
+        Activities without GPS (an empty ``start_latlng``) are skipped, and both
+        lists are capped at ``MAP_MARKER_LIMIT``.
+        """
+        markers, map_activities = [], []
+        for a in activities:
+            latlng = a.json.get('start_latlng') or []
+            if len(latlng) == 2 and (latlng[0] or latlng[1]):
+                markers.append({
+                    'lat': round(float(latlng[0]), 6),
+                    'lng': round(float(latlng[1]), 6),
+                    'type': a.type,
+                    'title': f'{a.name} · {a.dist} km',
+                })
+                map_activities.append(a)
+            if len(markers) >= MAP_MARKER_LIMIT:
+                break
+        return markers, map_activities
 
 
 class ActivitiesView(ListView):
