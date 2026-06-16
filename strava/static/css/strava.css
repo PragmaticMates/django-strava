@@ -184,6 +184,15 @@ body {
 }
 .zoom button:first-child { border-bottom: 1px solid var(--line-2); }
 .zoom button:hover { color: var(--ink); }
+.map-reset {
+  position: absolute; left: 18px; top: 96px; z-index: 5;
+  appearance: none; cursor: pointer;
+  width: 36px; height: 36px; border-radius: 9px;
+  background: var(--surface); border: 1px solid var(--line); color: var(--ink-2);
+  display: grid; place-items: center; box-shadow: var(--shadow);
+}
+.map-reset:hover { color: var(--ink); }
+.map-reset svg { width: 16px; height: 16px; }
 .map-filters { position: absolute; right: 18px; top: 18px; z-index: 5; display: flex; gap: 10px; }
 .pill-btn {
   appearance: none; cursor: pointer;

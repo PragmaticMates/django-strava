@@ -16,6 +16,9 @@
     <button type="button" id="map-zoom-in" aria-label="Zoom in">+</button>
     <button type="button" id="map-zoom-out" aria-label="Zoom out">−</button>
   </div>
+  <button type="button" class="map-reset" id="map-reset" aria-label="Reset view" title="Reset view">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V5a1 1 0 0 1 1-1h3"></path><path d="M16 4h3a1 1 0 0 1 1 1v3"></path><path d="M20 16v3a1 1 0 0 1-1 1h-3"></path><path d="M8 20H5a1 1 0 0 1-1-1v-3"></path></svg>
+  </button>
   <div class="map-filters">
     <div class="map-search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -465,6 +468,7 @@
     btn.addEventListener('click', onCardClose);
   });
 
+  let resetView;
   if (markers.length) {
     const clusters = L.markerClusterGroup({
       showCoverageOnHover: false,
@@ -500,16 +504,28 @@
         .addTo(clusters);
     });
     map.addLayer(clusters);
-    map.fitBounds(clusters.getBounds(), Object.assign({ maxZoom: 14 }, FIT));
+    // Capture bounds from all marker coords (markercluster.getBounds() shrinks once
+    // off-screen markers are unloaded, which would make reset frame fewer markers).
+    const homeBounds = L.latLngBounds(markers.map(function(m) { return [m.lat, m.lng]; }));
+    resetView = function() { map.fitBounds(homeBounds, Object.assign({ maxZoom: 14 }, FIT)); };
   } else {
-    map.setView([48.6, 18.2], 6);  // default region when no GPS activities exist
+    resetView = function() { map.setView([48.6, 18.2], 6); };  // default when no GPS activities exist
   }
+  resetView();  // frame all markers on load
 
   // Wire the existing styled zoom buttons to the map.
   const zin = document.getElementById('map-zoom-in');
   const zout = document.getElementById('map-zoom-out');
   if (zin) zin.addEventListener('click', function() { markUserMoved(); map.zoomIn(); });
   if (zout) zout.addEventListener('click', function() { markUserMoved(); map.zoomOut(); });
+
+  // Reset button: close any card/route and re-frame all markers.
+  const reset = document.getElementById('map-reset');
+  if (reset) reset.addEventListener('click', function() {
+    closeCard();
+    clearHoverRoute();
+    resetView();
+  });
 })();
 </script>
 <script src="{% static 'js/data.js' %}"></script>
