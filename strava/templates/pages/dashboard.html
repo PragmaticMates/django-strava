@@ -425,13 +425,19 @@
     map.fitBounds(coords, opts);
   }
 
-  // Closing a card removes its route and, if the user hasn't manually panned/zoomed,
-  // restores the map to where it was before the route was shown.
-  function onCardClose() {
+  // Hide any open card and drop its route, without moving the map.
+  function closeCard() {
+    document.querySelectorAll('.maphero .float-card').forEach(function(c) { c.style.display = 'none'; });
     if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
-    if (savedView && !userMoved) map.setView(savedView.center, savedView.zoom);
     savedView = null;
     userMoved = false;
+  }
+
+  // The close button also restores the prior view if the user hasn't panned/zoomed.
+  function onCardClose() {
+    const view = (savedView && !userMoved) ? savedView : null;
+    closeCard();
+    if (view) map.setView(view.center, view.zoom);
   }
   document.querySelectorAll('.maphero .fc-close').forEach(function(btn) {
     btn.addEventListener('click', onCardClose);
@@ -453,6 +459,7 @@
       },
     });
     clusters.on('clusterclick', function(e) {
+      closeCard();  // drilling into a cluster dismisses any open activity card
       const bounds = e.layer.getBounds();
       const pad = L.point(
         FIT.paddingTopLeft[0] + FIT.paddingBottomRight[0],
