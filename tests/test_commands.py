@@ -35,6 +35,9 @@ class TestImportStrava:
             ACTIVITY_JSON_1,
             ACTIVITY_JSON_2,
         ]
+        # The command fetches the detailed activity per summary id.
+        details = {100: ACTIVITY_JSON_1, 200: ACTIVITY_JSON_2}
+        mock_api_cls.return_value.get_activity.side_effect = lambda activity_id: details[activity_id]
 
         call_command("import_strava")
 
@@ -82,6 +85,7 @@ class TestImportStrava:
 
         updated_json = {**ACTIVITY_JSON_1, "name": "Renamed Run"}
         mock_api_cls.return_value.get_activities.return_value = [updated_json]
+        mock_api_cls.return_value.get_activity.side_effect = lambda activity_id: updated_json
 
         call_command("import_strava")
 
