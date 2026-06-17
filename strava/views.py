@@ -4,7 +4,7 @@ from django.db.models import Count, FloatField, IntegerField, Max, Sum
 from django.db.models.fields.json import KeyTextTransform
 from django.db.models.functions import Cast
 from django.utils import timezone
-from django.views.generic import ListView, TemplateView
+from django.views.generic import DetailView, ListView, TemplateView
 
 from strava.models import Activity, Gear
 
@@ -149,14 +149,14 @@ class DashboardView(TemplateView):
         """Collect map markers and their activities from ``start_latlng``.
 
         Returns ``(markers, map_activities, no_gps_count)`` where ``markers`` is a
-        list of ``{lat, lng, type, title, polyline, sport_type, sport_label, gear,
-        gear_label, year}`` dicts the Leaflet map plots (the encoded ``polyline``
-        is drawn as the route when a marker is clicked; ``sport_type``, ``gear``
-        and ``year`` back the map filter pills), ``map_activities`` are the
-        matching ``Activity`` objects in the same order (so a marker's list index
-        selects its activity card), and ``no_gps_count`` is how many activities
-        had no ``start_latlng`` (e.g. pool swims, treadmill runs) and so can't be
-        placed. The marker/activity lists are capped at ``MAP_MARKER_LIMIT``.
+        list of ``{id, lat, lng, type, title, polyline, sport_type, sport_label,
+        gear, gear_label, year}`` dicts the Leaflet map plots (the encoded
+        ``polyline`` is drawn as the route when a marker is clicked; ``sport_type``,
+        ``gear`` and ``year`` back the map filter pills; ``id`` lazily fetches the
+        activity's card via ``ActivityCardView``), ``map_activities`` are the
+        matching ``Activity`` objects in the same order, and ``no_gps_count`` is
+        how many activities had no ``start_latlng`` (e.g. pool swims, treadmill
+        runs) and so can't be placed. The lists are capped at ``MAP_MARKER_LIMIT``.
         """
         def has_gps(a):
             latlng = a.json.get('start_latlng') or []
@@ -167,6 +167,7 @@ class DashboardView(TemplateView):
             if has_gps(a):
                 latlng = a.json['start_latlng']
                 markers.append({
+                    'id': a.pk,  # for lazily fetching the activity's card on marker click
                     'lat': round(float(latlng[0]), 6),
                     'lng': round(float(latlng[1]), 6),
                     'type': a.type,
@@ -354,4 +355,21 @@ class GalleryView(ListView):
         context['photos'] = photos
         context['count'] = len(photos)
         context['year_list'] = [d.year for d in Activity.objects.dates('start_date', 'year', order='DESC')]
+        return context
+
+
+class ActivityCardView(DetailView):
+    """Render a single activity's float card, fetched lazily when its map marker is
+    clicked. Keeps the dashboard from server-rendering a card for every marker up
+    front (which dominated page load once the marker cap was raised)."""
+    model = Activity
+    template_name = 'widgets/activity.html'
+    context_object_name = 'activity'
+
+    def get_queryset(self):
+        return Activity.objects.select_related('gear')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['show_close'] = True  # card is shown standalone (visible, with a close button)
         return context

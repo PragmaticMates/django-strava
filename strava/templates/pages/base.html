@@ -85,6 +85,16 @@ document.addEventListener('click', function(e) {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') document.getElementById('user-menu-trigger').setAttribute('aria-expanded', 'false');
 });
+
+// Log how long the page took to load (navigation start → load event).
+// Deferred so loadEventEnd is populated — it's still 0 while the load event fires.
+window.addEventListener('load', function() {
+  setTimeout(function() {
+    const nav = performance.getEntriesByType('navigation')[0];
+    const ms = (nav && nav.loadEventEnd) ? nav.loadEventEnd - nav.startTime : performance.now();
+    console.log('Page load time:', Math.round(ms) + ' ms');
+  }, 0);
+});
 </script>
 {% block extra_js %}{% endblock %}
 

@@ -41,8 +41,9 @@
   {% if map_hidden_count %}
   <p class="map-note">{{ map_hidden_count }} activit{{ map_hidden_count|pluralize:"y,ies" }} without GPS not shown</p>
   {% endif %}
-  {% if latest_activity %}{% include "widgets/activity.html" with activity=latest_activity show_close=True hidden=True %}{% endif %}
-  {% for activity in map_activities %}{% include "widgets/activity.html" with activity=activity show_close=True map_card=True map_index=forloop.counter0 %}{% endfor %}
+  {# Activity cards are fetched lazily when a marker is clicked (see map JS) rather than
+     server-rendered for every marker — rendering ~1000 hidden cards dominated page load. #}
+  <div id="map-card-host" data-card-url="{% url 'strava:activity_card' 0 %}"></div>
 </section>
 
 <main class="page">
@@ -415,7 +416,7 @@
 
   // Only draw routes once zoomed in this close — at low zoom a busy map would try to
   // render thousands of polylines at once, which is slow and unreadable.
-  const ROUTE_ZOOM_MIN = 11;
+  const ROUTE_ZOOM_MIN = 8;
 
   // Draw (or clear) a thin route overlay. To keep it fast it draws only the routes
   // of activities currently in view, and only when zoomed in past ROUTE_ZOOM_MIN.
@@ -449,16 +450,40 @@
     if (hoverLayer) { map.removeLayer(hoverLayer); hoverLayer = null; }
   }
 
-  // Clicking a marker swaps the hero float card to that activity, closing any open one.
-  function openActivityCard(index) {
-    document.querySelectorAll('.maphero .float-card').forEach(function(c) { c.style.display = 'none'; });
-    const card = document.querySelector('.maphero .float-card[data-map-index="' + index + '"]');
-    if (card) card.style.display = '';
+  const cardHost = document.getElementById('map-card-host');
+  // Build the card endpoint URL for an activity id from the placeholder URL on the host.
+  function cardUrl(id) { return cardHost.dataset.cardUrl.replace('/0/card/', '/' + id + '/card/'); }
+
+  // Frame the route in the left region so it stays visible beside the centered card.
+  function frameRouteBesideCard(coords, card) {
+    const opts = Object.assign({ maxZoom: 16 }, FIT);
+    const size = map.getSize();
+    const cardW = (card && card.offsetWidth) || 360;
+    const rightPad = Math.round(size.x / 2 + cardW / 2 + 30);
+    if (size.x - rightPad > 220) opts.paddingBottomRight = [rightPad, FIT.paddingBottomRight[1]];
+    map.fitBounds(coords, opts);
   }
 
-  // Draw the activity's route (replacing any previous one) and frame the map on it.
-  function selectActivity(m, index) {
-    openActivityCard(index);
+  // Fetch and show an activity's float card on demand (cards aren't server-rendered up
+  // front), then frame the map route beside it once the card has a measurable width.
+  function loadActivityCard(id, coords) {
+    if (!cardHost) return;
+    fetch(cardUrl(id), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function(r) { return r.ok ? r.text() : ''; })
+      .then(function(html) {
+        cardHost.innerHTML = html;
+        const card = cardHost.querySelector('.float-card');
+        if (!card) return;
+        card.style.display = '';
+        if (window.renderCardRoute) window.renderCardRoute(card);
+        const closeBtn = card.querySelector('.fc-close');
+        if (closeBtn) closeBtn.addEventListener('click', onCardClose);
+        if (coords && coords.length) frameRouteBesideCard(coords, card);
+      });
+  }
+
+  // Draw the activity's route (replacing any previous one), load its card, frame the map.
+  function selectActivity(m) {
     clearHoverRoute();
     if (!routeLayer) savedView = { center: map.getCenter(), zoom: map.getZoom() };
     userMoved = false;
@@ -470,20 +495,12 @@
       L.polyline(coords, { color: '#fff', weight: 7, opacity: 0.85 }),
       L.polyline(coords, { color: color, weight: 4, opacity: 0.95 }),
     ]).addTo(map);
-
-    // Frame the route in the left region so it stays visible beside the centered card.
-    const opts = Object.assign({ maxZoom: 16 }, FIT);
-    const card = document.querySelector('.maphero .float-card[data-map-index="' + index + '"]');
-    const size = map.getSize();
-    const cardW = (card && card.offsetWidth) || 360;
-    const rightPad = Math.round(size.x / 2 + cardW / 2 + 30);
-    if (size.x - rightPad > 220) opts.paddingBottomRight = [rightPad, FIT.paddingBottomRight[1]];
-    map.fitBounds(coords, opts);
+    loadActivityCard(m.id, coords);
   }
 
   // Hide any open card and drop its route, without moving the map.
   function closeCard() {
-    document.querySelectorAll('.maphero .float-card').forEach(function(c) { c.style.display = 'none'; });
+    if (cardHost) cardHost.innerHTML = '';
     if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
     savedView = null;
     userMoved = false;
@@ -495,9 +512,6 @@
     closeCard();
     if (view) map.setView(view.center, view.zoom);
   }
-  document.querySelectorAll('.maphero .fc-close').forEach(function(btn) {
-    btn.addEventListener('click', onCardClose);
-  });
 
   let resetView;
   let clusters = null;
@@ -537,7 +551,7 @@
         .bindTooltip(m.title)
         .on('mouseover', function() { showHoverRoute(m); })
         .on('mouseout', function() { clearHoverRoute(); })
-        .on('click', function() { selectActivity(m, i); });
+        .on('click', function() { selectActivity(m); });
       leafletMarkers.push(marker);
       clusters.addLayer(marker);
     });
@@ -709,10 +723,21 @@
 <script src="{% static 'js/charts.js' %}"></script>
 <script src="{% static 'js/classic-data.js' %}"></script>
 <script>
-  // Render the route trace on the hero activity float card.
-  document.querySelectorAll('.fc-route[data-polyline]').forEach(function(svg) {
+  // Render a float card's route trace, once, the first time the card is shown.
+  // Float cards are hidden until their marker is clicked, so rendering every card's
+  // route up front (a heavy polyline decode + SVG build per activity) needlessly
+  // blocked page load — slow with a large map. Map markers call this lazily.
+  window.renderCardRoute = function(card) {
+    if (!card) return;
+    var svg = card.querySelector('.fc-route[data-polyline]');
+    if (!svg || svg.dataset.rendered) return;
+    svg.dataset.rendered = '1';
     var pts = window.DSCharts.decodePolyline(svg.dataset.polyline);
     if (pts.length) window.DSCharts.renderRoute(svg, pts);
+  };
+  // Render only the cards already visible on load (e.g. the latest-activity hero).
+  document.querySelectorAll('.float-card').forEach(function(card) {
+    if (card.offsetParent !== null) window.renderCardRoute(card);
   });
 </script>
 <script>
