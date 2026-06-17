@@ -86,13 +86,23 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') document.getElementById('user-menu-trigger').setAttribute('aria-expanded', 'false');
 });
 
-// Log how long the page took to load (navigation start → load event).
+// Log how long the page took to load, broken down by phase so we can see where the
+// time goes (server response vs. download vs. DOM parse/scripts vs. load event).
 // Deferred so loadEventEnd is populated — it's still 0 while the load event fires.
 window.addEventListener('load', function() {
   setTimeout(function() {
     const nav = performance.getEntriesByType('navigation')[0];
-    const ms = (nav && nav.loadEventEnd) ? nav.loadEventEnd - nav.startTime : performance.now();
-    console.log('Page load time:', Math.round(ms) + ' ms');
+    if (!nav) { console.log('Page load time:', Math.round(performance.now()) + ' ms'); return; }
+    const r = function(a, b) { return Math.round(nav[b] - nav[a]); };
+    console.log('Page load time:', Math.round(nav.loadEventEnd - nav.startTime) + ' ms', {
+      'server (TTFB)':      r('requestStart', 'responseStart') + ' ms',
+      'download (response)': r('responseStart', 'responseEnd') + ' ms',
+      'DOM parse + sync JS': r('responseEnd', 'domContentLoadedEventStart') + ' ms',
+      'DOMContentLoaded JS': r('domContentLoadedEventStart', 'domContentLoadedEventEnd') + ' ms',
+      'after DCL → load':   r('domContentLoadedEventEnd', 'loadEventStart') + ' ms',
+      'load handlers':      r('loadEventStart', 'loadEventEnd') + ' ms',
+      'transferSize':       (nav.transferSize || 0) + ' bytes',
+    });
   }, 0);
 });
 </script>
