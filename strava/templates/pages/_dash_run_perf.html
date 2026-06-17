@@ -1,0 +1,20 @@
+<section class="card" id="dash-run-perf" hx-swap-oob="true">
+  <div class="card-head">
+    <svg viewBox="0 0 24 24"><polyline points="4 17 9 10 13 13 20 5"></polyline><polyline points="14 5 20 5 20 11"></polyline></svg>
+    <h2 class="card-title">Running Performance</h2>
+  </div>
+  <div class="perf-grid">
+    {% for p in run_perf %}
+    <div class="perf-col">
+      <div class="dist">{{ p.dist }}</div>
+      <div class="cap">Best Time</div>
+      {% if p.best_id %}
+      <div class="best perf-best-link" role="button" tabindex="0" data-activity="{{ p.best_id }}" title="View activity">{{ p.best }}</div>
+      {% else %}
+      <div class="best">{{ p.best }}</div>
+      {% endif %}
+      <div class="cap">Estimated</div><div class="est">{{ p.est }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</section>

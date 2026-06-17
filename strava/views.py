@@ -118,6 +118,10 @@ class DashboardView(TemplateView):
                         if year == 'all' or str(local_date(a).year) == year]
         context['records'] = self._records(records_acts)
 
+        # ---- Running performance (best times per race distance + estimates) ----
+        # Year-scoped like the records widget, drawn from each run's Strava best_efforts.
+        context['run_perf'] = self._run_performance(records_acts)
+
         # ---- Trends (weekly / monthly / yearly) + activity calendar ----
         weekly, monthly, yearly = {}, {}, {}
         day_counts = {}
@@ -233,6 +237,17 @@ class DashboardView(TemplateView):
     # mis-tagged run rather than a hike.
     MIN_HIKE_PACE_SEC = 7 * 60
 
+    # Running-performance widget: (display label, Strava best-effort name lowercased,
+    # distance in metres). Best times come from each run's `best_efforts`; the estimate
+    # is a Riegel projection (T2 = T1·(D2/D1)^1.06) from the athlete's best efforts.
+    RUN_PERF_DISTANCES = [
+        ('5 km', '5k', 5000.0),
+        ('10 km', '10k', 10000.0),
+        ('Half Marathon', 'half-marathon', 21097.5),
+        ('Marathon', 'marathon', 42195.0),
+    ]
+    RIEGEL_EXP = 1.06
+
     def _records(self, activities):
         """Personal records grouped by the four sport tabs (Running / Cycling /
         Hiking / Swimming). Returns ``{tab: [record, ...]}`` where each record is a
@@ -319,6 +334,48 @@ class DashboardView(TemplateView):
         """Seconds-per-unit formatted as m:ss (a per-km or per-100m pace)."""
         m, s = divmod(int(round(seconds)), 60)
         return f'{m}:{s:02d}'
+
+    @staticmethod
+    def _fmt_hms(seconds):
+        """Seconds as h:mm:ss, dropping the hours part when under an hour (m:ss)."""
+        total = int(round(seconds))
+        h, r = divmod(total, 3600)
+        m, s = divmod(r, 60)
+        return f'{h}:{m:02d}:{s:02d}' if h else f'{m}:{s:02d}'
+
+    def _run_performance(self, activities):
+        """Per-distance running performance from Strava ``best_efforts``.
+
+        Returns a row per RUN_PERF_DISTANCES with the actual best time at that
+        distance (and the activity that set it, for the click-to-open card) plus a
+        Riegel estimate range projected from the athlete's best efforts at every
+        recorded distance. Best/estimate are ``'—'`` when there's nothing to compute."""
+        runs = [a for a in activities if a.sport_type in self.RECORD_SPORTS['Running']]
+
+        best_by_name = {}   # lowercased effort name -> (elapsed_seconds, activity_pk)
+        predictors = {}     # effort distance (m) -> fastest elapsed_seconds seen
+        for a in runs:
+            for e in (a.json.get('best_efforts') or []):
+                t, d = e.get('elapsed_time'), e.get('distance')
+                if not isinstance(t, (int, float)) or not t or not d:
+                    continue
+                name = (e.get('name') or '').lower()
+                if name not in best_by_name or t < best_by_name[name][0]:
+                    best_by_name[name] = (t, a.pk)
+                if d not in predictors or t < predictors[d]:
+                    predictors[d] = t
+
+        perf = []
+        for label, key, dist in self.RUN_PERF_DISTANCES:
+            row = {'dist': label, 'best': '—', 'best_id': None, 'est': '—'}
+            if key in best_by_name:
+                t, pk = best_by_name[key]
+                row['best'], row['best_id'] = self._fmt_hms(t), pk
+            if predictors:
+                est = min(pt * (dist / pd) ** self.RIEGEL_EXP for pd, pt in predictors.items())
+                row['est'] = f'{self._fmt_hms(est * 0.975)} – {self._fmt_hms(est * 1.025)}'
+            perf.append(row)
+        return perf
 
     @staticmethod
     def _unaccent(s):

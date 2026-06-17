@@ -98,34 +98,7 @@ endpoint the map uses) into .act-modal-host.
       <div id="rec-list"></div>
     </section>
 
-    <section class="card">
-      <div class="card-head">
-        <svg viewBox="0 0 24 24"><polyline points="4 17 9 10 13 13 20 5"></polyline><polyline points="14 5 20 5 20 11"></polyline></svg>
-        <h2 class="card-title">Running Performance</h2>
-      </div>
-      <div class="perf-grid">
-        <div class="perf-col">
-          <div class="dist">5 km</div>
-          <div class="cap">Best Time</div><div class="best">21:48</div>
-          <div class="cap">Estimated</div><div class="est">20:30 – 22:30</div>
-        </div>
-        <div class="perf-col">
-          <div class="dist">10 km</div>
-          <div class="cap">Best Time</div><div class="best">45:30</div>
-          <div class="cap">Estimated</div><div class="est">43:00 – 47:00</div>
-        </div>
-        <div class="perf-col">
-          <div class="dist">Half Marathon</div>
-          <div class="cap">Best Time</div><div class="best">1:42:10</div>
-          <div class="cap">Estimated</div><div class="est">1:39:00 – 1:45:00</div>
-        </div>
-        <div class="perf-col">
-          <div class="dist">Marathon</div>
-          <div class="cap">Best Time</div><div class="best">3:29:00</div>
-          <div class="cap">Estimated</div><div class="est">3:20:00 – 3:40:00</div>
-        </div>
-      </div>
-    </section>
+    {% include "pages/_dash_run_perf.html" %}
 
         <section class="card" data-screen-label="Activity of the year">
       <div class="card-head">
@@ -828,6 +801,19 @@ endpoint the map uses) into .act-modal-host.
     modal.querySelector('.act-modal-backdrop').addEventListener('click', close);
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape' && !modal.hidden) close();
+    });
+
+    // Running Performance "Best Time" values open the activity that set them. The card
+    // is OOB-swapped on a filter change, so delegate from the document to catch the
+    // freshly-swapped elements too.
+    document.addEventListener('click', function(e) {
+      const el = e.target.closest('.perf-best-link');
+      if (el && el.dataset.activity) window.openActivityModal(el.dataset.activity);
+    });
+    document.addEventListener('keydown', function(e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const el = e.target.closest('.perf-best-link');
+      if (el && el.dataset.activity) { e.preventDefault(); window.openActivityModal(el.dataset.activity); }
     });
   })();
 
