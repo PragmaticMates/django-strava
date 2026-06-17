@@ -19,11 +19,14 @@
   }
 
   /* ---- Trends series (real data from the server, with a demo fallback) ---- */
+  // Re-read on a filter change (ds:datachanged) so the chart tracks the active filter.
   let weekly, monthly, yearly;
-  const realTrends = readJSON("dashboard-trends");
-  if (realTrends) {
-    ({ weekly, monthly, yearly } = realTrends);
-  } else {
+  function loadTrends() {
+    const realTrends = readJSON("dashboard-trends");
+    if (realTrends) {
+      ({ weekly, monthly, yearly } = realTrends);
+      return;
+    }
     const r = rng(45211);
     weekly = [];
     const t0 = new Date(2025, 0, 6);
@@ -52,6 +55,7 @@
       x.pace = +(5.05 + r2() * 1.05).toFixed(2); // min/km
     }));
   }
+  loadTrends();
 
   /* ---- Personal records (4 sports) ---- */
   const records = {
@@ -85,16 +89,20 @@
   showRecords("Running");
 
   /* ---- Activity calendar dots (5 weeks, sizes 0–2) ---- */
-  const weeks = readJSON("dashboard-calendar") || [
-    { label: "Jun 2 – 8",      dots: [0, 0, 0, 2, 2, 2, 2] },
-    { label: "Jun 9 – 15",     dots: [2, 0, 0, 0, 0, 0, 1] },
-    { label: "Jun 16 – 22",    dots: [0, 0, 2, 0, 0, 0, 2] },
-    { label: "Jun 23 – 29",    dots: [2, 0, 0, 0, 0, 0, 0] },
-    { label: "Jun 30 – Jul 6", dots: [0, 0, 0, 0, 0, 2, 0] },
-  ];
-  $("#dotcal-rows").innerHTML = weeks.map(w => `
-    <span class="wk">${w.label}</span>
-    ${w.dots.map(s => `<span class="dot" data-s="${s}"></span>`).join("")}`).join("");
+  // Re-read on a filter change (ds:datachanged) so the dots track the active filter.
+  function renderCalendar() {
+    const weeks = readJSON("dashboard-calendar") || [
+      { label: "Jun 2 – 8",      dots: [0, 0, 0, 2, 2, 2, 2] },
+      { label: "Jun 9 – 15",     dots: [2, 0, 0, 0, 0, 0, 1] },
+      { label: "Jun 16 – 22",    dots: [0, 0, 2, 0, 0, 0, 2] },
+      { label: "Jun 23 – 29",    dots: [2, 0, 0, 0, 0, 0, 0] },
+      { label: "Jun 30 – Jul 6", dots: [0, 0, 0, 0, 0, 2, 0] },
+    ];
+    $("#dotcal-rows").innerHTML = weeks.map(w => `
+      <span class="wk">${w.label}</span>
+      ${w.dots.map(s => `<span class="dot" data-s="${s}"></span>`).join("")}`).join("");
+  }
+  renderCalendar();
 
   /* ---- Charts ---- */
   const tipTrend = $("#tip-trend");
@@ -124,4 +132,10 @@
   let rsT;
   window.addEventListener("resize", () => { clearTimeout(rsT); rsT = setTimeout(draw, 120); });
   window.addEventListener("ds:tweaks", () => requestAnimationFrame(draw));
+  // A filter change swaps in fresh trends/calendar JSON — reload and redraw both.
+  window.addEventListener("ds:datachanged", () => {
+    loadTrends();
+    renderCalendar();
+    requestAnimationFrame(draw);
+  });
 })();

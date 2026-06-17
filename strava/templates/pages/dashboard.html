@@ -45,36 +45,32 @@
   {% if map_hidden_count %}
   <p class="map-note">{{ map_hidden_count }} activit{{ map_hidden_count|pluralize:"y,ies" }} without GPS not shown</p>
   {% endif %}
-  {# Activity cards are fetched lazily when a marker is clicked (see map JS) rather than
-     server-rendered for every marker — rendering ~1000 hidden cards dominated page load. #}
+  {% comment %}
+  Activity cards are fetched lazily when a marker is clicked (see map JS) rather than
+  server-rendered for every marker — rendering ~1000 hidden cards dominated page load.
+  {% endcomment %}
   <div id="map-card-host" data-card-url="{% url 'strava:activity_card' 0 %}"></div>
 </section>
+
+{% comment %}
+Hidden mirror of the map's filter state. The map JS keeps these inputs in sync and
+fires the `refresh` trigger, so a filter change recomputes every dependent section
+server-side; the response arrives as out-of-band swaps absorbed by #dash-sink.
+{% endcomment %}
+<form id="dash-filters" hx-get="{% url 'strava:dashboard' %}" hx-target="#dash-sink"
+      hx-swap="innerHTML" hx-trigger="refresh" hx-push-url="false"
+      hx-sync="this:replace" style="display:none">
+  <input type="hidden" name="q" id="df-q" value="{{ q }}">
+  <input type="hidden" name="sport" id="df-sport" value="{{ sport }}">
+  <input type="hidden" name="gear" id="df-gear" value="{{ gear }}">
+  <input type="hidden" name="year" id="df-year" value="{{ year }}">
+</form>
+<div id="dash-sink" hidden></div>
 
 <main class="page">
 
   <!-- ============ Stat band ============ -->
-  <section class="card statband" data-screen-label="Season totals" aria-label="Season totals">
-    <div class="cell">
-      <span class="ic"><svg viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.4"></circle><circle cx="18" cy="6" r="2.4"></circle><path d="M8 17 C 13 15, 11 8, 16 7"></path></svg></span>
-      <div><div class="v">{{ stat.distance_km|intcomma }} <small>km</small></div><div class="l">Total Distance</div></div>
-    </div>
-    <div class="cell">
-      <span class="ic"><svg viewBox="0 0 24 24"><polyline points="3 20 10 7 14 13 17 9 21 20"></polyline></svg></span>
-      <div><div class="v">{{ stat.elev|intcomma }} <small>m</small></div><div class="l">Elevation Gain</div></div>
-    </div>
-    <div class="cell">
-      <span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="7.5"></circle><line x1="12" y1="13" x2="12" y2="8.5"></line><line x1="10" y1="3" x2="14" y2="3"></line></svg></span>
-      <div><div class="v">{{ stat.time_h }}<small>h</small> {{ stat.time_m }}<small>m</small></div><div class="l">Moving Time</div></div>
-    </div>
-    <div class="cell">
-      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polygon points="10 8 16 12 10 16 10 8" fill="var(--accent)" stroke="none"></polygon></svg></span>
-      <div><div class="v">{{ stat.activities|intcomma }}</div><div class="l">Activities</div></div>
-    </div>
-    <div class="cell">
-      <span class="ic"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"></rect><line x1="8" y1="3" x2="8" y2="7"></line><line x1="16" y1="3" x2="16" y2="7"></line><line x1="4" y1="10" x2="20" y2="10"></line></svg></span>
-      <div><div class="v">{{ stat.active_days|intcomma }}</div><div class="l">Active Days</div></div>
-    </div>
-  </section>
+  {% include "pages/_dash_statband.html" %}
 
 
   <!-- ============ Records · performance · AOTY ============ -->
@@ -169,11 +165,7 @@
   <div class="row" data-screen-label="Latest activities">
     <div class="latest-act-wrap">
       <h2 class="section-title">Latest Activities</h2>
-      <div class="act-cards" id="latest-activities">
-      {% for activity in latest_activities %}
-        {% include "widgets/activity.html" with activity=activity show_close=False %}
-      {% endfor %}
-    </div><!-- /.act-cards -->
+      {% include "pages/_dash_latest.html" %}
     </div><!-- /.latest-act-wrap -->
   </div><!-- /.row -->
 
@@ -224,27 +216,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18h18"></path><path d="M5 18V9c0-1 .5-2 2-2h4l4 3h2c1 0 2 .5 2 2v6"></path><path d="M9 7V6"></path><path d="M5 14h14"></path></svg>
         <h2 class="card-title">Gear Health</h2>
       </div>
-      <table class="gear-table">
-        <thead>
-          <tr><th>Brand</th><th>Model</th><th>Progress</th><th>Used</th></tr>
-        </thead>
-        <tbody>
-          {% for g in gear_health %}
-          <tr>
-            <td class="gname">{{ g.brand_name }}</td>
-            <td class="gtype">{{ g.model_name }}</td>
-            <td>
-              {% if g.activity_count %}
-              <div class="prog"><span class="nums">{{ g.distance_km|intcomma }} <small>/ {{ g.lifespan_km|intcomma }} km</small></span><span class="barline"><span class="prog-bar"><i style="width: {{ g.wear_pct }}%;"></i></span><span class="pct">{{ g.wear_pct }}%</span></span></div>{% if g.wear_alert %}<svg viewBox="0 0 24 24" width="15" height="15" fill="#F59E0B" style="display:inline-block;vertical-align:middle;margin-left:6px" title="Replace soon"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="17" x2="12.01" y2="17" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>{% endif %}
-              {% else %}<span style="color: var(--ink-3);">—</span>{% endif %}
-            </td>
-            <td class="used">{{ g.activity_count }} activit{{ g.activity_count|pluralize:"y,ies" }}</td>
-          </tr>
-          {% empty %}
-          <tr><td colspan="4" style="color: var(--ink-3);">No gear yet.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      {% include "pages/_dash_gear_body.html" %}
     </section>
 
     <section class="card" data-screen-label="Gear usage">
@@ -332,9 +304,7 @@
 {% endblock %}
 
 {% block extra_js %}
-{{ trends|json_script:"dashboard-trends" }}
-{{ calendar|json_script:"dashboard-calendar" }}
-{{ gear_usage|json_script:"dashboard-gear-usage" }}
+{% include "pages/_dash_data.html" %}
 {{ map_markers|json_script:"map-markers" }}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" integrity="sha256-Hk4dIpcqOSb0hZjgyvFOP+cEmDXUKKNE/tT542ZbNQg=" crossorigin=""></script>
@@ -664,8 +634,21 @@
   // Re-render as the view changes so routes appear once zoomed in and track the viewport.
   map.on('moveend zoomend', function() { if (showAllRoutes) renderAllRoutes(); });
 
-  // ---- Map filters: search box + sport / gear / year pills (all client-side) ----
+  // ---- Map filters: search box + sport / gear / year pills ----
+  // The map itself filters its markers client-side (below); the same state is mirrored
+  // into the hidden #dash-filters form so the dependent dashboard sections (season
+  // totals, latest activities, trends, calendar, gear stats) recompute server-side.
   const filterState = { q: '', sport: 'all', gear: 'all', year: 'all' };
+
+  function syncDashboard() {
+    const form = document.getElementById('dash-filters');
+    if (!form || typeof htmx === 'undefined') return;
+    document.getElementById('df-q').value = filterState.q;
+    document.getElementById('df-sport').value = filterState.sport;
+    document.getElementById('df-gear').value = filterState.gear;
+    document.getElementById('df-year').value = filterState.year;
+    htmx.trigger(form, 'refresh');
+  }
 
   // Lowercase and strip diacritics, the client-side equivalent of unaccent().
   function unaccent(s) {
@@ -698,6 +681,7 @@
     visibleCoords = shown;  // reset re-frames the active filter, not every marker
     renderAllRoutes();      // keep the all-routes overlay in sync with the filter
     if (shown.length) map.fitBounds(L.latLngBounds(shown), Object.assign({ maxZoom: 14 }, FIT));
+    syncDashboard();        // recompute the dependent sections for the new filter
   }
 
   const searchInput = document.querySelector('.map-search-input');
@@ -798,6 +782,18 @@
   document.querySelectorAll('.float-card').forEach(function(card) {
     if (card.offsetParent !== null) window.renderCardRoute(card);
   });
+
+  // After a filter swaps in fresh sections, draw the new latest-activity card routes
+  // and tell the charts/calendar/donut to reload their data (ds:datachanged) and the
+  // trends/calendar cards to re-equalise their heights (ds:tweaks).
+  document.body.addEventListener('htmx:afterSettle', function(e) {
+    if (e.target && e.target.id !== 'dash-sink') return;
+    document.querySelectorAll('#latest-activities .float-card').forEach(function(card) {
+      if (card.offsetParent !== null) window.renderCardRoute(card);
+    });
+    window.dispatchEvent(new Event('ds:datachanged'));
+    window.dispatchEvent(new Event('ds:tweaks'));
+  });
 </script>
 <script>
   function syncRowHeights() {
@@ -815,19 +811,13 @@
 <script>
   // Gear donut chart
   (function() {
-    const dataEl = document.getElementById('dashboard-gear-usage');
-    const data = dataEl ? JSON.parse(dataEl.textContent) : [];
-    if (!data.length) return;
-    const total = data.reduce((s, d) => s + d.acts, 0);
-
-    // Pre-compute saturated colors (darken + saturate each)
-    function saturate(hex) {
-      const r = parseInt(hex.slice(1,3),16);
-      const g = parseInt(hex.slice(3,5),16);
-      const b = parseInt(hex.slice(5,7),16);
-      // Shift toward a more vivid version by blending with a darkened copy
-      const factor = 0.55;
-      return `rgb(${Math.round(r*factor)},${Math.round(g*factor)},${Math.round(b*factor)})`;
+    // Re-read on a filter change (ds:datachanged) so the donut tracks the active filter.
+    let data = [];
+    let total = 0;
+    function loadData() {
+      const dataEl = document.getElementById('dashboard-gear-usage');
+      data = dataEl ? JSON.parse(dataEl.textContent) : [];
+      total = data.reduce((s, d) => s + d.acts, 0);
     }
 
     let hoveredIdx = -1;
@@ -877,7 +867,12 @@
           <span class="donut-legend-dot" style="background:${d.color}"></span>
           <span class="donut-legend-name">${d.name}</span>
         </div>`).join('');
+    }
 
+    // Bind hover behaviour once; it reads the current segments/data each move.
+    function bindHover() {
+      const canvas = document.getElementById('gear-donut');
+      if (!canvas) return;
       canvas.addEventListener('mousemove', (e) => {
         const rect = canvas.getBoundingClientRect();
         const size = 260;
@@ -902,8 +897,10 @@
         hoveredIdx = -1; draw(canvas, -1);
       });
     }
-    window.addEventListener('load', renderDonut);
+
+    window.addEventListener('load', () => { loadData(); bindHover(); renderDonut(); });
     window.addEventListener('ds:tweaks', renderDonut);
+    window.addEventListener('ds:datachanged', () => { hoveredIdx = -1; loadData(); renderDonut(); });
   })();
 </script>
 

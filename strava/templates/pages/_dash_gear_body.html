@@ -1,0 +1,26 @@
+{% load humanize %}
+{% comment %}
+OOB target is the whole <table>: a bare <tbody> at the top level of an htmx
+response would be stripped by the HTML parser.
+{% endcomment %}
+<table class="gear-table" id="dash-gear-table" hx-swap-oob="true">
+  <thead>
+    <tr><th>Brand</th><th>Model</th><th>Progress</th><th>Used</th></tr>
+  </thead>
+  <tbody>
+    {% for g in gear_health %}
+    <tr>
+      <td class="gname">{{ g.brand_name }}</td>
+      <td class="gtype">{{ g.model_name }}</td>
+      <td>
+        {% if g.activity_count %}
+        <div class="prog"><span class="nums">{{ g.distance_km|intcomma }} <small>/ {{ g.lifespan_km|intcomma }} km</small></span><span class="barline"><span class="prog-bar"><i style="width: {{ g.wear_pct }}%;"></i></span><span class="pct">{{ g.wear_pct }}%</span></span></div>{% if g.wear_alert %}<svg viewBox="0 0 24 24" width="15" height="15" fill="#F59E0B" style="display:inline-block;vertical-align:middle;margin-left:6px" title="Replace soon"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="17" x2="12.01" y2="17" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>{% endif %}
+        {% else %}<span style="color: var(--ink-3);">—</span>{% endif %}
+      </td>
+      <td class="used">{{ g.activity_count }} activit{{ g.activity_count|pluralize:"y,ies" }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="4" style="color: var(--ink-3);">No gear yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>

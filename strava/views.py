@@ -1,4 +1,5 @@
 import datetime
+import unicodedata
 
 from django.db.models import Count, FloatField, IntegerField, Max, Sum
 from django.db.models.fields.json import KeyTextTransform
@@ -27,11 +28,18 @@ GEAR_DONUT_PALETTE = [
 class DashboardView(TemplateView):
     template_name = 'pages/dashboard.html'
 
+    def get_template_names(self):
+        # An htmx request comes from the map filter controls (search + sport/gear/year
+        # pills); it only needs the recomputed sections, swapped in via hx-swap-oob.
+        if getattr(self.request, 'htmx', False):
+            return ['pages/_dashboard_results.html']
+        return [self.template_name]
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['active_page'] = 'dashboard'
 
-        activities = list(Activity.objects.select_related('gear').order_by('-start_date'))
+        all_activities = list(Activity.objects.select_related('gear').order_by('-start_date'))
         today = timezone.localdate()
 
         def local_date(activity):
@@ -43,16 +51,42 @@ class DashboardView(TemplateView):
         def elevation(activity):
             return activity.json.get('total_elevation_gain', 0) or 0
 
-        # ---- Season totals (current year) ----
-        year_acts = [a for a in activities if local_date(a).year == today.year]
-        total_secs = sum(seconds(a) for a in year_acts)
+        # ---- Filters (mirror the map's client-side search + sport/gear/year pills) ----
+        # The map filters its markers in JS; the same filter state is posted here so every
+        # section below recomputes over the matching activities. Non-GPS activities (pool
+        # swims, treadmill runs) carry no marker but are still counted in the stats.
+        params = self.request.GET
+        q = (params.get('q') or '').strip()
+        sport = params.get('sport') or 'all'
+        gear = params.get('gear') or 'all'
+        year = params.get('year') or 'all'
+        context['q'], context['sport'], context['gear'], context['year'] = q, sport, gear, year
+
+        tokens = self._unaccent(q).split()
+
+        def matches(a):
+            haystack = self._unaccent(f'{a.name} {a.type}')
+            return (
+                all(t in haystack for t in tokens)
+                and (sport == 'all' or a.sport_type == sport)
+                and (gear == 'all' or str(a.gear_id or '') == gear)
+                and (year == 'all' or str(local_date(a).year) == year)
+            )
+
+        activities = [a for a in all_activities if matches(a)]
+
+        # ---- Totals for the active filter ----
+        # Cover the whole filtered set so the stat band matches the map and the other
+        # sections: every matching activity (all years), or one year when the year
+        # filter is set (which already narrows `activities`).
+        total_secs = sum(seconds(a) for a in activities)
         context['stat'] = {
-            'distance_km': round(sum(float(a.distance) for a in year_acts) / 1000),
-            'elev': round(sum(elevation(a) for a in year_acts)),
+            'distance_km': round(sum(float(a.distance) for a in activities) / 1000),
+            'elev': round(sum(elevation(a) for a in activities)),
             'time_h': int(total_secs // 3600),
             'time_m': int(total_secs % 3600 // 60),
-            'activities': len(year_acts),
-            'active_days': len({local_date(a) for a in year_acts}),
+            'activities': len(activities),
+            'active_days': len({local_date(a) for a in activities}),
         }
 
         # ---- Latest activities ----
@@ -60,12 +94,17 @@ class DashboardView(TemplateView):
         context['latest_activities'] = activities[:4]
 
         # ---- Activity map markers (from each activity's start_latlng) ----
-        # GPS-less activities (pool swims, treadmill runs, …) can't be placed;
-        # map_hidden_count surfaces how many so the map isn't seen as dropping data.
+        # Built from every activity: the map shows all markers and filters them in JS,
+        # which is also where the filter pills' options come from. GPS-less activities
+        # (pool swims, treadmill runs, …) can't be placed; map_hidden_count surfaces how
+        # many so the map isn't seen as dropping data.
         (context['map_markers'], context['map_activities'],
-         context['map_hidden_count']) = self._map_data(activities)
+         context['map_hidden_count']) = self._map_data(all_activities)
 
         # ---- Activity of the year (longest this year, else longest overall) ----
+        # A selected year sets the "year"; otherwise it's the current one.
+        season_year = int(year) if year != 'all' and year.isdigit() else today.year
+        year_acts = [a for a in activities if local_date(a).year == season_year]
         pool = year_acts or activities
         context['aoty'] = max(pool, key=lambda a: a.distance) if pool else None
 
@@ -117,11 +156,17 @@ class DashboardView(TemplateView):
         context['calendar'] = weeks
 
         # ---- Gear health table + usage donut ----
-        gears = list(Gear.objects.annotate(
-            activity_count=Count('activity'),
-            distance_sum=Sum('activity__distance'),
-        ))
+        # Aggregated over the filtered activities (not the DB-wide totals) so gear stats
+        # track the active filter like every other section.
+        gear_acts, gear_dist = {}, {}
+        for a in activities:
+            if a.gear_id:
+                gear_acts[a.gear_id] = gear_acts.get(a.gear_id, 0) + 1
+                gear_dist[a.gear_id] = gear_dist.get(a.gear_id, 0) + float(a.distance)
+        gears = list(Gear.objects.all())
         for g in gears:
+            g.activity_count = gear_acts.get(g.pk, 0)
+            g.distance_sum = gear_dist.get(g.pk, 0)
             g.distance_km = round((g.distance_sum or 0) / 1000)
             g.wear_pct = min(100, round(g.distance_km / g.lifespan_km * 100)) if g.lifespan_km else 0
             g.wear_alert = 75 <= g.wear_pct < 100
@@ -143,6 +188,13 @@ class DashboardView(TemplateView):
         context['total_photos'] = sum(a.photo_count for a in activities)
         context['last_updated'] = timezone.localtime()
         return context
+
+    @staticmethod
+    def _unaccent(s):
+        """Lowercase and strip diacritics — the server-side twin of the map filter's
+        JS ``unaccent()`` so a filtered search here matches what the map shows."""
+        normalized = unicodedata.normalize('NFD', s or '')
+        return ''.join(c for c in normalized if not unicodedata.combining(c)).lower()
 
     @staticmethod
     def _map_data(activities):

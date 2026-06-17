@@ -1,0 +1,23 @@
+{% load humanize %}
+<section class="card statband" id="dash-statband" hx-swap-oob="true" data-screen-label="Season totals" aria-label="Season totals">
+  <div class="cell">
+    <span class="ic"><svg viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.4"></circle><circle cx="18" cy="6" r="2.4"></circle><path d="M8 17 C 13 15, 11 8, 16 7"></path></svg></span>
+    <div><div class="v">{{ stat.distance_km|intcomma }} <small>km</small></div><div class="l">Total Distance</div></div>
+  </div>
+  <div class="cell">
+    <span class="ic"><svg viewBox="0 0 24 24"><polyline points="3 20 10 7 14 13 17 9 21 20"></polyline></svg></span>
+    <div><div class="v">{{ stat.elev|intcomma }} <small>m</small></div><div class="l">Elevation Gain</div></div>
+  </div>
+  <div class="cell">
+    <span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="7.5"></circle><line x1="12" y1="13" x2="12" y2="8.5"></line><line x1="10" y1="3" x2="14" y2="3"></line></svg></span>
+    <div><div class="v">{{ stat.time_h }}<small>h</small> {{ stat.time_m }}<small>m</small></div><div class="l">Moving Time</div></div>
+  </div>
+  <div class="cell">
+    <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polygon points="10 8 16 12 10 16 10 8" fill="var(--accent)" stroke="none"></polygon></svg></span>
+    <div><div class="v">{{ stat.activities|intcomma }}</div><div class="l">Activities</div></div>
+  </div>
+  <div class="cell">
+    <span class="ic"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"></rect><line x1="8" y1="3" x2="8" y2="7"></line><line x1="16" y1="3" x2="16" y2="7"></line><line x1="4" y1="10" x2="20" y2="10"></line></svg></span>
+    <div><div class="v">{{ stat.active_days|intcomma }}</div><div class="l">Active Days</div></div>
+  </div>
+</section>
