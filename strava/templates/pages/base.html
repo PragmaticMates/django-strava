@@ -50,7 +50,9 @@
     </a>
   </nav>
   <div class="nav-user" id="user-menu-trigger" onclick="toggleUserMenu(event)" aria-haspopup="true" aria-expanded="false">
-    <image-slot id="avatar" class="avatar-slot" shape="circle" placeholder=""></image-slot>
+    <span class="avatar-slot" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4.5"></circle><path d="M3 21c0-4 4-7 9-7s9 3 9 7"></path></svg>
+    </span>
     <span class="uname">Erik Telepovsky</span>
     <span class="caret" id="user-caret">▾</span>
     <div class="user-dropdown" id="user-dropdown" role="menu">
@@ -72,7 +74,6 @@
 
 {% block content %}{% endblock %}
 
-<script src="{% static 'js/image-slot.js' %}"></script>
 {% htmx_script %}
 <script>
 function toggleNav(e) {

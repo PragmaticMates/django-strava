@@ -33,7 +33,7 @@
     {% if aoty.photo %}
     <img class="aoty-photo" src="{{ aoty.photo }}" alt="{{ aoty.name }}">
     {% else %}
-    <image-slot id="aoty-photo" class="aoty-photo" shape="rounded" radius="12" placeholder="No photo"></image-slot>
+    <div class="aoty-photo aoty-photo-empty">No photo</div>
     {% endif %}
   </div>
   {% endif %}

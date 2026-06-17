@@ -86,7 +86,13 @@ body {
 .user-dd-item:hover { background: var(--paper); color: var(--ink); }
 .user-dd-item svg { width: 17px; height: 17px; flex: none; color: var(--ink-3); }
 .user-dd-item:hover svg { color: var(--accent); }
-.avatar-slot { width: 36px; height: 36px; flex: none; }
+.avatar-slot {
+  width: 36px; height: 36px; flex: none;
+  display: grid; place-items: center;
+  border-radius: 50%; background: var(--paper);
+  border: 1px solid var(--line); color: var(--ink-3);
+}
+.avatar-slot svg { width: 20px; height: 20px; }
 .nav-toggle {
   display: none; align-self: center; margin-left: auto;
   width: 40px; height: 40px; flex: none;
@@ -99,7 +105,6 @@ body {
 
 /* ============ Map hero ============ */
 .maphero { position: relative; height: 700px; background: #D7E9F4; overflow: hidden; }
-.maphero image-slot.mapfill { position: absolute; inset: 0; width: 100%; height: 100%; }
 /* Sports dropdown */
 .sports-dd {
   display: none; position: absolute; z-index: 200;
@@ -286,6 +291,8 @@ body.map-expanded .nav { position: sticky; top: 0; z-index: 1001; }
   gap: var(--gap, 20px);
   padding: var(--gap, 20px) 0;
 }
+@media (max-width: 1100px) { .acts-feed { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 780px)  { .acts-feed { grid-template-columns: 1fr; } }
 .acts-feed .float-card,
 .act-cards .float-card { position: static; transform: none; width: auto; z-index: auto; }
 
@@ -536,6 +543,11 @@ body.modal-open { overflow: hidden; }
 .why svg { width: 16px; height: 16px; stroke: var(--accent); fill: none; stroke-width: 1.8; stroke-linecap: round; flex: none; }
 .aoty-photo { width: 100%; height: 100%; min-height: 160px; display: block; }
 img.act-photo, img.aoty-photo { object-fit: cover; }
+.aoty-photo-empty {
+  display: grid; place-items: center;
+  background: var(--paper); border-radius: 12px;
+  color: var(--ink-3); font-size: 13px;
+}
 
 /* ============ Gear table ============ */
 .gear-table { width: 100%; border-collapse: collapse; }
@@ -664,6 +676,11 @@ img.act-photo, img.aoty-photo { object-fit: cover; }
 }
 @media (max-width: 900px) {
   .row-mid { grid-template-columns: 1fr; }
+
+  /* Drop the overlap onto the map: stacked, the stat band is too tall to sit over
+     the map's bottom edge cleanly, so let it flow below the map instead. */
+  .page { margin-top: 0; }
+
   .statband { grid-template-columns: 1fr 1fr; }
   .statband .cell { border-left: none; }
   .gear-fun { grid-template-columns: 1fr; }
@@ -725,8 +742,6 @@ img.act-photo, img.aoty-photo { object-fit: cover; }
   .map-filters { left: 64px; right: 18px; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
   .map-search-input { width: 110px; }
   .sports-dd { max-width: calc(100vw - 24px); }
-  /* Lift the "no GPS" note above the stat band that overlaps the map's bottom edge. */
-  .map-note { bottom: 96px; }
 }
 @media (max-width: 560px) {
   .statband { grid-template-columns: 1fr; }
