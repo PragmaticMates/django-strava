@@ -275,6 +275,24 @@ endpoint the map uses) into .act-modal-host.
     return m._coords;
   }
 
+  // Frame the currently visible activities (all of them, or the active filter's
+  // matches). When the routes overlay is on, frame the full extent of every
+  // visible route so all routes stay completely visible — the marker start
+  // points alone (visibleCoords) would clip routes that run off the framed area.
+  function frameVisible() {
+    let bounds = null;
+    if (showAllRoutes && visibleMarkers.length) {
+      bounds = L.latLngBounds([]);
+      visibleMarkers.forEach(function(m) {
+        const coords = activityCoords(m);
+        bounds.extend(coords.length ? coords : [[m.lat, m.lng]]);
+      });
+    } else if (visibleCoords.length) {
+      bounds = L.latLngBounds(visibleCoords);
+    }
+    if (bounds && bounds.isValid()) map.fitBounds(bounds, Object.assign({ maxZoom: 14 }, FIT));
+  }
+
   // Only draw routes once zoomed in this close — at low zoom a busy map would try to
   // render thousands of polylines at once, which is slow and unreadable.
   const ROUTE_ZOOM_MIN = 6;
@@ -463,9 +481,7 @@ endpoint the map uses) into .act-modal-host.
     // Reset frames whatever markers are currently visible (all of them, or the
     // active filter's matches). Tracked from marker coords rather than
     // markercluster.getBounds(), which shrinks once off-screen markers unload.
-    resetView = function() {
-      if (visibleCoords.length) map.fitBounds(L.latLngBounds(visibleCoords), Object.assign({ maxZoom: 14 }, FIT));
-    };
+    resetView = function() { frameVisible(); };
   } else {
     resetView = function() { map.setView([48.6, 18.2], 6); };  // default when no GPS activities exist
   }
@@ -566,7 +582,7 @@ endpoint the map uses) into .act-modal-host.
     });
     visibleCoords = shown;  // reset re-frames the active filter, not every marker
     renderAllRoutes();      // keep the all-routes overlay in sync with the filter
-    if (shown.length) map.fitBounds(L.latLngBounds(shown), Object.assign({ maxZoom: 14 }, FIT));
+    frameVisible();         // frame the matches (full routes when the overlay is on)
     syncDashboard();        // recompute the dependent sections for the new filter
   }
 
