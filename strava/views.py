@@ -1,9 +1,7 @@
 import datetime
 import unicodedata
 
-from django.db.models import Count, FloatField, IntegerField, Max, Sum
-from django.db.models.fields.json import KeyTextTransform
-from django.db.models.functions import Cast
+from django.db.models import Count, F, Max, Sum
 from django.utils import timezone
 from django.views.generic import DetailView, ListView, TemplateView
 
@@ -46,10 +44,10 @@ class DashboardView(TemplateView):
             return timezone.localtime(activity.start_date).date()
 
         def seconds(activity):
-            return activity.json.get('moving_time', 0) or 0
+            return activity.moving_time or 0
 
         def elevation(activity):
-            return activity.json.get('total_elevation_gain', 0) or 0
+            return activity.total_elevation_gain or 0
 
         # ---- Filters (mirror the map's client-side search + sport/gear/year pills) ----
         # The map filters its markers in JS; the same filter state is posted here so every
@@ -197,7 +195,7 @@ class DashboardView(TemplateView):
         ]
 
         # ---- Summary (data-backed rows only) ----
-        context['total_kudos'] = sum((a.json.get('kudos_count', 0) or 0) for a in activities)
+        context['total_kudos'] = sum(a.kudos_count for a in activities)
         context['total_photos'] = sum(a.photo_count for a in activities)
         context['last_updated'] = timezone.localtime()
         return context
@@ -211,8 +209,7 @@ class DashboardView(TemplateView):
 
     @staticmethod
     def _has_gps(a):
-        latlng = a.json.get('start_latlng') or []
-        return len(latlng) == 2 and bool(latlng[0] or latlng[1])
+        return a.start_lat is not None
 
     @staticmethod
     def _map_data(activities):
@@ -232,11 +229,10 @@ class DashboardView(TemplateView):
         markers, map_activities = [], []
         for a in activities:
             if has_gps(a):
-                latlng = a.json['start_latlng']
                 markers.append({
                     'id': a.pk,  # for lazily fetching the activity's card on marker click
-                    'lat': round(float(latlng[0]), 6),
-                    'lng': round(float(latlng[1]), 6),
+                    'lat': a.start_lat,
+                    'lng': a.start_lng,
                     'type': a.type,
                     'title': f'{a.name} · {a.dist} km',
                     'polyline': a.polyline,
@@ -290,8 +286,8 @@ class ActivitiesView(ListView):
         qs = self.object_list
         agg = qs.aggregate(
             total_distance=Sum('distance'),
-            total_elevation=Sum(Cast(KeyTextTransform('total_elevation_gain', 'json'), output_field=FloatField())),
-            total_time=Sum(Cast(KeyTextTransform('moving_time', 'json'), output_field=FloatField())),
+            total_elevation=Sum('total_elevation_gain'),
+            total_time=Sum('moving_time'),
         )
         today = timezone.now().date()
         week_start = today - datetime.timedelta(days=today.weekday())
@@ -392,8 +388,10 @@ class GalleryView(ListView):
 
     def get_queryset(self):
         params = self.request.GET
+        # A gallery item is an activity with a primary photo; filter that in SQL.
         qs = (
             Activity.objects
+            .exclude(photo_url='')
             .search(params.get('q'))
             .for_sport_category(params.get('sport'))
             .for_year(params.get('year'))
@@ -402,8 +400,7 @@ class GalleryView(ListView):
         if sort == 'oldest':
             return qs.order_by('start_date')
         if sort == 'kudos':
-            kudos = Cast(KeyTextTransform('kudos_count', 'json'), output_field=IntegerField())
-            return qs.annotate(_kudos=kudos).order_by(kudos.desc(nulls_last=True), '-start_date')
+            return qs.order_by(F('kudos_count').desc(nulls_last=True), '-start_date')
         return qs.order_by('-start_date')
 
     def get_context_data(self, **kwargs):
@@ -416,9 +413,8 @@ class GalleryView(ListView):
         context['year'] = params.get('year', 'all')
         context['sort'] = params.get('sort', 'newest')
 
-        # A gallery item is an activity that has a primary photo. Photo presence is read via
-        # the Activity.photo property (json.photos.primary.urls), so it's filtered in Python.
-        photos = [a for a in context['photos'] if a.photo]
+        # Photo presence is now filtered in the queryset (photo_url), so the list is ready.
+        photos = list(context['photos'])
         context['photos'] = photos
         context['count'] = len(photos)
         context['year_list'] = [d.year for d in Activity.objects.dates('start_date', 'year', order='DESC')]

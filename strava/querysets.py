@@ -1,7 +1,5 @@
 from django.db import models
 from django.db.models import F, Value, Q, CharField, FloatField, Func, ExpressionWrapper
-from django.db.models.fields.json import KeyTextTransform
-from django.db.models.functions import Cast
 
 
 class ActivityQuerySet(models.QuerySet):
@@ -75,16 +73,14 @@ class ActivityQuerySet(models.QuerySet):
         return self
 
     def sorted_by(self, key, direction='desc'):
-        moving_time = Cast(KeyTextTransform('moving_time', 'json'), output_field=FloatField())
-        elevation = Cast(KeyTextTransform('total_elevation_gain', 'json'), output_field=FloatField())
         fields = {
             'name': F('name'),
             'date': F('start_date'),
             'dist': F('distance'),
-            'time': moving_time,
-            'elev': elevation,
+            'time': F('moving_time'),
+            'elev': F('total_elevation_gain'),
             'pace': ExpressionWrapper(
-                moving_time / Func(F('distance'), Value(0), function='NULLIF'),
+                F('moving_time') / Func(F('distance'), Value(0), function='NULLIF'),
                 output_field=FloatField(),
             ),
         }
@@ -106,15 +102,8 @@ class GearQuerySet(models.QuerySet):
         return qs
 
     def of_type(self, gear_type):
-        # Per the Strava API, only bikes carry a frame_type (DetailedGear); shoes return
-        # frame_type=null. A bike therefore has the key present with a non-null value;
-        # everything else (json null or missing key) is a shoe. This matches both a missing
-        # key and a present-but-null value without relying on DB-specific null extraction.
-        has_frame_type = Q(json__has_key='frame_type') & ~Q(json__frame_type=None)
-        if gear_type == 'bike':
-            return self.filter(has_frame_type)
-        if gear_type == 'shoe':
-            return self.exclude(has_frame_type)
+        if gear_type in ('bike', 'shoe'):
+            return self.filter(gear_type=gear_type)
         return self
 
     def sorted_by(self, key, direction='asc'):

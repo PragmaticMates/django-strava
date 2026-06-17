@@ -14,6 +14,18 @@ class Activity(models.Model):
   start_date = models.DateTimeField(_("start date"))
   sport_type = models.CharField(_("sport type"), max_length=29, choices=SportType.choices)
   distance = models.DecimalField(_("distance"), max_digits=12, decimal_places=2)
+  moving_time = models.PositiveIntegerField(_("moving time"), null=True, blank=True)
+  elapsed_time = models.PositiveIntegerField(_("elapsed time"), null=True, blank=True)
+  total_elevation_gain = models.FloatField(_("elevation gain"), null=True, blank=True)
+  average_speed = models.FloatField(_("average speed"), null=True, blank=True)
+  max_speed = models.FloatField(_("max speed"), null=True, blank=True)
+  average_heartrate = models.FloatField(_("average heartrate"), null=True, blank=True)
+  max_heartrate = models.FloatField(_("max heartrate"), null=True, blank=True)
+  kudos_count = models.PositiveIntegerField(_("kudos"), default=0)
+  total_photo_count = models.PositiveIntegerField(_("photos"), default=0)
+  photo_url = models.URLField(_("photo URL"), max_length=500, blank=True, default="")
+  start_lat = models.FloatField(_("start latitude"), null=True, blank=True)
+  start_lng = models.FloatField(_("start longitude"), null=True, blank=True)
   gear = models.ForeignKey("Gear", on_delete=models.SET_NULL,
                            blank=True, null=True, default=None)
   json = models.JSONField()
@@ -33,13 +45,30 @@ class Activity(models.Model):
 
   @classmethod
   def read_json(cls, json):
+    primary = (json.get('photos') or {}).get('primary') or {}
+    urls = primary.get('urls') or {}
+    latlng = json.get('start_latlng') or []
+    # Treat (0, 0) / missing coords as "no GPS" (e.g. pool swims, treadmill runs).
+    has_gps = len(latlng) == 2 and bool(latlng[0] or latlng[1])
     return {
       # 'id': json['id'],
       'name': json['name'],
       'gear_id': json['gear_id'],
       'sport_type': json['sport_type'],
       'distance': json['distance'],
-      'start_date': datetime.fromisoformat(json['start_date'])
+      'start_date': datetime.fromisoformat(json['start_date']),
+      'moving_time': json.get('moving_time'),
+      'elapsed_time': json.get('elapsed_time'),
+      'total_elevation_gain': json.get('total_elevation_gain'),
+      'average_speed': json.get('average_speed'),
+      'max_speed': json.get('max_speed'),
+      'average_heartrate': json.get('average_heartrate'),
+      'max_heartrate': json.get('max_heartrate'),
+      'kudos_count': json.get('kudos_count', 0) or 0,
+      'total_photo_count': json.get('total_photo_count', 0) or 0,
+      'photo_url': urls.get('600') or urls.get('100') or '',
+      'start_lat': round(float(latlng[0]), 6) if has_gps else None,
+      'start_lng': round(float(latlng[1]), 6) if has_gps else None,
     }
 
   def update_from_json(self):
@@ -113,14 +142,14 @@ class Activity(models.Model):
 
   @property
   def dur(self):
-    t = self.json.get('moving_time', 0)
+    t = self.moving_time or 0
     h, r = divmod(t, 3600)
     m, s = divmod(r, 60)
     return f'{h}h {m:02d}m' if h else f'{m}m {s:02d}s'
 
   @property
   def pace_parts(self):
-    t = self.json.get('moving_time', 0)
+    t = self.moving_time or 0
     d = float(self.distance)
     if not t or not d:
       return '-', ''
@@ -144,11 +173,11 @@ class Activity(models.Model):
 
   @property
   def elev(self):
-    return round(self.json.get('total_elevation_gain', 0))
+    return round(self.total_elevation_gain or 0)
 
   @property
   def kudos(self):
-    return self.json.get('kudos_count', 0)
+    return self.kudos_count
 
   @property
   def comments(self):
@@ -156,7 +185,7 @@ class Activity(models.Model):
 
   @property
   def photo_count(self):
-    return self.json.get('total_photo_count', 0)
+    return self.total_photo_count
 
   @property
   def pb(self):
@@ -164,12 +193,15 @@ class Activity(models.Model):
 
   @property
   def photo(self):
-    photos = self.json.get('photos') or {}
-    primary = photos.get('primary')
-    if not primary:
-      return None
-    urls = primary.get('urls') or {}
-    return urls.get('600') or urls.get('100')
+    return self.photo_url or None
+
+  @property
+  def has_gps(self):
+    return self.start_lat is not None
+
+  @property
+  def has_heartrate(self):
+    return self.average_heartrate is not None and self.max_heartrate is not None
 
   @property
   def polyline(self):
@@ -181,11 +213,14 @@ class Gear(models.Model):
   SHOE_LIFESPAN_KM = 700
   BIKE_LIFESPAN_KM = 12000
 
+  GEAR_TYPES = (('bike', _("bike")), ('shoe', _("shoe")))
+
   id = models.CharField(max_length=36, primary_key=True, editable=False)  # default=uuid.uuid4
   primary = models.BooleanField(_("primary"), default=False)
   brand_name = models.CharField(_("brand name"), max_length=30)
   model_name = models.CharField(_("model name"), max_length=50)
   description = models.CharField(_("description"), max_length=100)
+  gear_type = models.CharField(_("type"), max_length=4, choices=GEAR_TYPES, default='shoe')
   json = models.JSONField()
   objects = GearQuerySet.as_manager()
 
@@ -202,11 +237,6 @@ class Gear(models.Model):
     if last_used is None:
       return True
     return last_used < timezone.now() - timedelta(days=365)
-
-  @property
-  def gear_type(self):
-    # Per the Strava API, only bikes carry a frame_type (DetailedGear); shoes have none.
-    return 'bike' if (self.json or {}).get('frame_type') is not None else 'shoe'
 
   @property
   def lifespan_km(self):
@@ -244,7 +274,9 @@ class Gear(models.Model):
       'primary': json['primary'],
       'brand_name': json['brand_name'],
       'model_name': json['model_name'],
-      'description': json['description'] or ''
+      'description': json['description'] or '',
+      # Per the Strava API, only bikes carry a frame_type (DetailedGear); shoes have none.
+      'gear_type': 'bike' if json.get('frame_type') is not None else 'shoe',
     }
 
   def update_from_json(self):

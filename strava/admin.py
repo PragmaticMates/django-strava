@@ -106,29 +106,29 @@ class ActivityAdmin(admin.ModelAdmin):
     def show_distance(self, obj):
         return f'{round(obj.distance / 1000, 2)} km'
 
-    @display(description=_("Elevation"), ordering="json__total_elevation_gain")
+    @display(description=_("Elevation"), ordering="total_elevation_gain")
     def show_elevation(self, obj):
-        return f'{round(obj.json['total_elevation_gain'])} m'
+        return f'{round(obj.total_elevation_gain or 0)} m'
 
-    @display(description=_("Time"), header=True, ordering="json__elapsed_time", )
+    @display(description=_("Time"), header=True, ordering="elapsed_time", )
     def show_time(self, obj):
         return [
-            f'Elapsed: {datetime.timedelta(seconds=obj.json["elapsed_time"])}',
-            f'Moving: {datetime.timedelta(seconds=obj.json["moving_time"])}',
+            f'Elapsed: {datetime.timedelta(seconds=obj.elapsed_time or 0)}',
+            f'Moving: {datetime.timedelta(seconds=obj.moving_time or 0)}',
         ]
 
-    @display(description=_("Pace / speed"), header=True, ordering="json__average_speed")
+    @display(description=_("Pace / speed"), header=True, ordering="average_speed")
     def show_speed(self, obj):
-        if obj.distance == 0:
+        if obj.distance == 0 or not obj.elapsed_time:
             return ['-', '']
 
         # if any(x in obj.sport_type.lower() for x in ('run', 'swim', 'hike')):
-        time_min = Decimal(obj.json["elapsed_time"] / 60)
+        time_min = Decimal(obj.elapsed_time / 60)
         distance_km = obj.distance / 1000
         pace = f'{round(time_min / distance_km, 2)} min / km'
 
         # if any(x in obj.sport_type.lower() for x in ('ride', 'ski', 'walk', 'inline')):
-        time_hod = Decimal(obj.json["elapsed_time"] / 60 / 60)
+        time_hod = Decimal(obj.elapsed_time / 60 / 60)
         distance_km = obj.distance / 1000
         speed = f'{round(distance_km / time_hod, 2)} km / hod'
 
@@ -137,14 +137,14 @@ class ActivityAdmin(admin.ModelAdmin):
             speed,
         ]
 
-    @display(description=_("Heartrate"), header=True, ordering="json__average_heartrate",)
+    @display(description=_("Heartrate"), header=True, ordering="average_heartrate",)
     def show_heartrate(self, obj):
-        if not obj.json.get("has_heartrate", False):
+        if not obj.has_heartrate:
             return ['-', '']
 
         return [
-            f'Avg: {obj.json["average_heartrate"]}',
-            f'Max: {obj.json["max_heartrate"]}',
+            f'Avg: {obj.average_heartrate}',
+            f'Max: {obj.max_heartrate}',
             # '♥'
         ]
 
@@ -172,10 +172,10 @@ class GearAdmin(admin.ModelAdmin):
     search_fields = ("id", "brand_name", "model_name", "description")
     actions = ["fetch_from_api"]
     actions_list = ["open_strava_gear"]
-    list_display = ("id", "brand_and_model", "description",
+    list_display = ("id", "brand_and_model", "show_gear_type", "description",
                     "show_activity_count", "show_distance", "show_age", "primary")
     list_display_links = ("id", "brand_and_model")
-    list_filter = ("brand_name",)
+    list_filter = ("gear_type", "brand_name")
     readonly_fields = ("primary", "brand_name", "model_name", "description", "json")
 
     def get_queryset(self, request):
@@ -201,6 +201,13 @@ class GearAdmin(admin.ModelAdmin):
             obj.model_name
         ]
 
+    @display(description=_("Type"), ordering="gear_type", label={
+        "bike": "info",
+        "shoe": "success",
+    })
+    def show_gear_type(self, obj):
+        return obj.get_gear_type_display()
+
     @display(description=_("Total activities"), ordering="activity_count")
     def show_activity_count(self, obj):
         url = reverse_lazy("admin:strava_activity_changelist")
@@ -216,6 +223,5 @@ class GearAdmin(admin.ModelAdmin):
 
     @display(description=_("Is old"))
     def show_age(self, obj):
-        # TODO: check gear type (shoes only)
-        return obj.distance_sum > 400000
+        return obj.is_old
     show_age.boolean = True
