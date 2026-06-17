@@ -6,7 +6,7 @@ from django.utils.translation import gettext_lazy as _
 
 from strava.api import StravaApi
 from strava.choices import SportType
-from strava.querysets import ActivityQuerySet, GearQuerySet
+from strava.querysets import ActivityQuerySet, GearQuerySet, DETAIL_MARKER_FIELDS
 
 
 class Activity(models.Model):
@@ -120,6 +120,12 @@ class Activity(models.Model):
       ]
       return all(conditions)
   is_gear_synced.boolean = True
+
+  def is_detailed(self):
+      # True once the full DetailedActivity payload has been fetched; summary-only
+      # records carry these fields as null/absent and need fetch_from_api().
+      return any(self.json.get(field) is not None for field in DETAIL_MARKER_FIELDS)
+  is_detailed.boolean = True
 
   @property
   def type(self):

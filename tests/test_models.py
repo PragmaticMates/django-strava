@@ -114,6 +114,35 @@ class TestActivityIsGearSynced:
         assert activity.is_gear_synced() is False
 
 
+class TestActivityIsDetailed:
+    def _activity(self, json_data):
+        return Activity(
+            name="Morning Run",
+            start_date=datetime(2024, 6, 15, tzinfo=timezone.utc),
+            sport_type="Run",
+            distance=5000.50,
+            json=json_data,
+        )
+
+    def test_summary_only_is_not_detailed(self):
+        # SummaryActivity JSON omits the detail-only fields entirely.
+        assert self._activity(ACTIVITY_JSON).is_detailed() is False
+
+    def test_null_detail_fields_is_not_detailed(self):
+        # stravalib serialises detail fields as null for summary-sourced activities.
+        json_data = {**ACTIVITY_JSON, "calories": None, "embed_token": None,
+                     "description": None, "device_name": None}
+        assert self._activity(json_data).is_detailed() is False
+
+    def test_calories_makes_it_detailed(self):
+        json_data = {**ACTIVITY_JSON, "calories": 0}
+        assert self._activity(json_data).is_detailed() is True
+
+    def test_embed_token_makes_it_detailed(self):
+        json_data = {**ACTIVITY_JSON, "embed_token": "abc123"}
+        assert self._activity(json_data).is_detailed() is True
+
+
 @pytest.mark.django_db
 class TestActivityUpdateFromJson:
     @patch("strava.models.StravaApi")

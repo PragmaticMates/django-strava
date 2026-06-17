@@ -1,5 +1,11 @@
 from django.db import models
 from django.db.models import F, Value, Q, CharField, FloatField, Func, ExpressionWrapper
+from django.db.models.functions import Coalesce
+
+# Scalar fields present only on Strava's DetailedActivity (not SummaryActivity).
+# They are null/absent for activities imported with summary data only, so their
+# presence tells us the full detail payload has been fetched from the API.
+DETAIL_MARKER_FIELDS = ("embed_token", "calories", "description", "device_name")
 
 
 class ActivityQuerySet(models.QuerySet):
@@ -14,6 +20,24 @@ class ActivityQuerySet(models.QuerySet):
                 output_field=CharField()
             ),
         ).exclude(Q(gear_id=F('casted_json_gear_id')) | Q(gear_id=None, json__gear_id=None))
+
+    def _with_detail_marker(self):
+        # Coalesce the scalar DetailedActivity fields: the marker is non-null
+        # as soon as any of them carries a value (jsonb_extract_path_text yields
+        # NULL for missing keys, JSON null, and non-scalar array/object values).
+        markers = [
+            Func(F("json"), Value(field), function="jsonb_extract_path_text", output_field=CharField())
+            for field in DETAIL_MARKER_FIELDS
+        ]
+        return self.annotate(detail_marker=Coalesce(*markers, output_field=CharField()))
+
+    def summary_only(self):
+        # Activities stored with SummaryActivity data only; they still need the
+        # DetailedActivity payload (best efforts, splits, laps, ...) fetched from the API.
+        return self._with_detail_marker().filter(detail_marker__isnull=True)
+
+    def detailed(self):
+        return self._with_detail_marker().filter(detail_marker__isnull=False)
 
     def search(self, query):
         qs = self

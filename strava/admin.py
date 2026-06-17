@@ -31,6 +31,23 @@ class ActivitySyncFilter(admin.SimpleListFilter):
             return queryset.gear_unsynced()
 
 
+class ActivityDetailFilter(admin.SimpleListFilter):
+    title = _("Detail status")
+    parameter_name = "detail"
+
+    def lookups(self, request, model_admin):
+        return [
+            ("summary", _("Summary only (needs fetch)")),
+            ("detailed", _("Detailed")),
+        ]
+
+    def queryset(self, request, queryset):
+        if self.value() == "summary":
+            return queryset.summary_only()
+        if self.value() == "detailed":
+            return queryset.detailed()
+
+
 class DistanceFilter(RangeNumericListFilter):
     parameter_name = "distance"
     title = _("Distance")
@@ -47,7 +64,7 @@ class ActivityAdmin(admin.ModelAdmin):
     list_select_related = ("gear",)
     list_display_links = ("name_and_id",)
     list_editable = ("gear",)
-    list_filter = (ActivitySyncFilter, DistanceFilter, "gear", "sport_type")
+    list_filter = (ActivitySyncFilter, ActivityDetailFilter, DistanceFilter, "gear", "sport_type")
     list_per_page = 100
     readonly_fields = ('distance', 'json', 'start_date')
     # autocomplete_fields = ("gear",)
