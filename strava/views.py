@@ -109,6 +109,15 @@ class DashboardView(TemplateView):
         pool = year_acts or activities
         context['aoty'] = max(pool, key=lambda a: a.distance) if pool else None
 
+        # ---- Personal records (per sport tab) ----
+        # Each record carries the id of the activity that set it so the widget can
+        # open that activity's card on click. The widget has its own sport tabs, so it's
+        # scoped by the year filter only — applying the sport/gear/search filters would
+        # empty the other tabs and make the records jump around on a text search.
+        records_acts = [a for a in all_activities
+                        if year == 'all' or str(local_date(a).year) == year]
+        context['records'] = self._records(records_acts)
+
         # ---- Trends (weekly / monthly / yearly) + activity calendar ----
         weekly, monthly, yearly = {}, {}, {}
         day_counts = {}
@@ -199,6 +208,117 @@ class DashboardView(TemplateView):
         context['total_photos'] = sum(a.photo_count for a in activities)
         context['last_updated'] = timezone.localtime()
         return context
+
+    # Exact sport types per records tab. An explicit allow-list (rather than the coarse
+    # Activity.type bucket, whose "run" fallback swallows every unlisted sport such as
+    # AlpineSki) keeps unrelated, fast activities out of the running/cycling PRs.
+    RECORD_SPORTS = {
+        'Running': {'Run', 'TrailRun', 'VirtualRun'},
+        # E-bikes (EBikeRide / EMountainBikeRide) are excluded — motor assistance
+        # would unfairly dominate the cycling records.
+        'Cycling': {'Ride', 'GravelRide', 'MountainBikeRide',
+                    'VirtualRide', 'Velomobile', 'Handcycle'},
+        'Hiking': {'Hike', 'Snowshoe', 'Walk'},
+        'Swimming': {'Swim'},
+    }
+
+    # Rides averaging faster than this (km/h) are excluded from the fastest-avg-speed
+    # PR as implausible (GPS errors or mis-tagged motorized activities).
+    MAX_RIDE_AVG_KMH = 60
+    # Likewise for the instantaneous top-speed PR. Higher than the average cap, since
+    # real descents legitimately exceed 60 km/h; only clear GPS glitches are dropped.
+    MAX_RIDE_TOP_KMH = 100
+    # Hikes faster than this pace (seconds per km) are excluded from the hiking
+    # longest/fastest PRs — anything quicker than 7:00/km is almost certainly a
+    # mis-tagged run rather than a hike.
+    MIN_HIKE_PACE_SEC = 7 * 60
+
+    def _records(self, activities):
+        """Personal records grouped by the four sport tabs (Running / Cycling /
+        Hiking / Swimming). Returns ``{tab: [record, ...]}`` where each record is a
+        ``{'label', 'value', 'unit', 'id'}`` dict — ``id`` is the pk of the activity
+        that holds the record, so clicking the row opens that activity's card."""
+        return {
+            name: self._sport_records(name, [a for a in activities if a.sport_type in sports])
+            for name, sports in self.RECORD_SPORTS.items()
+        }
+
+    def _sport_records(self, name, acts):
+        if not acts:
+            return []
+        recs = []
+
+        # Longest distance. For hiking, ignore run-paced activities (likely mis-tagged).
+        longest_pool = [a for a in acts if self._hike_pace_ok(a)] if name == 'Hiking' else acts
+        if longest_pool:
+            longest = max(longest_pool, key=lambda a: a.distance)
+            recs.append(self._rec('Longest', longest, f'{float(longest.distance) / 1000:.1f}', 'km'))
+
+        # Fastest — avg speed for rides, per-100m for swims, avg pace otherwise.
+        # Derived from distance/time (like Activity.pace_parts) to avoid relying on
+        # the raw API speed units. Hiking again drops run-paced activities.
+        moving = [a for a in acts if a.moving_time and a.distance]
+        if name == 'Hiking':
+            moving = [a for a in moving if self._hike_pace_ok(a)]
+        if name == 'Cycling':
+            # Drop rides whose average speed exceeds MAX_RIDE_AVG_KMH — those are GPS
+            # glitches or mis-tagged motorized activities, not real cycling PRs.
+            rides = [a for a in moving
+                     if (float(a.distance) / 1000) / (a.moving_time / 3600) <= self.MAX_RIDE_AVG_KMH]
+            if rides:
+                best = max(rides, key=lambda a: float(a.distance) / a.moving_time)
+                kmh = (float(best.distance) / 1000) / (best.moving_time / 3600)
+                recs.append(self._rec('Fastest (avg. speed)', best, f'{kmh:.1f}', 'km/h'))
+        elif name == 'Swimming':
+            if moving:
+                best = min(moving, key=lambda a: a.moving_time / (float(a.distance) / 100))
+                recs.append(self._rec('Fastest (per 100 m)', best,
+                                      self._fmt_pace(best.moving_time / (float(best.distance) / 100)), '/100m'))
+        else:
+            if moving:
+                best = min(moving, key=lambda a: a.moving_time / (float(a.distance) / 1000))
+                recs.append(self._rec('Fastest (avg. pace)', best,
+                                      self._fmt_pace(best.moving_time / (float(best.distance) / 1000)), '/km'))
+
+        # Most elevation (not meaningful for swimming)
+        if name != 'Swimming':
+            climbs = [a for a in acts if a.total_elevation_gain]
+            if climbs:
+                best = max(climbs, key=lambda a: a.total_elevation_gain)
+                recs.append(self._rec('Most Elevation', best, f'{best.total_elevation_gain:,.0f}', 'm'))
+
+        # Top speed only for cycling (descents legitimately hit 50–70 km/h). For other
+        # sports the GPS max_speed is dominated by noisy spikes — a single bad fix on a
+        # slow run reads as 50+ km/h — so show the reliable longest moving time instead.
+        if name == 'Cycling':
+            speeds = [a for a in acts if a.max_speed and a.max_speed * 3.6 <= self.MAX_RIDE_TOP_KMH]
+            if speeds:
+                best = max(speeds, key=lambda a: a.max_speed)
+                recs.append(self._rec('Top Speed', best, f'{best.max_speed * 3.6:.1f}', 'km/h'))
+        else:
+            timed = [a for a in acts if a.moving_time]
+            if timed:
+                best = max(timed, key=lambda a: a.moving_time)
+                recs.append(self._rec('Longest Time', best, best.dur, ''))
+
+        return recs
+
+    @staticmethod
+    def _rec(label, activity, value, unit):
+        return {'label': label, 'value': value, 'unit': unit, 'id': activity.pk}
+
+    def _hike_pace_ok(self, a):
+        """A genuine hike isn't faster than MIN_HIKE_PACE_SEC per km. Activities with no
+        pace data (missing time/distance) are kept — there's nothing to disqualify on."""
+        if not a.moving_time or not a.distance:
+            return True
+        return a.moving_time / (float(a.distance) / 1000) >= self.MIN_HIKE_PACE_SEC
+
+    @staticmethod
+    def _fmt_pace(seconds):
+        """Seconds-per-unit formatted as m:ss (a per-km or per-100m pace)."""
+        m, s = divmod(int(round(seconds)), 60)
+        return f'{m}:{s:02d}'
 
     @staticmethod
     def _unaccent(s):

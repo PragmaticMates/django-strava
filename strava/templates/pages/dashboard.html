@@ -65,6 +65,16 @@ server-side; the response arrives as out-of-band swaps absorbed by #dash-sink.
 </form>
 <div id="dash-sink" hidden></div>
 
+{% comment %}
+Centered overlay for an activity's card, opened from clickable widgets such as the
+Personal Records rows. The card HTML is fetched lazily from ActivityCardView (same
+endpoint the map uses) into .act-modal-host.
+{% endcomment %}
+<div id="activity-modal" class="act-modal" data-card-url="{% url 'strava:activity_card' 0 %}" hidden>
+  <div class="act-modal-backdrop"></div>
+  <div class="act-modal-host"></div>
+</div>
+
 <main class="page">
 
   <!-- ============ Stat band ============ -->
@@ -781,6 +791,45 @@ server-side; the response arrives as out-of-band swaps absorbed by #dash-sink.
   document.querySelectorAll('.float-card').forEach(function(card) {
     if (card.offsetParent !== null) window.renderCardRoute(card);
   });
+
+  // ---- Activity modal: a centered overlay showing one activity's card ----
+  // Opened from clickable widgets (e.g. Personal Records rows). The card HTML is
+  // fetched on demand from ActivityCardView, the same endpoint the map markers use.
+  (function() {
+    const modal = document.getElementById('activity-modal');
+    if (!modal) return;
+    const host = modal.querySelector('.act-modal-host');
+    const cardUrl = function(id) { return modal.dataset.cardUrl.replace('/0/card/', '/' + id + '/card/'); };
+
+    function close() {
+      modal.hidden = true;
+      host.innerHTML = '';
+      document.body.classList.remove('modal-open');
+    }
+
+    window.openActivityModal = function(id) {
+      fetch(cardUrl(id), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(function(r) { return r.ok ? r.text() : ''; })
+        .then(function(html) {
+          if (!html) return;
+          host.innerHTML = html;
+          const card = host.querySelector('.float-card');
+          if (card) {
+            card.style.display = '';
+            if (window.renderCardRoute) window.renderCardRoute(card);
+            const closeBtn = card.querySelector('.fc-close');
+            if (closeBtn) closeBtn.addEventListener('click', close);
+          }
+          modal.hidden = false;
+          document.body.classList.add('modal-open');
+        });
+    };
+
+    modal.querySelector('.act-modal-backdrop').addEventListener('click', close);
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && !modal.hidden) close();
+    });
+  })();
 
   // After a filter swaps in fresh sections, draw the new latest-activity card routes
   // and tell the charts/calendar/donut to reload their data (ds:datachanged) and the

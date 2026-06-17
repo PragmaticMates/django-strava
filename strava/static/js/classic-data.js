@@ -58,36 +58,46 @@
   }
   loadTrends();
 
-  /* ---- Personal records (4 sports) ---- */
-  const records = {
-    Running: [
-      ["Longest", "32.4", "km"], ["Fastest (avg. pace)", "4:18", "/km"],
-      ["Most Elevation", "1,420", "m"], ["Furthest from Home", "487", "km"],
-    ],
-    Cycling: [
-      ["Longest", "142.6", "km"], ["Fastest (avg. speed)", "31.4", "km/h"],
-      ["Most Elevation", "1,980", "m"], ["Furthest from Home", "612", "km"],
-    ],
-    Hiking: [
-      ["Longest", "26.8", "km"], ["Highest Point", "2,634", "m"],
-      ["Most Elevation", "1,890", "m"], ["Furthest from Home", "318", "km"],
-    ],
-    Swimming: [
-      ["Longest", "3.2", "km"], ["Fastest (per 100 m)", "1:52", ""],
-      ["Open Water Longest", "1.8", "km"], ["Furthest from Home", "95", "km"],
-    ],
-  };
+  /* ---- Personal records (per sport, real data from the server) ---- */
+  // Each record is tied to the activity that set it; clicking a row opens that
+  // activity's card (window.openActivityModal). Re-read on a filter change so the
+  // records track the active filter like every other section.
+  let records = readJSON("dashboard-records") || {};
+  let recSport = "Running";
   const recList = $("#rec-list");
   function showRecords(sport) {
-    recList.innerHTML = records[sport].map(([k, v, u]) => `
-      <div class="kv"><span class="k">${k}</span>
-      <span class="v">${v}${u ? ` <small>${u}</small>` : ""}</span></div>`).join("");
+    recSport = sport;
+    const rows = records[sport] || [];
+    recList.innerHTML = rows.length
+      ? rows.map(r => `
+          <div class="kv kv-record" role="button" tabindex="0" data-activity="${r.id}"
+               title="View activity">
+            <span class="k">${r.label}</span>
+            <span class="v">${r.value}${r.unit ? ` <small>${r.unit}</small>` : ""}</span>
+          </div>`).join("")
+      : `<div class="rec-empty">No ${sport.toLowerCase()} activities yet.</div>`;
     $$("#rec-tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.sport === sport));
   }
   $("#rec-tabs").addEventListener("click", e => {
     const b = e.target.closest("button"); if (b) showRecords(b.dataset.sport);
   });
-  showRecords("Running");
+  function openRecord(row) {
+    if (row && row.dataset.activity && window.openActivityModal) {
+      window.openActivityModal(row.dataset.activity);
+    }
+  }
+  recList.addEventListener("click", e => openRecord(e.target.closest(".kv-record")));
+  recList.addEventListener("keydown", e => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const row = e.target.closest(".kv-record");
+    if (row) { e.preventDefault(); openRecord(row); }
+  });
+  showRecords(recSport);
+  // A filter change swaps in fresh records JSON — reload and re-render the active tab.
+  window.addEventListener("ds:datachanged", () => {
+    records = readJSON("dashboard-records") || {};
+    showRecords(recSport);
+  });
 
   /* ---- Activity calendar dots (5 weeks, sizes 0–2) ---- */
   // Re-read on a filter change (ds:datachanged) so the dots track the active filter.

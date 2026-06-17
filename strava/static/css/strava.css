@@ -271,6 +271,14 @@ body.map-expanded .nav { position: sticky; top: 0; z-index: 1001; }
 .acts-feed .float-card,
 .act-cards .float-card { position: static; transform: none; width: auto; z-index: auto; }
 
+/* Activity modal — a centered overlay hosting one activity's float card. */
+.act-modal { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; padding: 20px; }
+.act-modal[hidden] { display: none; }
+.act-modal-backdrop { position: absolute; inset: 0; background: rgba(20,16,12,0.45); backdrop-filter: blur(4px); }
+.act-modal-host { position: relative; z-index: 1; }
+.act-modal-host .float-card { position: relative; left: auto; top: auto; transform: none; }
+body.modal-open { overflow: hidden; }
+
 /* header */
 .fc-header { display: flex; align-items: center; gap: 10px; padding: 14px 16px 10px; }
 .fc-avatar { width: 40px; height: 40px; flex: none; }
@@ -404,6 +412,11 @@ body.map-expanded .nav { position: sticky; top: 0; z-index: 1001; }
 .kv .k { font-weight: 600; font-size: 13.5px; }
 .kv .v { font-weight: 700; font-size: 14.5px; white-space: nowrap; }
 .kv .v small { font-weight: 600; font-size: 11px; color: var(--ink-3); }
+/* Clickable record rows — open the activity that set the record. */
+.kv-record { cursor: pointer; margin: 0 calc(-7px * var(--d)); padding-left: calc(7px * var(--d)); padding-right: calc(7px * var(--d)); border-radius: 8px; transition: background 0.12s; }
+.kv-record:hover, .kv-record:focus-visible { background: color-mix(in srgb, var(--accent) 9%, transparent); outline: none; }
+.kv-record:hover .k, .kv-record:focus-visible .k { color: var(--accent); }
+.rec-empty { padding: calc(7px * var(--d)) 0; font-size: 13px; color: var(--ink-3); }
 
 /* ============ Running performance ============ */
 .perf-grid { display: grid; grid-template-columns: repeat(4, 1fr); text-align: center; }
