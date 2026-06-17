@@ -1,0 +1,40 @@
+{% load humanize %}
+<section class="card" id="dash-aoty" hx-swap-oob="true" data-screen-label="Activity of the year">
+  <div class="card-head">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="5.5"></circle><polyline points="9 13.5 7 21 12 18.5 17 21 15 13.5"></polyline></svg>
+    <h2 class="card-title">Activity of the Year</h2>
+  </div>
+  {% if aoty %}
+  <div class="aoty">
+    <div>
+      <h3 class="aoty-title">{{ aoty.name }}</h3>
+      <div class="aoty-stats">
+        <div><div class="v">{{ aoty.dist }} <small>km</small></div><div class="l">Distance</div></div>
+        <div><div class="v">{{ aoty.elev|intcomma }} <small>m</small></div><div class="l">Elevation Gain</div></div>
+        <div><div class="v">{{ aoty.dur }}</div><div class="l">Moving Time</div></div>
+      </div>
+      <div class="aoty-meta">
+        <div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polygon points="10 8 16 12 10 16 10 8" fill="var(--ink-3)" stroke="none"></polygon></svg>
+          {{ aoty.get_sport_type_display }}
+        </div>
+        {% if aoty.gear %}
+        <div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18h18"></path><path d="M5 18V9c0-1 .5-2 2-2h4l4 3h2c1 0 2 .5 2 2v6"></path><path d="M9 7V6"></path><path d="M5 14h14"></path></svg>
+          {{ aoty.gear }}
+        </div>
+        {% endif %}
+        <div>
+          <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"></rect><line x1="8" y1="3" x2="8" y2="7"></line><line x1="16" y1="3" x2="16" y2="7"></line><line x1="4" y1="10" x2="20" y2="10"></line></svg>
+          {{ aoty.start_date|date:"M j, Y" }}
+        </div>
+      </div>
+    </div>
+    {% if aoty.photo %}
+    <img class="aoty-photo" src="{{ aoty.photo }}" alt="{{ aoty.name }}">
+    {% else %}
+    <image-slot id="aoty-photo" class="aoty-photo" shape="rounded" radius="12" placeholder="No photo"></image-slot>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>

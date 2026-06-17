@@ -134,6 +134,25 @@ class TestFilters:
 
 
 # --------------------------------------------------------------------------- #
+# Activity of the year
+# --------------------------------------------------------------------------- #
+@pytest.mark.django_db
+class TestActivityOfTheYear:
+    def _seed(self):
+        # Longest activity overall sits in 2024; 2025's longest is shorter.
+        make_activity(1, "Run", distance=12000, start_date=dt(2025, 6, 15), name="2025 Long Run")
+        make_activity(2, "Run", distance=8000, start_date=dt(2025, 3, 1), name="2025 Short Run")
+        make_activity(3, "Ride", distance=40000, start_date=dt(2024, 7, 1), name="2024 Big Ride")
+
+    def test_year_filter_scopes_aoty(self):
+        self._seed()
+        # 2025 selected: longest of 2025 only, not the longer 2024 ride.
+        assert dashboard_context(year="2025")["aoty"].pk == 1
+        # 2024 selected: the big ride.
+        assert dashboard_context(year="2024")["aoty"].pk == 3
+
+
+# --------------------------------------------------------------------------- #
 # "By the Numbers" stats
 # --------------------------------------------------------------------------- #
 @pytest.mark.django_db
