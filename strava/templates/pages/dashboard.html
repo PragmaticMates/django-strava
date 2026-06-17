@@ -42,9 +42,7 @@
     </button>
     <button class="pill-btn" type="button" id="map-gear-btn"><span class="pill-label">All Gear</span> <span class="caret">▾</span></button>
   </div>
-  {% if map_hidden_count %}
-  <p class="map-note">{{ map_hidden_count }} activit{{ map_hidden_count|pluralize:"y,ies" }} without GPS not shown</p>
-  {% endif %}
+  {% include "pages/_dash_map_note.html" %}
   {% comment %}
   Activity cards are fetched lazily when a marker is clicked (see map JS) rather than
   server-rendered for every marker — rendering ~1000 hidden cards dominated page load.

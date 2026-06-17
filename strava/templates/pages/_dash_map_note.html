@@ -1,0 +1,10 @@
+{% comment %}
+"Without GPS not shown" note for the activity map. The count tracks the active
+filter, so it's an out-of-band swap (id + hx-swap-oob) refreshed on filter change.
+The wrapper always renders so the OOB target exists even when the count is zero.
+{% endcomment %}
+<div id="dash-map-note" hx-swap-oob="true">
+  {% if map_hidden_count %}
+  <p class="map-note">{{ map_hidden_count }} activit{{ map_hidden_count|pluralize:"y,ies" }} without GPS not shown</p>
+  {% endif %}
+</div>

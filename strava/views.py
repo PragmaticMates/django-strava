@@ -98,8 +98,11 @@ class DashboardView(TemplateView):
         # which is also where the filter pills' options come from. GPS-less activities
         # (pool swims, treadmill runs, …) can't be placed; map_hidden_count surfaces how
         # many so the map isn't seen as dropping data.
-        (context['map_markers'], context['map_activities'],
-         context['map_hidden_count']) = self._map_data(all_activities)
+        # Markers come from every activity (the map filters them in JS), but the
+        # "without GPS not shown" note counts only activities matching the active
+        # filter so it tracks what the map currently displays.
+        context['map_markers'], context['map_activities'], _ = self._map_data(all_activities)
+        context['map_hidden_count'] = sum(1 for a in activities if not self._has_gps(a))
 
         # ---- Activity of the year (longest this year, else longest overall) ----
         # A selected year sets the "year"; otherwise it's the current one.
@@ -207,6 +210,11 @@ class DashboardView(TemplateView):
         return ''.join(c for c in normalized if not unicodedata.combining(c)).lower()
 
     @staticmethod
+    def _has_gps(a):
+        latlng = a.json.get('start_latlng') or []
+        return len(latlng) == 2 and bool(latlng[0] or latlng[1])
+
+    @staticmethod
     def _map_data(activities):
         """Collect map markers and their activities from ``start_latlng``.
 
@@ -220,10 +228,7 @@ class DashboardView(TemplateView):
         how many activities had no ``start_latlng`` (e.g. pool swims, treadmill
         runs) and so can't be placed. The lists are capped at ``MAP_MARKER_LIMIT``.
         """
-        def has_gps(a):
-            latlng = a.json.get('start_latlng') or []
-            return len(latlng) == 2 and bool(latlng[0] or latlng[1])
-
+        has_gps = DashboardView._has_gps
         markers, map_activities = [], []
         for a in activities:
             if has_gps(a):
