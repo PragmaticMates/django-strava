@@ -229,7 +229,8 @@ body {
 }
 .maphero.expanded .map-fullscreen .fs-open { display: none; }
 .maphero.expanded .map-fullscreen .fs-close { display: block; }
-/* Keep the header on top of the expanded map overlay. */
+/* Keep the header on top of the expanded map overlay, and lock page scrolling. */
+body.map-expanded { overflow: hidden; }
 body.map-expanded .nav { position: sticky; top: 0; z-index: 1001; }
 .map-filters { position: absolute; right: 18px; top: 18px; z-index: 5; display: flex; gap: 10px; }
 .map-note {

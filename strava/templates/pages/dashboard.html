@@ -639,38 +639,10 @@
   const hero = el.closest('.maphero');
   const fsBtn = document.getElementById('map-fullscreen');
   if (fsBtn && hero) fsBtn.addEventListener('click', function() {
-    if (hero.dataset.animating) return;
-    const willExpand = !hero.classList.contains('expanded');
-    if (willExpand) window.scrollTo(0, 0);  // align with the header pinned at the top
-    // FLIP on geometry (not transform): measure the box before/after, then animate
-    // top/left/width/height between them. Scaling would stretch the Leaflet tiles;
-    // resizing the box just reveals more map, with invalidateSize() filling it at the end.
-    function setRect(r) {
-      hero.style.top = r.top + 'px'; hero.style.left = r.left + 'px';
-      hero.style.width = r.width + 'px'; hero.style.height = r.height + 'px';
-    }
-    const first = hero.getBoundingClientRect();
-    hero.classList.toggle('expanded', willExpand);
-    document.body.classList.toggle('map-expanded', willExpand);  // keeps the header on top
-    const last = hero.getBoundingClientRect();
-    hero.style.position = 'fixed'; hero.style.margin = '0'; hero.style.zIndex = '1000';
-    hero.style.transition = 'none';
-    setRect(first);
-    hero.dataset.animating = '1';
-    void hero.offsetWidth;  // force reflow so the start geometry takes effect
-    requestAnimationFrame(function() {
-      hero.style.transition = 'top 0.3s ease, left 0.3s ease, width 0.3s ease, height 0.3s ease';
-      setRect(last);
-    });
-    hero.addEventListener('transitionend', function done(e) {
-      if (e.propertyName !== 'height') return;
-      hero.removeEventListener('transitionend', done);
-      // Drop the inline geometry so each resting state falls back to its CSS.
-      ['position', 'margin', 'zIndex', 'transition', 'top', 'left', 'width', 'height']
-        .forEach(function(p) { hero.style[p] = ''; });
-      delete hero.dataset.animating;
-      map.invalidateSize();  // recompute tiles/markers for the final size
-    });
+    const expanded = hero.classList.toggle('expanded');
+    document.body.classList.toggle('map-expanded', expanded);  // keeps the header on top
+    if (expanded) window.scrollTo(0, 0);  // align with the header pinned at the top
+    map.invalidateSize();  // recompute tiles/markers for the new size
   });
 
   // Reset button: close any card/route and re-frame all markers.
