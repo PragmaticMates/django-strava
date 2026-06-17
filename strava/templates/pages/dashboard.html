@@ -760,6 +760,10 @@ endpoint the map uses) into .act-modal-host.
         .then(function(html) {
           if (!html) return;
           host.innerHTML = html;
+          // Reveal the modal before drawing the route: the map-backed trace measures
+          // the card's .fc-map, which has no size while the modal is display:none.
+          modal.hidden = false;
+          document.body.classList.add('modal-open');
           const card = host.querySelector('.float-card');
           if (card) {
             card.style.display = '';
@@ -767,8 +771,6 @@ endpoint the map uses) into .act-modal-host.
             const closeBtn = card.querySelector('.fc-close');
             if (closeBtn) closeBtn.addEventListener('click', close);
           }
-          modal.hidden = false;
-          document.body.classList.add('modal-open');
         });
     };
 
