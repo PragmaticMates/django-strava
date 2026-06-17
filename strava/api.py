@@ -1,9 +1,9 @@
-import environ
 import functools
 import json
 import logging
 import time
 from datetime import datetime, timezone
+from django.conf import settings
 
 from stravalib import Client, exc
 from stravalib.util.limiter import (
@@ -15,24 +15,22 @@ from stravalib.util.limiter import (
 
 logger = logging.getLogger("file")
 
-env = environ.Env()
-
-STRAVA_CLIENT_ID = env("STRAVA_CLIENT_ID")
-STRAVA_CLIENT_SECRET = env("STRAVA_CLIENT_SECRET")
-STRAVA_ACCESS_TOKEN = env("STRAVA_ACCESS_TOKEN")
-STRAVA_REFRESH_TOKEN = env("STRAVA_REFRESH_TOKEN")
-STRAVA_TOKEN_EXPIRES = env("STRAVA_TOKEN_EXPIRES", default=None)
+STRAVA_CLIENT_ID = getattr(settings, "STRAVA_CLIENT_ID", None)
+STRAVA_CLIENT_SECRET = getattr(settings, "STRAVA_CLIENT_SECRET", None)
+STRAVA_ACCESS_TOKEN = getattr(settings, "STRAVA_ACCESS_TOKEN", None)
+STRAVA_REFRESH_TOKEN = getattr(settings, "STRAVA_REFRESH_TOKEN", None)
+STRAVA_TOKEN_EXPIRES = getattr(settings, "STRAVA_TOKEN_EXPIRES", None)
 
 # How aggressively to space out requests to stay within Strava's limits
 # (https://developers.strava.com/docs/rate-limits/):
 #   "high"   - no proactive throttling (burst until a limit is hit)
 #   "medium" - spread requests so the short-term (15 min) limit is not exceeded
 #   "low"    - spread requests so the daily limit is not exceeded
-STRAVA_RATE_LIMIT_PRIORITY = env("STRAVA_RATE_LIMIT_PRIORITY", default="medium")
+STRAVA_RATE_LIMIT_PRIORITY = getattr(settings, "STRAVA_RATE_LIMIT_PRIORITY", "medium")
 
 # How many times to retry a request after hitting a 429 (rate limit exceeded)
 # before giving up. Each retry waits until the relevant limit window resets.
-STRAVA_RATE_LIMIT_MAX_RETRIES = env.int("STRAVA_RATE_LIMIT_MAX_RETRIES", default=3)
+STRAVA_RATE_LIMIT_MAX_RETRIES = getattr(settings, "STRAVA_RATE_LIMIT_MAX_RETRIES", 3)
 
 
 def rate_limited(func):
