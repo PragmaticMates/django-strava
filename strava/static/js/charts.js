@@ -91,7 +91,7 @@ window.DSCharts = (function () {
     const W = host.clientWidth || 760, H = host.clientHeight || 240;
     const padL = 44, padB = 26, padT = 14, padR = 8;
     const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, width: W, height: H });
-    const unit = { km: "km", elev: "m", hours: "h", pace: "/km" }[metric];
+    const unit = { km: "km", elev: "m", hours: "h", pace: "/km", acts: "" }[metric];
     const fmtVal = metric === "pace"
       ? (v) => { const m = Math.floor(v); return m + ":" + String(Math.round((v - m) * 60)).padStart(2, "0"); }
       : fmtTick;

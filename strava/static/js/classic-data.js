@@ -53,6 +53,7 @@
       x.elev = Math.round(x.km * (26 + r2() * 16));
       x.hours = +(x.km / (9.6 + r2() * 2.2)).toFixed(1);
       x.pace = +(5.05 + r2() * 1.05).toFixed(2); // min/km
+      x.acts = Math.max(1, Math.round(x.km / (12 + r2() * 6)));
     }));
   }
   loadTrends();

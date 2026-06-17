@@ -116,10 +116,11 @@ class DashboardView(TemplateView):
             km, elev, secs = float(a.distance) / 1000, elevation(a), seconds(a)
             wk = d - datetime.timedelta(days=d.weekday())
             for buckets, key in ((weekly, wk), (monthly, (d.year, d.month)), (yearly, d.year)):
-                b = buckets.setdefault(key, {'km': 0.0, 'elev': 0.0, 'secs': 0.0})
+                b = buckets.setdefault(key, {'km': 0.0, 'elev': 0.0, 'secs': 0.0, 'acts': 0})
                 b['km'] += km
                 b['elev'] += elev
                 b['secs'] += secs
+                b['acts'] += 1
             day_counts[d] = day_counts.get(d, 0) + 1
 
         def rows(buckets, label, partial=None):
@@ -131,6 +132,7 @@ class DashboardView(TemplateView):
                     'km': round(b['km']),
                     'elev': round(b['elev']),
                     'hours': round(b['secs'] / 3600, 1),
+                    'acts': b['acts'],
                     'pace': round((b['secs'] / 60) / b['km'], 2) if b['km'] else 0,
                     **({'partial': True} if partial and partial(key) else {}),
                 })
