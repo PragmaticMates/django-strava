@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 {% block fonts %}<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">{% endblock %}
-<link rel="stylesheet" href="{% static 'css/strava.css' %}">
+<link rel="stylesheet" href="{% static 'strava/css/strava.css' %}">
 {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -75,7 +75,7 @@
 {% block content %}{% endblock %}
 
 {% htmx_script %}
-<script src="{% static 'js/ui.js' %}"></script>
+<script src="{% static 'strava/js/ui.js' %}"></script>
 {% block extra_js %}{% endblock %}
 
 </body>
