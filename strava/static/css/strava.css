@@ -311,6 +311,18 @@ body.modal-open { overflow: hidden; }
   width: 84px; height: 84px;
   border-radius: 10px; border: 2px solid #fff;
   box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  cursor: zoom-in;
+}
+/* Full-screen overlay shown when the activity photo is clicked. */
+.fc-lightbox {
+  position: fixed; inset: 0; z-index: 2000;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.82); padding: 24px; cursor: zoom-out;
+}
+.fc-lightbox.open { display: flex; }
+.fc-lightbox img {
+  max-width: 100%; max-height: 100%;
+  border-radius: 8px; box-shadow: 0 8px 40px rgba(0,0,0,0.5);
 }
 .fc-attr {
   position: absolute; bottom: 0; right: 0;
