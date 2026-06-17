@@ -474,6 +474,9 @@
   let resetView;
   let clusters = null;
   const leafletMarkers = [];
+  // [lat, lng] of the markers currently on the map; reset re-frames these so an
+  // active filter stays framed instead of zooming out to every activity.
+  let visibleCoords = markers.map(function(m) { return [m.lat, m.lng]; });
   if (markers.length) {
     clusters = L.markerClusterGroup({
       showCoverageOnHover: false,
@@ -510,10 +513,12 @@
       clusters.addLayer(marker);
     });
     map.addLayer(clusters);
-    // Capture bounds from all marker coords (markercluster.getBounds() shrinks once
-    // off-screen markers are unloaded, which would make reset frame fewer markers).
-    const homeBounds = L.latLngBounds(markers.map(function(m) { return [m.lat, m.lng]; }));
-    resetView = function() { map.fitBounds(homeBounds, Object.assign({ maxZoom: 14 }, FIT)); };
+    // Reset frames whatever markers are currently visible (all of them, or the
+    // active filter's matches). Tracked from marker coords rather than
+    // markercluster.getBounds(), which shrinks once off-screen markers unload.
+    resetView = function() {
+      if (visibleCoords.length) map.fitBounds(L.latLngBounds(visibleCoords), Object.assign({ maxZoom: 14 }, FIT));
+    };
   } else {
     resetView = function() { map.setView([48.6, 18.2], 6); };  // default when no GPS activities exist
   }
@@ -562,6 +567,7 @@
         shown.push([m.lat, m.lng]);
       }
     });
+    visibleCoords = shown;  // reset re-frames the active filter, not every marker
     if (shown.length) map.fitBounds(L.latLngBounds(shown), Object.assign({ maxZoom: 14 }, FIT));
   }
 
