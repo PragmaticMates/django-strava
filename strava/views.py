@@ -31,7 +31,7 @@ class DashboardView(TemplateView):
         # An htmx request comes from the map filter controls (search + sport/gear/year
         # pills); it only needs the recomputed sections, swapped in via hx-swap-oob.
         if getattr(self.request, 'htmx', False):
-            return ['strava/pages/_dashboard_results.html']
+            return ['strava/hx/dashboard_results.html']
         return [self.template_name]
 
     def get_context_data(self, **kwargs):
@@ -513,7 +513,7 @@ class ActivitiesView(ListView):
 
     def get_template_names(self):
         if getattr(self.request, 'htmx', False):
-            return ['strava/pages/_activities_results.html']
+            return ['strava/hx/activities_results.html']
         return [self.template_name]
 
     def get_queryset(self):
@@ -576,7 +576,7 @@ class GearView(ListView):
 
     def get_template_names(self):
         if getattr(self.request, 'htmx', False):
-            return ['strava/pages/_gear_results.html']
+            return ['strava/hx/gear_results.html']
         return [self.template_name]
 
     def get_queryset(self):
@@ -640,7 +640,7 @@ class GalleryView(ListView):
 
     def get_template_names(self):
         if getattr(self.request, 'htmx', False):
-            return ['strava/pages/_gallery_results.html']
+            return ['strava/hx/gallery_results.html']
         return [self.template_name]
 
     def get_queryset(self):
