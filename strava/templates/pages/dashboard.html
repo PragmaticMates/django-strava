@@ -436,11 +436,34 @@
     allRoutesLayer = L.layerGroup(lines).addTo(map);
   }
 
+  // Fade the all-routes overlay so a single hovered route stands out among the rest.
+  function setRoutesDimmed(dimmed) {
+    if (!allRoutesLayer) return;
+    allRoutesLayer.eachLayer(function(line) {
+      line.setStyle({ opacity: dimmed ? 0.06 : 0.65 });
+    });
+  }
+
+  // Fade every other marker/cluster while one marker is hovered, keeping it highlighted.
+  const markerPane = map.getPane('markerPane');
+  let hoveredIcon = null;
+  function setMarkersDimmed(dimmed, marker) {
+    if (markerPane) markerPane.classList.toggle('dim-others', dimmed);
+    if (hoveredIcon) { hoveredIcon.classList.remove('marker-hovered'); hoveredIcon = null; }
+    if (dimmed && marker && marker._icon) {
+      hoveredIcon = marker._icon;
+      hoveredIcon.classList.add('marker-hovered');
+    }
+  }
+
   // Preview the route on hover (dashed, no card, no map move); cleared on mouse-out.
-  function showHoverRoute(m) {
+  // The other routes and markers are dimmed so the hovered one is highlighted among them.
+  function showHoverRoute(m, marker) {
     clearHoverRoute();
     const coords = activityCoords(m);
     if (!coords.length) return;
+    setRoutesDimmed(true);
+    setMarkersDimmed(true, marker);
     hoverLayer = L.layerGroup([
       L.polyline(coords, { color: '#fff', weight: 5, opacity: 0.7 }),
       L.polyline(coords, { color: COLORS[m.type] || COLORS.run, weight: 3, opacity: 0.9, dashArray: '4 5' }),
@@ -448,6 +471,8 @@
   }
   function clearHoverRoute() {
     if (hoverLayer) { map.removeLayer(hoverLayer); hoverLayer = null; }
+    setRoutesDimmed(false);
+    setMarkersDimmed(false);
   }
 
   const cardHost = document.getElementById('map-card-host');
@@ -549,7 +574,7 @@
     markers.forEach(function(m, i) {
       const marker = L.marker([m.lat, m.lng], { icon: pinIcon(m.type) })
         .bindTooltip(m.title)
-        .on('mouseover', function() { showHoverRoute(m); })
+        .on('mouseover', function() { showHoverRoute(m, marker); })
         .on('mouseout', function() { clearHoverRoute(); })
         .on('click', function() { selectActivity(m); });
       leafletMarkers.push(marker);

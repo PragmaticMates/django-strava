@@ -124,6 +124,10 @@ body {
   display: flex; align-items: center; justify-content: center;
 }
 .map-pin:hover { transform: scale(1.4); }
+/* Dim other markers/clusters while a single marker's route is hovered.
+   !important overrides the inline opacity markercluster sets during zoom animations. */
+.leaflet-marker-pane.dim-others .leaflet-marker-icon { opacity: 0.25 !important; transition: opacity 0.15s; }
+.leaflet-marker-pane.dim-others .leaflet-marker-icon.marker-hovered { opacity: 1 !important; }
 .map-cluster {
   display: flex; align-items: center; justify-content: center;
   min-width: 36px; height: 36px; padding: 0 8px; border-radius: 999px;
