@@ -360,21 +360,50 @@ endpoint the map uses) into .act-modal-host.
   // Build the card endpoint URL for an activity id from the placeholder URL on the host.
   function cardUrl(id) { return cardHost.dataset.cardUrl.replace('/0/card/', '/' + id + '/card/'); }
 
-  // Frame the route in the left region so it stays visible beside the centered card.
+  // Lay the route and the card out as one horizontally-centered pair sitting in the middle
+  // of the map: [margin][route][gap][card][margin], with the two outer margins equal. The
+  // route is a thin trace, so we frame it once to measure its actual rendered width, then
+  // re-frame it into a column of exactly that width and pin the card a gap to its right —
+  // that way the left-edge-to-route gap matches the card-to-right-edge gap, instead of the
+  // route floating inside an oversized panel. Narrow viewports fall back to a centred card.
   function frameRouteBesideCard(coords, card) {
-    const opts = Object.assign({ maxZoom: 16 }, FIT);
     const size = map.getSize();
     const cardW = (card && card.offsetWidth) || 360;
-    const rightPad = Math.round(size.x / 2 + cardW / 2 + 30);
-    if (size.x - rightPad > 220) opts.paddingBottomRight = [rightPad, FIT.paddingBottomRight[1]];
-    map.fitBounds(coords, opts);
+    const gap = 90;
+    const fit = Object.assign({ maxZoom: 16, animate: false }, FIT);
+    if (size.x <= 900) { card.style.left = ''; map.fitBounds(coords, fit); return; }
+
+    // Pass 1 — frame the route on the left (card column reserved on the right) to learn its
+    // rendered pixel width at the fitted zoom.
+    map.fitBounds(coords, Object.assign({}, fit, {
+      paddingTopLeft: [60, FIT.paddingTopLeft[1]],
+      paddingBottomRight: [Math.round(cardW + gap + 60), FIT.paddingBottomRight[1]],
+    }));
+    const b = L.latLngBounds(coords);
+    const routeW = Math.abs(
+      map.latLngToContainerPoint(b.getSouthEast()).x -
+      map.latLngToContainerPoint(b.getNorthWest()).x
+    );
+
+    // Centre the [route + gap + card] block; bail to a centred card if it won't fit.
+    const margin = Math.round((size.x - (routeW + gap + cardW)) / 2);
+    if (margin < 20) { card.style.left = ''; map.fitBounds(coords, fit); return; }
+
+    // Pass 2 — frame the route into a column exactly its own width, anchored at `margin`,
+    // so it fills the column (its left edge sits at `margin`); pin the card a gap past it.
+    map.fitBounds(coords, Object.assign({}, fit, {
+      paddingTopLeft: [margin, FIT.paddingTopLeft[1]],
+      paddingBottomRight: [Math.round(size.x - margin - routeW), FIT.paddingBottomRight[1]],
+    }));
+    card.style.left = Math.round(margin + routeW + gap + cardW / 2) + 'px';
   }
 
   // Fetch and show an activity's float card on demand (cards aren't server-rendered up
   // front), then frame the map route beside it once the card has a measurable width.
   function loadActivityCard(id, coords) {
     if (!cardHost) return;
-    fetch(cardUrl(id), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+    // ?map=1 → the route-less, full-bleed-photo card variant (route is drawn on the map).
+    fetch(cardUrl(id) + '?map=1', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
       .then(function(r) { return r.ok ? r.text() : ''; })
       .then(function(html) {
         cardHost.innerHTML = html;

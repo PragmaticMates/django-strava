@@ -692,4 +692,7 @@ class ActivityCardView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['show_close'] = True  # card is shown standalone (visible, with a close button)
+        # Cards opened from a map marker (?map=1) drop the redundant route trace — the
+        # route is already drawn on the map behind the card — and show a full-bleed photo.
+        context['map_card'] = self.request.GET.get('map') == '1'
         return context

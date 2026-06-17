@@ -313,6 +313,21 @@ body.modal-open { overflow: hidden; }
   box-shadow: 0 2px 10px rgba(0,0,0,0.3);
   cursor: zoom-in;
 }
+/* Map cards (opened from a map marker) drop the route trace, so the photo fills the
+   media band as a full-bleed hero. Clickable for the lightbox like the thumbnail is. */
+.fc-photo-hero .fc-photo { cursor: zoom-in; }
+/* Photoless map cards: a slim sport-colored band stands in for the empty media area,
+   tinted to match the activity's route on the map, carrying the sport pill and (when
+   set) the PR badge inline beside it. */
+.fc-hero { position: relative; height: 56px; overflow: hidden; background: #8a8a8a; }
+.fc-hero .fc-pills { top: 50%; bottom: auto; transform: translateY(-50%); }
+.fc-hero .fc-pills .act-gcard-pr { position: static; display: inline-flex; align-items: center; line-height: 1; }
+.fc-hero--run { background: linear-gradient(135deg, #FC5200, #d83f00); }
+.fc-hero--trail { background: linear-gradient(135deg, #7C4DB8, #5f37a0); }
+.fc-hero--ride,
+.fc-hero--swim { background: linear-gradient(135deg, #007FB6, #005f8a); }
+.fc-hero--hike,
+.fc-hero--walk { background: linear-gradient(135deg, #3A8050, #2c6440); }
 /* Full-screen overlay shown when the activity photo is clicked. */
 .fc-lightbox {
   position: fixed; inset: 0; z-index: 2000;
