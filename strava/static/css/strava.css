@@ -194,6 +194,12 @@ body {
 .map-reset:hover { color: var(--ink); }
 .map-reset svg { width: 16px; height: 16px; }
 .map-filters { position: absolute; right: 18px; top: 18px; z-index: 5; display: flex; gap: 10px; }
+.map-note {
+  position: absolute; left: 18px; bottom: 18px; z-index: 5; margin: 0;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+  font: 500 12px var(--font-body); color: var(--ink-3); padding: 5px 11px;
+  box-shadow: var(--shadow);
+}
 .pill-btn {
   appearance: none; cursor: pointer;
   display: flex; align-items: center; gap: 8px;

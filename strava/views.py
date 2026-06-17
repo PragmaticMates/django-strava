@@ -60,7 +60,10 @@ class DashboardView(TemplateView):
         context['latest_activities'] = activities[:4]
 
         # ---- Activity map markers (from each activity's start_latlng) ----
-        context['map_markers'], context['map_activities'] = self._map_data(activities)
+        # GPS-less activities (pool swims, treadmill runs, …) can't be placed;
+        # map_hidden_count surfaces how many so the map isn't seen as dropping data.
+        (context['map_markers'], context['map_activities'],
+         context['map_hidden_count']) = self._map_data(activities)
 
         # ---- Activity of the year (longest this year, else longest overall) ----
         pool = year_acts or activities
@@ -145,29 +148,41 @@ class DashboardView(TemplateView):
     def _map_data(activities):
         """Collect map markers and their activities from ``start_latlng``.
 
-        Returns ``(markers, map_activities)`` where ``markers`` is a list of
-        ``{lat, lng, type, title, polyline}`` dicts the Leaflet map plots (the
-        encoded ``polyline`` is drawn as the route when a marker is clicked), and
-        ``map_activities`` are the matching ``Activity`` objects in
-        the same order (so a marker's list index selects its activity card).
-        Activities without GPS (an empty ``start_latlng``) are skipped, and both
-        lists are capped at ``MAP_MARKER_LIMIT``.
+        Returns ``(markers, map_activities, no_gps_count)`` where ``markers`` is a
+        list of ``{lat, lng, type, title, polyline, sport_type, sport_label, gear,
+        gear_label, year}`` dicts the Leaflet map plots (the encoded ``polyline``
+        is drawn as the route when a marker is clicked; ``sport_type``, ``gear``
+        and ``year`` back the map filter pills), ``map_activities`` are the
+        matching ``Activity`` objects in the same order (so a marker's list index
+        selects its activity card), and ``no_gps_count`` is how many activities
+        had no ``start_latlng`` (e.g. pool swims, treadmill runs) and so can't be
+        placed. The marker/activity lists are capped at ``MAP_MARKER_LIMIT``.
         """
+        def has_gps(a):
+            latlng = a.json.get('start_latlng') or []
+            return len(latlng) == 2 and bool(latlng[0] or latlng[1])
+
         markers, map_activities = [], []
         for a in activities:
-            latlng = a.json.get('start_latlng') or []
-            if len(latlng) == 2 and (latlng[0] or latlng[1]):
+            if has_gps(a):
+                latlng = a.json['start_latlng']
                 markers.append({
                     'lat': round(float(latlng[0]), 6),
                     'lng': round(float(latlng[1]), 6),
                     'type': a.type,
                     'title': f'{a.name} · {a.dist} km',
                     'polyline': a.polyline,
+                    'sport_type': a.sport_type,
+                    'sport_label': a.get_sport_type_display(),
+                    'gear': str(a.gear_id) if a.gear_id else '',
+                    'gear_label': str(a.gear) if a.gear_id else '',
+                    'year': timezone.localtime(a.start_date).year,
                 })
                 map_activities.append(a)
             if len(markers) >= MAP_MARKER_LIMIT:
                 break
-        return markers, map_activities
+        no_gps_count = sum(1 for a in activities if not has_gps(a))
+        return markers, map_activities, no_gps_count
 
 
 class ActivitiesView(ListView):

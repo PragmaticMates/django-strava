@@ -24,16 +24,19 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
       <input type="text" placeholder="Search…" class="map-search-input">
     </div>
-    <button class="pill-btn" type="button">
+    <button class="pill-btn" type="button" id="map-year-btn">
       <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"></rect><line x1="8" y1="3" x2="8" y2="7"></line><line x1="16" y1="3" x2="16" y2="7"></line><line x1="4" y1="10" x2="20" y2="10"></line></svg>
-      2026 <span class="caret">▾</span>
+      <span class="pill-label">All Years</span> <span class="caret">▾</span>
     </button>
-    <button class="pill-btn" type="button" id="all-sports-btn" onclick="toggleSportsDropdown(event)">
+    <button class="pill-btn" type="button" id="map-sport-btn">
       <svg viewBox="0 0 16 16" fill="currentColor" width="15" height="15"><g fill=""><path d="M8.99 7.382L7.637 9.75h-.595V11h1.32l.648-1.132 1.98 3.34L12.35 11H13V9.75h-1.35l-.64 1.041z"/><path d="M11.124 2.876a6 6 0 10-8.247 8.248 6.031 6.031 0 002 2 6 6 0 108.248-8.247 6.031 6.031 0 00-2.001-2z"/></g></svg>
-      All Sports <span class="caret">▾</span>
+      <span class="pill-label">All Sports</span> <span class="caret">▾</span>
     </button>
-    <button class="pill-btn" type="button">All Gear <span class="caret">▾</span></button>
+    <button class="pill-btn" type="button" id="map-gear-btn"><span class="pill-label">All Gear</span> <span class="caret">▾</span></button>
   </div>
+  {% if map_hidden_count %}
+  <p class="map-note">{{ map_hidden_count }} activit{{ map_hidden_count|pluralize:"y,ies" }} without GPS not shown</p>
+  {% endif %}
   {% if latest_activity %}{% include "widgets/activity.html" with activity=latest_activity show_close=True hidden=True %}{% endif %}
   {% for activity in map_activities %}{% include "widgets/activity.html" with activity=activity show_close=True map_card=True map_index=forloop.counter0 %}{% endfor %}
 </section>
@@ -469,8 +472,10 @@
   });
 
   let resetView;
+  let clusters = null;
+  const leafletMarkers = [];
   if (markers.length) {
-    const clusters = L.markerClusterGroup({
+    clusters = L.markerClusterGroup({
       showCoverageOnHover: false,
       maxClusterRadius: 60,
       // Zoom to clusters ourselves so the fit honours FIT padding (the default
@@ -496,12 +501,13 @@
       map.fitBounds(cluster.getBounds(), Object.assign({ maxZoom: clusters._maxZoom }, FIT));
     });
     markers.forEach(function(m, i) {
-      L.marker([m.lat, m.lng], { icon: pinIcon(m.type) })
+      const marker = L.marker([m.lat, m.lng], { icon: pinIcon(m.type) })
         .bindTooltip(m.title)
         .on('mouseover', function() { showHoverRoute(m); })
         .on('mouseout', function() { clearHoverRoute(); })
-        .on('click', function() { selectActivity(m, i); })
-        .addTo(clusters);
+        .on('click', function() { selectActivity(m, i); });
+      leafletMarkers.push(marker);
+      clusters.addLayer(marker);
     });
     map.addLayer(clusters);
     // Capture bounds from all marker coords (markercluster.getBounds() shrinks once
@@ -525,6 +531,115 @@
     closeCard();
     clearHoverRoute();
     resetView();
+  });
+
+  // ---- Map filters: search box + sport / gear / year pills (all client-side) ----
+  const filterState = { q: '', sport: 'all', gear: 'all', year: 'all' };
+
+  // Lowercase and strip diacritics, the client-side equivalent of unaccent().
+  function unaccent(s) {
+    return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+
+  // Show only markers matching every active filter, then reframe to the matches.
+  // Search mirrors the server-side `name__unaccent__icontains` — accent-insensitive,
+  // with each whitespace-separated token required to match (AND).
+  function applyFilters() {
+    if (!clusters) return;
+    const tokens = unaccent(filterState.q.trim()).split(/\s+/).filter(Boolean);
+    closeCard();
+    clearHoverRoute();
+    clusters.clearLayers();
+    const shown = [];
+    markers.forEach(function(m, i) {
+      const haystack = unaccent(m.title + ' ' + (m.type || ''));
+      const ok = tokens.every(function(t) { return haystack.indexOf(t) !== -1; })
+        && (filterState.sport === 'all' || m.sport_type === filterState.sport)
+        && (filterState.gear === 'all' || m.gear === filterState.gear)
+        && (filterState.year === 'all' || String(m.year) === filterState.year);
+      if (ok) {
+        clusters.addLayer(leafletMarkers[i]);
+        shown.push([m.lat, m.lng]);
+      }
+    });
+    if (shown.length) map.fitBounds(L.latLngBounds(shown), Object.assign({ maxZoom: 14 }, FIT));
+  }
+
+  const searchInput = document.querySelector('.map-search-input');
+  if (searchInput) {
+    let searchTimer;
+    searchInput.addEventListener('input', function() {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(function() { filterState.q = searchInput.value; applyFilters(); }, 200);
+    });
+  }
+
+  // Distinct {value, label} options present among the markers for a given pair of keys.
+  function distinctOptions(valueKey, labelKey) {
+    const seen = {}, out = [];
+    markers.forEach(function(m) {
+      const v = m[valueKey];
+      if (v === '' || v == null) return;
+      const key = String(v);
+      if (seen[key]) return;
+      seen[key] = true;
+      out.push({ value: key, label: String(m[labelKey]) });
+    });
+    return out;
+  }
+
+  // Turn a pill button into a dropdown of options; selecting one updates the filter.
+  // Reuses the .sports-dd styling. Hidden entirely when there's nothing to choose.
+  function setupFilterPill(btn, allLabel, options, key) {
+    if (!btn) return;
+    if (!options.length) { btn.style.display = 'none'; return; }
+    const label = btn.querySelector('.pill-label');
+    const dd = document.createElement('div');
+    dd.className = 'sports-dd';
+    dd.style.display = 'none';
+    [{ value: 'all', label: allLabel }].concat(options).forEach(function(opt) {
+      const el = document.createElement('div');
+      el.className = 'sports-dd-opt' + (opt.value === 'all' ? ' sports-dd-sel' : '');
+      el.innerHTML = '<span>' + opt.label + '</span>';
+      el.addEventListener('click', function(e) {
+        e.stopPropagation();
+        filterState[key] = opt.value;
+        dd.querySelectorAll('.sports-dd-opt').forEach(function(o) { o.classList.remove('sports-dd-sel'); });
+        el.classList.add('sports-dd-sel');
+        if (label) label.textContent = opt.value === 'all' ? allLabel : opt.label;
+        dd.style.display = 'none';
+        applyFilters();
+      });
+      dd.appendChild(el);
+    });
+    document.body.appendChild(dd);
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const wasOpen = dd.style.display === 'block';
+      document.querySelectorAll('.sports-dd').forEach(function(d) { d.style.display = 'none'; });
+      if (!wasOpen) {
+        const r = btn.getBoundingClientRect();
+        dd.style.top = (r.bottom + window.scrollY + 6) + 'px';
+        dd.style.left = (r.left + window.scrollX) + 'px';
+        dd.style.display = 'block';
+      }
+    });
+  }
+
+  const sportOpts = distinctOptions('sport_type', 'sport_label')
+    .sort(function(a, b) { return a.label.localeCompare(b.label); });
+  const gearOpts = distinctOptions('gear', 'gear_label')
+    .sort(function(a, b) { return a.label.localeCompare(b.label); });
+  const yearOpts = distinctOptions('year', 'year')
+    .sort(function(a, b) { return Number(b.value) - Number(a.value); });
+
+  setupFilterPill(document.getElementById('map-sport-btn'), 'All Sports', sportOpts, 'sport');
+  setupFilterPill(document.getElementById('map-gear-btn'), 'All Gear', gearOpts, 'gear');
+  setupFilterPill(document.getElementById('map-year-btn'), 'All Years', yearOpts, 'year');
+
+  // Close any open filter dropdown on an outside click.
+  document.addEventListener('click', function() {
+    document.querySelectorAll('.sports-dd').forEach(function(d) { d.style.display = 'none'; });
   });
 })();
 </script>
@@ -747,88 +862,6 @@
 })();
 </script>
 
-<script>
-// Sports dropdown
-const SPORTS_DATA = [
-  { group: "Your Top Sports", items: [
-    { id: "all", label: "All Sports", icon: `<path d="M8.99 7.382L7.637 9.75h-.595V11h1.32l.648-1.132 1.98 3.34L12.35 11H13V9.75h-1.35l-.64 1.041z"/><path d="M11.124 2.876a6 6 0 10-8.247 8.248 6.031 6.031 0 002 2 6 6 0 108.248-8.247 6.031 6.031 0 00-2.001-2zM6 1.25c.964 0 1.86.287 2.61.78a6 6 0 00-6.58 6.58A4.75 4.75 0 016 1.25zM4 10c0 .206.01.41.03.61a4.75 4.75 0 016.58-6.58A6 6 0 004 10zm6-4.75a4.75 4.75 0 110 9.5 4.75 4.75 0 010-9.5z"/>` },
-    { id: "run", label: "Run", icon: `<path d="M5.783 0c-.492 0-.969.175-1.344.494l-2 1.7a.042.042 0 01-.013.008L.417 2.91A.625.625 0 000 3.5c0 1.05.134 1.834.387 2.459.258.636.622 1.063 1.009 1.418.193.178.381.331.563.48.545.446 1.04.851 1.488 1.735.693 1.714 1.576 3.093 2.954 4.03C7.784 14.56 9.584 15 12 15c1.368 0 2.312-.306 2.948-.785a2.596 2.596 0 001.002-1.554c.14-.657-.234-1.19-.6-1.484l-2.58-2.073a.708.708 0 01-.234-.346l-2.081-6.842A1.292 1.292 0 009.219 1h-.9c-.348 0-.682.14-.925.39l-.398.408-.335-1.14A.915.915 0 005.783 0z"/>` },
-    { id: "trail_run", label: "Trail Run", icon: `<path d="M5.783 0c-.492 0-.969.175-1.344.494l-2 1.7a.042.042 0 01-.013.008L.417 2.91A.625.625 0 000 3.5c0 1.05.134 1.834.387 2.459.258.636.622 1.063 1.009 1.418.193.178.381.331.563.48.545.446 1.04.851 1.488 1.735.693 1.714 1.576 3.093 2.954 4.03.065.043.13.086.197.128H4.993l-2.08-2.181a.625.625 0 00-.888-.017l-.144.141-.881-.88-.884.883 1.317 1.317a.625.625 0 00.878.006l.134-.13 1.828 1.917a.625.625 0 00.453.194h7.399c1.3-.018 2.206-.32 2.823-.785a2.596 2.596 0 001.002-1.554c.14-.657-.234-1.19-.6-1.483l-2.58-2.074a.708.708 0 01-.234-.346l-2.081-6.842A1.292 1.292 0 009.219 1h-.9c-.348 0-.682.14-.925.39l-.398.408-.335-1.14A.915.915 0 005.783 0zM12 13.75c-2.275 0-3.796-.415-4.897-1.163-1.098-.746-1.86-1.88-2.506-3.487a.625.625 0 00-.021-.047C3.993 7.893 3.239 7.28 2.66 6.81c-.155-.125-.297-.24-.42-.354-.294-.27-.527-.55-.695-.967-.145-.358-.255-.844-.287-1.55l1.09-.385L4 5.03v1l.208.186c.312.279.545.638.844 1.18l.208.387c.25.466.55 1.025.952 1.658.857 1.345 2.028 2.696 3.492 3.484l.139.075h4.588a1.503 1.503 0 01-.234.216c-.356.268-1.008.534-2.197.534z"/>`, selected: true },
-    { id: "ride", label: "Ride", icon: `<path d="M2 3h4v1.25h-.566l.429.75h3.972l-.422-1.161A.625.625 0 0110 3h3.5a1.5 1.5 0 010 3H13V4.75h.5a.25.25 0 100-.5h-2.608l1.018 2.8a3.5 3.5 0 11-1.175.427l-.324-.894-2.423 4.11A.625.625 0 017.45 11h-.485a3.5 3.5 0 11-2.39-3.832l.516-.999L3.994 4.25H2z"/>` },
-    { id: "swim", label: "Swim", icon: `<g><path d="M12.03 1.544a.625.625 0 00-1.06 0c-.277.443-.57.738-.878.924-.305.184-.658.282-1.092.282s-.787-.098-1.092-.282c-.309-.186-.601-.481-.878-.924l-1.06.662c.354.566.776 1.021 1.292 1.332C7.782 3.853 8.364 4 9 4c.636 0 1.217-.147 1.738-.462.28-.169.533-.38.762-.629.23.249.482.46.762.63.52.314 1.102.461 1.738.461s1.217-.147 1.738-.462c.516-.31.938-.766 1.292-1.332z"/><path d="M6.5 6.25c.216 0 .416.111.53.294.277.443.57.738.878.924.305.184.658.282 1.092.282.434 0 .787-.098 1.092-.282.309-.186.601-.481.878-.924a.625.625 0 011.06 0c.277.443.57.738.878.924.305.184.658.282 1.092.282s.787-.098 1.092-.282c.308-.186.601-.481.878-.924l1.06.662c-.354.566-.776 1.021-1.292 1.332C15.218 8.853 14.636 9 14 9s-1.217-.147-1.738-.462c-.28-.169-.533-.38-.762-.629-.23.249-.482.46-.762.63C10.218 8.852 9.636 9 9 9c-.636 0-1.217-.147-1.738-.462-.28-.169-.533-.38-.762-.629-.23.249-.482.46-.762.63C5.218 8.852 4.636 9 4 9s-1.217-.147-1.738-.462c-.516-.311-.938-.766-1.292-1.332l1.06-.662c.277.443.57.738.878.924.305.184.658.282 1.092.282.434 0 .787-.098 1.092-.282.309-.186.601-.481.878-.924a.625.625 0 01.53-.294z"/></g>` },
-  ]},
-  { group: "Foot Sports", items: [
-    { id: "walk", label: "Walk", icon: `<path d="M6.545 3c.635 0 1.257.184 1.79.529l2.487 1.611.005-.007.478.32 3.12 1.425A2.697 2.697 0 0116 9.331V9.357c-.004.11-.05.787-.638 1.44-.603.67-1.673 1.203-3.507 1.203H1.52a1.52 1.52 0 01-.843-2.786l.101-.067A.498.498 0 001 8.733v-4.3c0-.584.474-1.058 1.058-1.058.478 0 .926.228 1.207.614l.553.761h.942l-.344-.902A.625.625 0 015 3z"/>` },
-    { id: "hike", label: "Hike", icon: `<path d="M5.086 1.86C5.45 1.322 6.058 1 6.707 1h.626c.284 0 .532.191.605.465l.568 2.15a4.708 4.708 0 003.206 3.308l2.413.719A2.625 2.625 0 0116 10.157v.253c0 .217-.026.477-.134.738a4.426 4.426 0 01-1.311 1.73C13.775 13.504 12.632 14 11 14H9.333a.625.625 0 01-.16-.02l-2.307-.614-.41.437A.625.625 0 016 14H2.625A2.625 2.625 0 010 11.375v-.24c0-.445.151-.877.43-1.224l.423-.53.415-4.599A1.958 1.958 0 013.218 3h1.095z"/>` },
-  ]},
-  { group: "Cycle Sports", items: [
-    { id: "mtb", label: "Mountain Bike", icon: `<g><path d="M10.558.584a1.625 1.625 0 00-2.116 0L6.125 2.57l-.567-.486a1.625 1.625 0 00-2.116 0L.593 4.526l.814.949 2.849-2.442c.14-.12.348-.12.488 0l2.85 2.442.813-.95-1.322-1.132 2.171-1.86c.14-.12.348-.12.488 0l4.366 3.742.813-.95z"/></g>` },
-    { id: "gravel", label: "Gravel Ride", icon: `<path d="M6 2H2v1.25h1.711l1.864 3.23-.116.119A3.5 3.5 0 106.965 10h.459c.224 0 .432-.12.543-.316l2.4-4.22.369 1.013a3.5 3.5 0 101.175-.427l-1.019-2.8h1.15c.39 0 .708.317.708.708v.035H14v-.035A1.958 1.958 0 0012.042 2H10a.625.625 0 00-.587.839L9.835 4H5.587l-.433-.75H6z"/>` },
-    { id: "ebike", label: "E-Bike", icon: `<path d="M8.807 4.33a.625.625 0 01.526-.288h2.625v1.25h-1.646l1.307 2.82a3.502 3.502 0 11-1.134.527l-.413-.89L7.87 11.68a.625.625 0 01-.545.32h-.344a3.508 3.508 0 11-2.47-3.854l.427-.87-.586-1.026H3V5h3v1.25h-.209l1.863 3.26 1.77-3.162-.658-1.419a.625.625 0 01.04-.599z"/>` },
-  ]},
-  { group: "Water Sports", items: [
-    { id: "canoe", label: "Canoe", icon: `<path d="M3.4.436C2.492-.419 1 .226 1 1.475v.827c0 .818.34 1.599.937 2.157a2.08 2.08 0 002.731.093l6.78 6.78a2.08 2.08 0 00.093 2.731 2.95 2.95 0 002.157.937h.827c1.249 0 1.894-1.49 1.039-2.4l-1.33-1.417c-.451-.479-1.1-.66-1.7-.533l-.39-.39c2.689-3.194 3.502-6.76 3.748-8.503A1.443 1.443 0 0014.242.11C12.5.357 8.93 1.173 5.74 3.856l-.39-.39c.127-.6-.054-1.249-.533-1.7z"/>` },
-    { id: "rowing", label: "Rowing", icon: `<path d="M14.708 0C15.422 0 16 .578 16 1.292v.341c0 .289-.097.57-.275.797l-1.226 1.564A2.625 2.625 0 0112.433 5H9.929L8.795 6.443l2.361 3.005.686-.59.815.948-.728.626 3.522 4.483-.983.772-3.488-4.44-.722.621-.815-.948.764-.656L8 7.454l-2.207 2.81.764.656-.815.948-.722-.62-3.488 4.439-.983-.772 3.522-4.483-.728-.626.815-.948.686.59 2.361-3.005L6.071 5H3.567C2.761 5 2 4.63 1.501 3.994L.275 2.43A1.292 1.292 0 010 1.633v-.341C0 .578.578 0 1.292 0h1.88c.4 0 .78.187 1.024.506L6.87 3.994 8 5.432l1.136-1.446 2.668-3.48A1.292 1.292 0 0112.829 0z"/>` },
-  ]},
-  { group: "Winter Sports", items: [
-    { id: "ski", label: "Alpine Ski", icon: `<path d="M3.358.656a1.125 1.125 0 011.98-.02L8 5.465 10.661.637a1.125 1.125 0 011.981.02l.41.78c.41.78.402 1.714-.022 2.487l-2.936 5.339 3.203 5.81a.625.625 0 01-.547.927H9.98a.625.625 0 01-.548-.324L8 13.071l-1.432 2.605c-.11.2-.32.324-.548.324H3.25a.625.625 0 01-.547-.927l3.203-5.81-2.936-5.34a2.625 2.625 0 01-.023-2.486z"/>` },
-    { id: "snowboard", label: "Snowboard", icon: `<path d="M10.349 1.047a3.256 3.256 0 114.604 4.604c-.743.743-1.614 1.496-2.465 2.231l-.01.009c-.862.745-1.7 1.47-2.408 2.178-.707.707-1.433 1.546-2.178 2.408l-.009.01c-.735.85-1.488 1.722-2.23 2.465a3.256 3.256 0 01-4.605-4.604l.001-.001.008-.008c.74-.74 1.609-1.49 2.456-2.222l.015-.013c.86-.744 1.697-1.468 2.403-2.174s1.43-1.543 2.174-2.403l.013-.015C8.85 2.665 9.6 1.797 10.34 1.056l.008-.008z"/>` },
-  ]},
-];
 
-let selectedSport = "trail_run";
-let dropdownOpen = false;
-
-function toggleSportsDropdown(e) {
-  e.stopPropagation();
-  dropdownOpen = !dropdownOpen;
-  let dd = document.getElementById('sports-dropdown');
-  if (!dd) { dd = createDropdown(); document.body.appendChild(dd); }
-  if (dropdownOpen) {
-    const btn = document.getElementById('all-sports-btn');
-    const r = btn.getBoundingClientRect();
-    dd.style.top = (r.bottom + window.scrollY + 6) + 'px';
-    dd.style.left = (r.right - 240 + window.scrollX) + 'px';
-    dd.style.display = 'block';
-  } else {
-    dd.style.display = 'none';
-  }
-}
-
-function createDropdown() {
-  const dd = document.createElement('div');
-  dd.id = 'sports-dropdown';
-  dd.className = 'sports-dd';
-  SPORTS_DATA.forEach(group => {
-    const gh = document.createElement('div');
-    gh.className = 'sports-dd-group';
-    gh.textContent = group.group;
-    dd.appendChild(gh);
-    group.items.forEach(item => {
-      const opt = document.createElement('div');
-      opt.className = 'sports-dd-opt' + (item.id === selectedSport ? ' sports-dd-sel' : '');
-      opt.dataset.id = item.id;
-      opt.innerHTML = `<svg viewBox="0 0 16 16" fill="currentColor" width="16" height="16">${item.icon}</svg><span>${item.label}</span>`;
-      opt.addEventListener('click', (e) => {
-        e.stopPropagation();
-        selectedSport = item.id;
-        document.querySelectorAll('.sports-dd-opt').forEach(o => o.classList.remove('sports-dd-sel'));
-        opt.classList.add('sports-dd-sel');
-        const label = item.id === 'all' ? 'All Sports' : item.label;
-        document.querySelector('#all-sports-btn').childNodes[2].textContent = ' ' + label + ' ';
-        dd.style.display = 'none'; dropdownOpen = false;
-      });
-      dd.appendChild(opt);
-    });
-  });
-  return dd;
-}
-
-// Close sports dropdown on outside click
-document.addEventListener('click', () => {
-  const dd = document.getElementById('sports-dropdown');
-  if (dd) { dd.style.display = 'none'; dropdownOpen = false; }
-});
-</script>
 
 {% endblock %}
