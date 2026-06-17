@@ -8,6 +8,13 @@ Reusable Django app for Strava API integration. Provides models for Activities a
 - Django 5.1+
 - PostgreSQL (uses `jsonb_extract_path_text`, `unaccent`)
 
+Python dependencies (installed automatically):
+
+- [stravalib](https://github.com/stravalib/stravalib) — Strava API client (also provides the rate limiter)
+- [django-environ](https://github.com/joke2k/django-environ) — environment variable management
+- [django-unfold](https://github.com/unfoldadmin/django-unfold) — admin UI framework
+- [django-htmx](https://github.com/adamchainz/django-htmx) — htmx integration for the frontend pages
+
 ## Installation
 
 ```bash
@@ -34,6 +41,17 @@ MIDDLEWARE = [
 The activities page uses [htmx](https://htmx.org/) (via
 [django-htmx](https://github.com/adamchainz/django-htmx)) for server-side filtering, sorting and
 stat calculation. The htmx runtime is served by `{% htmx_script %}` — no CDN required.
+
+Wire up the URLs in your project's `urls.py` to expose the frontend pages:
+
+```python
+from django.urls import include, path
+
+urlpatterns = [
+    # ...
+    path("strava/", include("strava.urls", namespace="strava")),
+]
+```
 
 Run migrations:
 
@@ -80,6 +98,22 @@ python manage.py import_strava
 ```
 
 The command fetches all activities newer than the latest one in the database. On first run, it imports all available activities.
+
+### Pages
+
+The app ships a set of htmx-powered pages (registered under the `strava` URL namespace).
+All filtering, sorting and stat recalculation happens server-side and is swapped in
+without a full page reload.
+
+- **Dashboard** (`strava:dashboard`) — headline stats, "By the Numbers" totals,
+  personal records (including "Furthest from Home"), run-performance breakdown, gear
+  summary, the latest activity, and an activity map. The map controls (search +
+  sport/gear/year filters) recompute every section live.
+- **Activities** (`strava:activities`) — searchable, sortable list of activities with
+  filtering by sport, gear and month, a summary band (distance, elevation, time, this
+  week) and grid/table views.
+- **Gear** (`strava:gear`) — gear cards showing usage, wear level and replacement alerts.
+- **Gallery** (`strava:gallery`) — photo gallery of activities that have images.
 
 ### Admin interface
 
