@@ -163,13 +163,21 @@ class DashboardView(TemplateView):
             if a.gear_id:
                 gear_acts[a.gear_id] = gear_acts.get(a.gear_id, 0) + 1
                 gear_dist[a.gear_id] = gear_dist.get(a.gear_id, 0) + float(a.distance)
+        # With no active filter the gear stats default to currently-relevant kit, so
+        # hide gear that hasn't been used in over a year.
+        no_filter = not q and sport == 'all' and gear == 'all' and year == 'all'
         gears = list(Gear.objects.all())
+        if no_filter:
+            gears = [g for g in gears if not g.is_old]
         for g in gears:
             g.activity_count = gear_acts.get(g.pk, 0)
             g.distance_sum = gear_dist.get(g.pk, 0)
             g.distance_km = round((g.distance_sum or 0) / 1000)
             g.wear_pct = min(100, round(g.distance_km / g.lifespan_km * 100)) if g.lifespan_km else 0
             g.wear_alert = 75 <= g.wear_pct < 100
+        if not no_filter:
+            # Under an active filter, only show gear used by the matching activities.
+            gears = [g for g in gears if g.activity_count]
         context['gear_health'] = sorted(gears, key=lambda g: g.activity_count, reverse=True)
 
         used = sorted((g for g in gears if g.activity_count), key=lambda g: g.activity_count, reverse=True)

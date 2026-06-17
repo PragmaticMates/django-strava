@@ -1,6 +1,7 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from strava.api import StravaApi
@@ -197,8 +198,10 @@ class Gear(models.Model):
 
   @property
   def is_old(self):
-    # TODO: check gear type (shoes only)
-    return self.distance > 400
+    last_used = self.activity_set.aggregate(models.Max('start_date'))['start_date__max']
+    if last_used is None:
+      return True
+    return last_used < timezone.now() - timedelta(days=365)
 
   @property
   def gear_type(self):
