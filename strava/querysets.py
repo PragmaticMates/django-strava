@@ -20,7 +20,10 @@ class ActivityQuerySet(models.QuerySet):
     def search(self, query):
         qs = self
         for token in (query or '').split():
-            qs = qs.filter(name__unaccent__icontains=token)
+            qs = qs.filter(
+                Q(name__unaccent__icontains=token)
+                | Q(sport_type__unaccent__icontains=token)
+            )
         return qs
 
     def for_sport(self, sport_type):
