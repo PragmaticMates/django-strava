@@ -416,7 +416,7 @@
 
   // Only draw routes once zoomed in this close — at low zoom a busy map would try to
   // render thousands of polylines at once, which is slow and unreadable.
-  const ROUTE_ZOOM_MIN = 8;
+  const ROUTE_ZOOM_MIN = 6;
 
   // Draw (or clear) a thin route overlay. To keep it fast it draws only the routes
   // of activities currently in view, and only when zoomed in past ROUTE_ZOOM_MIN.
