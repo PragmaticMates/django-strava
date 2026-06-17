@@ -73,6 +73,7 @@ window.DSCharts = (function () {
     const cy = (mercY(minLat, s) + mercY(maxLat, s)) / 2;
     const originX = cx - W / 2, originY = cy - H / 2;  // world px at panel's top-left
 
+    mapEl.classList.add("fc-has-map");
     let bg = mapEl.querySelector(".fc-tiles");
     if (!bg) { bg = document.createElement("div"); bg.className = "fc-tiles"; mapEl.insertBefore(bg, mapEl.firstChild); }
     bg.innerHTML = "";
@@ -107,8 +108,9 @@ window.DSCharts = (function () {
     return true;
   }
 
-  // Entry point for activity cards: draw a map-backed trace when the card has
-  // GPS and no photo, otherwise fall back to the abstract auto-fit trace.
+  // Entry point for activity cards: draw a map-backed trace whenever the card
+  // has a GPS track (the photo, if any, is shown as a corner thumbnail over the
+  // map), otherwise fall back to the abstract auto-fit trace.
   function renderRouteSvg(svg) {
     if (!svg || svg.dataset.fcRendered) return;
     const pts = decodePolyline(svg.dataset.polyline || "");
@@ -119,7 +121,7 @@ window.DSCharts = (function () {
     const moves = pts.length > 1 &&
       (Math.min(...ll.map(p => p[0])) !== Math.max(...ll.map(p => p[0])) ||
        Math.min(...ll.map(p => p[1])) !== Math.max(...ll.map(p => p[1])));
-    if (mapEl && !mapEl.querySelector(".fc-photo") && moves && renderTileMap(mapEl, svg, ll)) return;
+    if (mapEl && moves && renderTileMap(mapEl, svg, ll)) return;
     renderRoute(svg, pts);
   }
 
