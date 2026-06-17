@@ -11,7 +11,6 @@ Reusable Django app for Strava API integration. Provides models for Activities a
 Python dependencies (installed automatically):
 
 - [stravalib](https://github.com/stravalib/stravalib) — Strava API client (also provides the rate limiter)
-- [django-environ](https://github.com/joke2k/django-environ) — environment variable management
 - [django-unfold](https://github.com/unfoldadmin/django-unfold) — admin UI framework
 - [django-htmx](https://github.com/adamchainz/django-htmx) — htmx integration for the frontend pages
 
@@ -61,14 +60,16 @@ python manage.py migrate
 
 ## Configuration
 
-Set the following environment variables with your Strava API credentials:
+Add your Strava API credentials to your Django settings (the app reads them via
+`getattr(settings, ...)`). Source them however you like — e.g. from environment variables:
 
-```
-STRAVA_CLIENT_ID=...
-STRAVA_CLIENT_SECRET=...
-STRAVA_ACCESS_TOKEN=...
-STRAVA_REFRESH_TOKEN=...
-STRAVA_TOKEN_EXPIRES=...  # optional, format: 2024-01-01T00:00:00Z
+```python
+# settings.py
+STRAVA_CLIENT_ID = "..."
+STRAVA_CLIENT_SECRET = "..."
+STRAVA_ACCESS_TOKEN = "..."
+STRAVA_REFRESH_TOKEN = "..."
+STRAVA_TOKEN_EXPIRES = "..."  # optional, format: 2024-01-01T00:00:00Z
 ```
 
 ### Rate limiting
@@ -76,11 +77,12 @@ STRAVA_TOKEN_EXPIRES=...  # optional, format: 2024-01-01T00:00:00Z
 API calls respect [Strava's rate limits](https://developers.strava.com/docs/rate-limits/).
 Requests are proactively spaced out to stay within the limits, and any `429`
 (rate limit exceeded) response is retried after sleeping until the offending
-limit window resets. Two optional environment variables tune this behaviour:
+limit window resets. Two optional settings tune this behaviour:
 
-```
-STRAVA_RATE_LIMIT_PRIORITY=medium  # optional, one of: high, medium, low (default: medium)
-STRAVA_RATE_LIMIT_MAX_RETRIES=3    # optional, retries after a 429 (default: 3)
+```python
+# settings.py
+STRAVA_RATE_LIMIT_PRIORITY = "medium"  # optional, one of: high, medium, low (default: medium)
+STRAVA_RATE_LIMIT_MAX_RETRIES = 3      # optional, retries after a 429 (default: 3)
 ```
 
 - `high` — no proactive throttling (burst until a limit is hit)

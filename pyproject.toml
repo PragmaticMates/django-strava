@@ -30,7 +30,6 @@ classifiers = [
 dependencies = [
     "Django>=5.1",
     "stravalib",
-    "django-environ",
     "django-unfold",
     "django-htmx",
 ]
