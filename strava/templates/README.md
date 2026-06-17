@@ -15,10 +15,8 @@ django_package/
 │   │   ├── gear.css           # Gear page styles
 │   │   └── gallery.css        # Gallery page styles
 │   └── js/
-│       ├── data.js            # DS data module (mock data + derived stats)
 │       ├── charts.js          # DSCharts module (SVG/canvas chart renderers)
-│       ├── classic-data.js    # Dashboard wiring (records tabs, trends, calendar)
-│       └── image-slot.js      # <image-slot> web component
+│       └── classic-data.js    # Dashboard wiring (records tabs, trends, calendar)
 ├── templates/
 │   ├── dashboard.html
 │   ├── activities.html
@@ -72,33 +70,14 @@ See `sample_views.py`.
 
 ---
 
-## Replacing Mock Data with Real Data
+## Dashboard Data
 
-The templates currently use the bundled `data.js` / `classic-data.js` JavaScript modules
-which generate deterministic mock data on the client side. To connect real Strava data:
-
-1. Remove `<script src="{% static 'js/data.js' %}">` from `dashboard.html`
-2. Remove `<script src="{% static 'js/classic-data.js' %}">` from `dashboard.html`
-3. Pass your data from the Django view as JSON and initialise the charts manually,
-   or use the same `window.DS` / `window.DSCharts` API that `classic-data.js` already calls.
-
----
-
-## Image Slots
-
-The `<image-slot>` elements in the templates are drag-and-drop placeholders used
-during the design phase. In production, replace them with standard `<img>` tags
-loading images from your models:
-
-```html
-<!-- Replace this: -->
-<image-slot id="aoty-photo" class="aoty-photo" ...></image-slot>
-
-<!-- With this: -->
-<img src="{{ activity.photo.url }}" class="aoty-photo" alt="Activity photo">
-```
-
-You can remove `image-slot.js` from the static folder once all slots are replaced.
+`classic-data.js` wires up the dashboard's records list, calendar dots and trends
+chart. It reads real server data from the JSON `<script>` blocks rendered by
+`_dash_data.html` (`dashboard-records`, `dashboard-trends`, `dashboard-calendar`)
+and falls back to a small deterministic demo series only when those are absent.
+To feed it real data, populate those JSON blocks from your Django view; no
+JavaScript changes are needed.
 
 ---
 

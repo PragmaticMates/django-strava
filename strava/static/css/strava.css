@@ -173,10 +173,6 @@ body {
   font: 500 13.5px var(--font-body); color: var(--ink); width: 160px;
 }
 .map-search-input::placeholder { color: var(--ink-3); }
-.map-routes-svg {
-  position: absolute; inset: 0; width: 100%; height: 100%;
-  z-index: 2; pointer-events: none;
-}
 .map-tint {
   position: absolute; inset: 0; z-index: 1; pointer-events: none;
   mix-blend-mode: multiply; background: rgba(201,80,28,0.03);
@@ -484,6 +480,7 @@ body.modal-open { overflow: hidden; }
 .kv-record:hover, .kv-record:focus-visible { background: color-mix(in srgb, var(--accent) 9%, transparent); outline: none; }
 .kv-record:hover .k, .kv-record:focus-visible .k { color: var(--accent); }
 .rec-empty { padding: calc(7px * var(--d)) 0; font-size: 13px; color: var(--ink-3); }
+.chart-empty { display: grid; place-items: center; height: 100%; min-height: 160px; font-size: 13px; color: var(--ink-3); }
 
 /* ============ Running performance ============ */
 .perf-grid { display: grid; grid-template-columns: repeat(4, 1fr); text-align: center; }

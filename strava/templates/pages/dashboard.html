@@ -721,7 +721,6 @@ endpoint the map uses) into .act-modal-host.
   });
 })();
 </script>
-<script src="{% static 'js/data.js' %}"></script>
 <script src="{% static 'js/charts.js' %}"></script>
 <script src="{% static 'js/classic-data.js' %}"></script>
 <script>
@@ -915,108 +914,5 @@ endpoint the map uses) into .act-modal-host.
     window.addEventListener('ds:datachanged', () => { hoveredIdx = -1; loadData(); renderDonut(); });
   })();
 </script>
-
-<script>
-// Map route renderer — realistic GPS-style paths
-(function() {
-  function rng(seed) {
-    return function() {
-      seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
-      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
-  }
-
-  function generateRoute(cx, cy, sport, len, seed) {
-    const r = rng(seed);
-    const pts = [];
-    let x = cx, y = cy;
-    let heading = r() * Math.PI * 2;
-
-    const cfg = {
-      run:   { turn: 0.35, step: 1.4, returnBias: 0.18, loop: true },
-      trail: { turn: 0.50, step: 1.1, returnBias: 0.10, loop: true },
-      ride:  { turn: 0.18, step: 2.8, returnBias: 0.08, loop: false },
-      hike:  { turn: 0.55, step: 0.9, returnBias: 0.14, loop: true },
-    }[sport] || { turn: 0.35, step: 1.4, returnBias: 0.15, loop: true };
-
-    pts.push([cx, cy]);
-    for (let i = 0; i < len; i++) {
-      // Return bias pulls toward start in second half
-      const progress = i / len;
-      let returnAngle = 0;
-      if (progress > 0.55 && cfg.loop) {
-        const dx = cx - x, dy = cy - y;
-        returnAngle = Math.atan2(dy, dx);
-        const diff = ((returnAngle - heading + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
-        heading += diff * cfg.returnBias * (progress - 0.55) * 3;
-      }
-      heading += (r() - 0.48) * cfg.turn * Math.PI;
-      const stepScale = sport === 'hike' && (i % 8 < 3) ? 0.3 : 1; // hike switchbacks
-      x += Math.cos(heading) * cfg.step * stepScale;
-      y += Math.sin(heading) * cfg.step * 0.65;
-      x = Math.max(3, Math.min(97, x));
-      y = Math.max(3, Math.min(97, y));
-      pts.push([x, y]);
-    }
-    if (cfg.loop) pts.push([cx, cy]); // close the loop
-    return pts;
-  }
-
-  function ptsToSmooth(pts) {
-    if (pts.length < 2) return '';
-    let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
-    for (let i = 1; i < pts.length - 1; i++) {
-      const [x0, y0] = pts[i - 1], [x1, y1] = pts[i], [x2, y2] = pts[i + 1];
-      const cpx = x1 - (x2 - x0) * 0.15, cpy = y1 - (y2 - y0) * 0.15;
-      d += ` S${cpx.toFixed(1)},${cpy.toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)}`;
-    }
-    const last = pts[pts.length - 1];
-    d += ` L${last[0].toFixed(1)},${last[1].toFixed(1)}`;
-    return d;
-  }
-
-  const routes = [
-    { cx: 48, cy: 52, color: '#FC5200', opacity: 0.75, seed: 1001, len: 24, sport: 'run' },
-    { cx: 44, cy: 62, color: '#7C4DB8', opacity: 0.75, seed: 1002, len: 30, sport: 'trail' },
-    { cx: 52, cy: 44, color: '#FC5200', opacity: 0.65, seed: 1003, len: 18, sport: 'run' },
-    { cx: 58, cy: 30, color: '#007FB6', opacity: 0.70, seed: 1004, len: 44, sport: 'ride' },
-    { cx: 62, cy: 26, color: '#3A8050', opacity: 0.68, seed: 1005, len: 35, sport: 'hike' },
-    { cx: 38, cy: 46, color: '#007FB6', opacity: 0.62, seed: 1006, len: 40, sport: 'ride' },
-    { cx: 56, cy: 54, color: '#7C4DB8', opacity: 0.65, seed: 1007, len: 20, sport: 'trail' },
-    { cx: 66, cy: 40, color: '#3A8050', opacity: 0.60, seed: 1008, len: 28, sport: 'hike' },
-    { cx: 42, cy: 33, color: '#FC5200', opacity: 0.58, seed: 1009, len: 14, sport: 'run' },
-    { cx: 72, cy: 58, color: '#007FB6', opacity: 0.65, seed: 1010, len: 50, sport: 'ride' },
-  ];
-
-  function drawRoutes() {
-    const svg = document.getElementById('map-routes');
-    if (!svg) return;
-    svg.setAttribute('viewBox', '0 0 100 100');
-    svg.setAttribute('preserveAspectRatio', 'none');
-    svg.innerHTML = '';
-    routes.forEach(rt => {
-      const pts = generateRoute(rt.cx, rt.cy, rt.sport, rt.len, rt.seed);
-      const d = ptsToSmooth(pts);
-      const halo = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      halo.setAttribute('d', d); halo.setAttribute('fill', 'none');
-      halo.setAttribute('stroke', 'white'); halo.setAttribute('stroke-width', '0.9');
-      halo.setAttribute('stroke-linecap', 'round'); halo.setAttribute('opacity', '0.6');
-      svg.appendChild(halo);
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      line.setAttribute('d', d); line.setAttribute('fill', 'none');
-      line.setAttribute('stroke', rt.color); line.setAttribute('stroke-width', '0.42');
-      line.setAttribute('stroke-linecap', 'round'); line.setAttribute('opacity', rt.opacity.toFixed(2));
-      svg.appendChild(line);
-    });
-  }
-
-  window.addEventListener('load', drawRoutes);
-  window.addEventListener('resize', drawRoutes);
-})();
-</script>
-
-
 
 {% endblock %}
