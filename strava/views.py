@@ -1,4 +1,5 @@
 import datetime
+import math
 import unicodedata
 
 from django.db.models import Count, F, Max, Sum
@@ -116,7 +117,10 @@ class DashboardView(TemplateView):
         # empty the other tabs and make the records jump around on a text search.
         records_acts = [a for a in all_activities
                         if year == 'all' or str(local_date(a).year) == year]
-        context['records'] = self._records(records_acts)
+        # Home is the most-used start location across all activities (stable across the
+        # year filter); the per-year "furthest from home" record measures against it.
+        home = self._home_location(all_activities)
+        context['records'] = self._records(records_acts, home)
 
         # ---- Running performance (best times per race distance + estimates) ----
         # Year-scoped like the records widget, drawn from each run's Strava best_efforts.
@@ -208,8 +212,8 @@ class DashboardView(TemplateView):
         ]
 
         # ---- Summary (data-backed rows only) ----
-        context['total_kudos'] = sum(a.kudos_count for a in activities)
-        context['total_photos'] = sum(a.photo_count for a in activities)
+        # ---- "By the Numbers" — fun stats + summary, over the filtered activities ----
+        context['fun_stats'], context['summary'] = self._by_the_numbers(activities)
         context['last_updated'] = timezone.localtime()
         return context
 
@@ -248,17 +252,24 @@ class DashboardView(TemplateView):
     ]
     RIEGEL_EXP = 1.06
 
-    def _records(self, activities):
+    # "By the Numbers" fun-stat reference values.
+    EARTH_CIRCUMFERENCE_KM = 40075
+    EVEREST_HEIGHT_M = 8849
+    MARATHON_KM = 42.195
+    CO2_KG_PER_KM = 0.12   # ~avg car tailpipe CO2 per km, avoided by cycling instead
+
+    def _records(self, activities, home=None):
         """Personal records grouped by the four sport tabs (Running / Cycling /
         Hiking / Swimming). Returns ``{tab: [record, ...]}`` where each record is a
         ``{'label', 'value', 'unit', 'id'}`` dict — ``id`` is the pk of the activity
-        that holds the record, so clicking the row opens that activity's card."""
+        that holds the record, so clicking the row opens that activity's card.
+        ``home`` is the (lat, lng) the "furthest from home" record measures against."""
         return {
-            name: self._sport_records(name, [a for a in activities if a.sport_type in sports])
+            name: self._sport_records(name, [a for a in activities if a.sport_type in sports], home)
             for name, sports in self.RECORD_SPORTS.items()
         }
 
-    def _sport_records(self, name, acts):
+    def _sport_records(self, name, acts, home=None):
         if not acts:
             return []
         recs = []
@@ -316,11 +327,49 @@ class DashboardView(TemplateView):
                 best = max(timed, key=lambda a: a.moving_time)
                 recs.append(self._rec('Longest Time', best, best.dur, ''))
 
+        # Furthest from home — the activity starting farthest from the usual start point.
+        if home:
+            located = [a for a in acts if a.start_lat is not None and a.start_lng is not None]
+            if located:
+                best = max(located, key=lambda a: self._haversine_km(
+                    home[0], home[1], a.start_lat, a.start_lng))
+                dist = self._haversine_km(home[0], home[1], best.start_lat, best.start_lng)
+                recs.append(self._rec('Furthest from Home', best, f'{dist:,.0f}', 'km'))
+
         return recs
 
     @staticmethod
     def _rec(label, activity, value, unit):
         return {'label': label, 'value': value, 'unit': unit, 'id': activity.pk}
+
+    @staticmethod
+    def _home_location(activities):
+        """Estimate "home" as the busiest start location. Start points are bucketed on a
+        ~1 km grid (2-decimal rounding); the most-used bucket's averaged coordinates are
+        returned as ``(lat, lng)``, or ``None`` when no activity has GPS."""
+        clusters = {}
+        for a in activities:
+            if a.start_lat is None or a.start_lng is None:
+                continue
+            key = (round(a.start_lat, 2), round(a.start_lng, 2))
+            agg = clusters.setdefault(key, [0, 0.0, 0.0])
+            agg[0] += 1
+            agg[1] += a.start_lat
+            agg[2] += a.start_lng
+        if not clusters:
+            return None
+        count, lat_sum, lng_sum = max(clusters.values(), key=lambda agg: agg[0])
+        return lat_sum / count, lng_sum / count
+
+    @staticmethod
+    def _haversine_km(lat1, lng1, lat2, lng2):
+        """Great-circle distance between two lat/lng points, in kilometres."""
+        radius = 6371.0
+        phi1, phi2 = math.radians(lat1), math.radians(lat2)
+        d_phi = math.radians(lat2 - lat1)
+        d_lambda = math.radians(lng2 - lng1)
+        a = math.sin(d_phi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(d_lambda / 2) ** 2
+        return 2 * radius * math.asin(math.sqrt(a))
 
     def _hike_pace_ok(self, a):
         """A genuine hike isn't faster than MIN_HIKE_PACE_SEC per km. Activities with no
@@ -376,6 +425,37 @@ class DashboardView(TemplateView):
                 row['est'] = f'{self._fmt_hms(est * 0.975)} – {self._fmt_hms(est * 1.025)}'
             perf.append(row)
         return perf
+
+    def _by_the_numbers(self, activities):
+        """Fun-stat and summary tallies for the "By the Numbers" cards, computed over
+        the (already filtered) activities so they track the active filter. Returns
+        ``(fun_stats, summary)`` dicts. Calories / achievements / PR counts come from
+        the stored Strava JSON; the rest from promoted model fields."""
+        total_km = sum(float(a.distance) for a in activities) / 1000
+        total_elev = sum((a.total_elevation_gain or 0) for a in activities)
+        cycling_km = sum(float(a.distance) for a in activities
+                         if a.sport_type in self.RECORD_SPORTS['Cycling']) / 1000
+
+        # Heart rate averaged across activities, weighted by moving time.
+        hr = [a for a in activities if a.average_heartrate and a.moving_time]
+        avg_hr = (round(sum(a.average_heartrate * a.moving_time for a in hr)
+                        / sum(a.moving_time for a in hr)) if hr else 0)
+
+        fun_stats = {
+            'around_earth': f'{total_km / self.EARTH_CIRCUMFERENCE_KM * 100:.1f}%',
+            'everest': f'{total_elev / self.EVEREST_HEIGHT_M:.1f}x',
+            'co2_saved': f'{round(cycling_km * self.CO2_KG_PER_KM):,} kg',
+            'marathons': f'{round(total_km / self.MARATHON_KM):,}',
+        }
+        summary = {
+            'photos': sum(a.photo_count for a in activities),
+            'calories': round(sum((a.json.get('calories') or 0) for a in activities)),
+            'kudos': sum(a.kudos_count for a in activities),
+            'avg_hr': avg_hr,
+            'achievements': sum((a.json.get('achievement_count') or 0) for a in activities),
+            'prs': sum((a.json.get('pr_count') or 0) for a in activities),
+        }
+        return fun_stats, summary
 
     @staticmethod
     def _unaccent(s):
