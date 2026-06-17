@@ -175,17 +175,23 @@ body {
 .maphero .leaflet-control-attribution { font: 400 10px var(--font-body); }
 .zoom {
   position: absolute; left: 18px; top: 18px; z-index: 5;
-  display: flex; flex-direction: column; border-radius: 9px; overflow: hidden;
-  box-shadow: var(--shadow); border: 1px solid var(--line);
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  width: 36px; padding: 9px 0; border-radius: 9px;
+  background: var(--surface); box-shadow: var(--shadow); border: 1px solid var(--line);
 }
-.zoom button {
-  appearance: none; border: none; background: var(--surface); cursor: pointer;
-  width: 36px; height: 34px; font-size: 17px; color: var(--ink-2); line-height: 1;
+.zoom-end {
+  appearance: none; border: none; background: transparent; cursor: pointer;
+  color: var(--ink-3); font-size: 17px; line-height: 1; padding: 2px 6px; user-select: none;
 }
-.zoom button:first-child { border-bottom: 1px solid var(--line-2); }
-.zoom button:hover { color: var(--ink); }
+.zoom-end:hover { color: var(--ink); }
+.zoom-slider {
+  appearance: slider-vertical; -webkit-appearance: slider-vertical; /* legacy fallback */
+  writing-mode: vertical-lr; direction: rtl;                        /* standard: + at top */
+  width: 6px; height: 100px; margin: 0; cursor: pointer;
+  background: transparent; accent-color: var(--accent);
+}
 .map-reset {
-  position: absolute; left: 18px; top: 96px; z-index: 5;
+  position: absolute; left: 18px; top: 198px; z-index: 5;
   appearance: none; cursor: pointer;
   width: 36px; height: 36px; border-radius: 9px;
   background: var(--surface); border: 1px solid var(--line); color: var(--ink-2);
@@ -193,6 +199,16 @@ body {
 }
 .map-reset:hover { color: var(--ink); }
 .map-reset svg { width: 16px; height: 16px; }
+.map-routes-toggle {
+  position: absolute; left: 18px; top: 242px; z-index: 5;
+  appearance: none; cursor: pointer;
+  width: 36px; height: 36px; border-radius: 9px;
+  background: var(--surface); border: 1px solid var(--line); color: var(--ink-2);
+  display: grid; place-items: center; box-shadow: var(--shadow);
+}
+.map-routes-toggle:hover { color: var(--ink); }
+.map-routes-toggle.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.map-routes-toggle svg { width: 18px; height: 18px; }
 .map-filters { position: absolute; right: 18px; top: 18px; z-index: 5; display: flex; gap: 10px; }
 .map-note {
   position: absolute; left: 18px; bottom: 18px; z-index: 5; margin: 0;

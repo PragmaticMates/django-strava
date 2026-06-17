@@ -13,11 +13,15 @@
   <div id="activity-map" class="mapfill" data-screen-label="Activity map"></div>
   <div class="map-tint" id="map-tint"></div>
   <div class="zoom">
-    <button type="button" id="map-zoom-in" aria-label="Zoom in">+</button>
-    <button type="button" id="map-zoom-out" aria-label="Zoom out">−</button>
+    <button type="button" class="zoom-end" id="map-zoom-in" aria-label="Zoom in">+</button>
+    <input type="range" class="zoom-slider" id="map-zoom-slider" aria-label="Zoom level" step="1">
+    <button type="button" class="zoom-end" id="map-zoom-out" aria-label="Zoom out">−</button>
   </div>
   <button type="button" class="map-reset" id="map-reset" aria-label="Reset view" title="Reset view">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V5a1 1 0 0 1 1-1h3"></path><path d="M16 4h3a1 1 0 0 1 1 1v3"></path><path d="M20 16v3a1 1 0 0 1-1 1h-3"></path><path d="M8 20H5a1 1 0 0 1-1-1v-3"></path></svg>
+  </button>
+  <button type="button" class="map-routes-toggle" id="map-routes-toggle" aria-label="Show routes" aria-pressed="false" title="Show routes (zoom in to see them)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2.5"></circle><circle cx="18" cy="5" r="2.5"></circle><path d="M8 18 C 14 16, 12 8, 16 6"></path></svg>
   </button>
   <div class="map-filters">
     <div class="map-search">
@@ -394,6 +398,8 @@
   // closing the card can restore the previous position/zoom (unless the user moved).
   let routeLayer = null;
   let hoverLayer = null;
+  let allRoutesLayer = null;   // overlay of every visible activity's route, toggled on
+  let showAllRoutes = false;
   let savedView = null;
   let userMoved = false;
   function markUserMoved() { userMoved = true; }
@@ -405,6 +411,28 @@
   function activityCoords(m) {
     if (m._coords === undefined) m._coords = m.polyline ? decodePolyline(m.polyline) : [];
     return m._coords;
+  }
+
+  // Only draw routes once zoomed in this close — at low zoom a busy map would try to
+  // render thousands of polylines at once, which is slow and unreadable.
+  const ROUTE_ZOOM_MIN = 11;
+
+  // Draw (or clear) a thin route overlay. To keep it fast it draws only the routes
+  // of activities currently in view, and only when zoomed in past ROUTE_ZOOM_MIN.
+  // Follows the active filter and stays beneath the hover/selected route.
+  function renderAllRoutes() {
+    if (allRoutesLayer) { map.removeLayer(allRoutesLayer); allRoutesLayer = null; }
+    if (!showAllRoutes || map.getZoom() < ROUTE_ZOOM_MIN) return;
+    const bounds = map.getBounds();
+    const lines = [];
+    visibleMarkers.forEach(function(m) {
+      if (!bounds.contains([m.lat, m.lng])) return;  // viewport cull
+      const coords = activityCoords(m);
+      if (coords.length) {
+        lines.push(L.polyline(coords, { color: COLORS[m.type] || COLORS.run, weight: 2.5, opacity: 0.65 }));
+      }
+    });
+    allRoutesLayer = L.layerGroup(lines).addTo(map);
   }
 
   // Preview the route on hover (dashed, no card, no map move); cleared on mouse-out.
@@ -474,8 +502,9 @@
   let resetView;
   let clusters = null;
   const leafletMarkers = [];
-  // [lat, lng] of the markers currently on the map; reset re-frames these so an
-  // active filter stays framed instead of zooming out to every activity.
+  // The markers currently on the map (all of them, or the active filter's matches).
+  // visibleCoords backs reset framing; visibleMarkers backs the "all routes" overlay.
+  let visibleMarkers = markers.slice();
   let visibleCoords = markers.map(function(m) { return [m.lat, m.lng]; });
   if (markers.length) {
     clusters = L.markerClusterGroup({
@@ -524,7 +553,20 @@
   }
   resetView();  // frame all markers on load
 
-  // Wire the existing styled zoom buttons to the map.
+  // Wire the zoom slider + / − buttons to the map (two-way: controls drive zoom,
+  // map moves sync back).
+  const zslider = document.getElementById('map-zoom-slider');
+  if (zslider) {
+    zslider.min = map.getMinZoom();
+    zslider.max = map.getMaxZoom();
+    function syncSlider() { zslider.value = Math.round(map.getZoom()); }
+    syncSlider();
+    zslider.addEventListener('input', function() {
+      markUserMoved();
+      map.setZoom(Number(zslider.value), { animate: false });
+    });
+    map.on('zoomend', syncSlider);
+  }
   const zin = document.getElementById('map-zoom-in');
   const zout = document.getElementById('map-zoom-out');
   if (zin) zin.addEventListener('click', function() { markUserMoved(); map.zoomIn(); });
@@ -537,6 +579,17 @@
     clearHoverRoute();
     resetView();
   });
+
+  // Routes toggle: overlay in-view routes (only when zoomed in), or clear them.
+  const routesToggle = document.getElementById('map-routes-toggle');
+  if (routesToggle) routesToggle.addEventListener('click', function() {
+    showAllRoutes = !showAllRoutes;
+    routesToggle.classList.toggle('active', showAllRoutes);
+    routesToggle.setAttribute('aria-pressed', showAllRoutes ? 'true' : 'false');
+    renderAllRoutes();
+  });
+  // Re-render as the view changes so routes appear once zoomed in and track the viewport.
+  map.on('moveend zoomend', function() { if (showAllRoutes) renderAllRoutes(); });
 
   // ---- Map filters: search box + sport / gear / year pills (all client-side) ----
   const filterState = { q: '', sport: 'all', gear: 'all', year: 'all' };
@@ -556,6 +609,7 @@
     clearHoverRoute();
     clusters.clearLayers();
     const shown = [];
+    visibleMarkers = [];
     markers.forEach(function(m, i) {
       const haystack = unaccent(m.title + ' ' + (m.type || ''));
       const ok = tokens.every(function(t) { return haystack.indexOf(t) !== -1; })
@@ -564,10 +618,12 @@
         && (filterState.year === 'all' || String(m.year) === filterState.year);
       if (ok) {
         clusters.addLayer(leafletMarkers[i]);
+        visibleMarkers.push(m);
         shown.push([m.lat, m.lng]);
       }
     });
     visibleCoords = shown;  // reset re-frames the active filter, not every marker
+    renderAllRoutes();      // keep the all-routes overlay in sync with the filter
     if (shown.length) map.fitBounds(L.latLngBounds(shown), Object.assign({ maxZoom: 14 }, FIT));
   }
 
