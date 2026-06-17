@@ -20,8 +20,12 @@
   <button type="button" class="map-reset" id="map-reset" aria-label="Reset view" title="Reset view">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V5a1 1 0 0 1 1-1h3"></path><path d="M16 4h3a1 1 0 0 1 1 1v3"></path><path d="M20 16v3a1 1 0 0 1-1 1h-3"></path><path d="M8 20H5a1 1 0 0 1-1-1v-3"></path></svg>
   </button>
-  <button type="button" class="map-routes-toggle" id="map-routes-toggle" aria-label="Show routes" aria-pressed="false" title="Show routes (zoom in to see them)">
+  <button type="button" class="map-routes-toggle" id="map-routes-toggle" aria-label="Show routes" aria-pressed="false" title="Show routes">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2.5"></circle><circle cx="18" cy="5" r="2.5"></circle><path d="M8 18 C 14 16, 12 8, 16 6"></path></svg>
+  </button>
+  <button type="button" class="map-fullscreen" id="map-fullscreen" aria-label="Toggle fullscreen" title="Fullscreen">
+    <svg class="fs-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+    <svg class="fs-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"></polyline><polyline points="20 10 14 10 14 4"></polyline><line x1="14" y1="10" x2="21" y2="3"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
   </button>
   <div class="map-filters">
     <div class="map-search">
@@ -627,6 +631,45 @@
   const zout = document.getElementById('map-zoom-out');
   if (zin) zin.addEventListener('click', function() { markUserMoved(); map.zoomIn(); });
   if (zout) zout.addEventListener('click', function() { markUserMoved(); map.zoomOut(); });
+
+  // Expand button: grow the map widget to fill the viewport in-page (not OS fullscreen).
+  // Leaflet must recompute its size once the container's dimensions change.
+  const hero = el.closest('.maphero');
+  const fsBtn = document.getElementById('map-fullscreen');
+  if (fsBtn && hero) fsBtn.addEventListener('click', function() {
+    if (hero.dataset.animating) return;
+    const willExpand = !hero.classList.contains('expanded');
+    if (willExpand) window.scrollTo(0, 0);  // align with the header pinned at the top
+    // FLIP on geometry (not transform): measure the box before/after, then animate
+    // top/left/width/height between them. Scaling would stretch the Leaflet tiles;
+    // resizing the box just reveals more map, with invalidateSize() filling it at the end.
+    function setRect(r) {
+      hero.style.top = r.top + 'px'; hero.style.left = r.left + 'px';
+      hero.style.width = r.width + 'px'; hero.style.height = r.height + 'px';
+    }
+    const first = hero.getBoundingClientRect();
+    hero.classList.toggle('expanded', willExpand);
+    document.body.classList.toggle('map-expanded', willExpand);  // keeps the header on top
+    const last = hero.getBoundingClientRect();
+    hero.style.position = 'fixed'; hero.style.margin = '0'; hero.style.zIndex = '1000';
+    hero.style.transition = 'none';
+    setRect(first);
+    hero.dataset.animating = '1';
+    void hero.offsetWidth;  // force reflow so the start geometry takes effect
+    requestAnimationFrame(function() {
+      hero.style.transition = 'top 0.3s ease, left 0.3s ease, width 0.3s ease, height 0.3s ease';
+      setRect(last);
+    });
+    hero.addEventListener('transitionend', function done(e) {
+      if (e.propertyName !== 'height') return;
+      hero.removeEventListener('transitionend', done);
+      // Drop the inline geometry so each resting state falls back to its CSS.
+      ['position', 'margin', 'zIndex', 'transition', 'top', 'left', 'width', 'height']
+        .forEach(function(p) { hero.style[p] = ''; });
+      delete hero.dataset.animating;
+      map.invalidateSize();  // recompute tiles/markers for the final size
+    });
+  });
 
   // Reset button: close any card/route and re-frame all markers.
   const reset = document.getElementById('map-reset');

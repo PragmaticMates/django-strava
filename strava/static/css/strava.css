@@ -213,6 +213,24 @@ body {
 .map-routes-toggle:hover { color: var(--ink); }
 .map-routes-toggle.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 .map-routes-toggle svg { width: 18px; height: 18px; }
+.map-fullscreen {
+  position: absolute; left: 18px; top: 286px; z-index: 5;
+  appearance: none; cursor: pointer;
+  width: 36px; height: 36px; border-radius: 9px;
+  background: var(--surface); border: 1px solid var(--line); color: var(--ink-2);
+  display: grid; place-items: center; box-shadow: var(--shadow);
+}
+.map-fullscreen:hover { color: var(--ink); }
+.map-fullscreen svg { width: 16px; height: 16px; }
+.map-fullscreen .fs-close { display: none; }
+/* Expand the map widget to fill the viewport below the header, and swap expand→collapse glyph. */
+.maphero.expanded {
+  position: fixed; inset: 62px 0 0 0; height: auto; width: auto; z-index: 1000; border-radius: 0;
+}
+.maphero.expanded .map-fullscreen .fs-open { display: none; }
+.maphero.expanded .map-fullscreen .fs-close { display: block; }
+/* Keep the header on top of the expanded map overlay. */
+body.map-expanded .nav { position: sticky; top: 0; z-index: 1001; }
 .map-filters { position: absolute; right: 18px; top: 18px; z-index: 5; display: flex; gap: 10px; }
 .map-note {
   position: absolute; left: 18px; bottom: 18px; z-index: 5; margin: 0;
