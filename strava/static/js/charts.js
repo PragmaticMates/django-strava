@@ -8,19 +8,12 @@ window.DSCharts = (function () {
   };
   const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
-  /* ---- Hero route trace ---- */
-  function renderRoute(svg, pts) {
+  /* ---- Route trace (shared draw step) ---- */
+  // P: points already projected into the svg's viewBox coordinate space.
+  function drawTrace(svg, P, vbW, vbH, par) {
     svg.innerHTML = "";
-    svg.setAttribute("viewBox", "0 0 100 96");
-    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-    const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
-    const minX = Math.min(...xs), maxX = Math.max(...xs);
-    const minY = Math.min(...ys), maxY = Math.max(...ys);
-    const sx = 84 / (maxX - minX), sy = 76 / (maxY - minY);
-    const s = Math.min(sx, sy);
-    const ox = (100 - (maxX - minX) * s) / 2 - minX * s;
-    const oy = (96 - (maxY - minY) * s) / 2 - minY * s;
-    const P = pts.map(p => [(p[0] * s + ox).toFixed(2), (p[1] * s + oy).toFixed(2)]);
+    svg.setAttribute("viewBox", `0 0 ${vbW} ${vbH}`);
+    svg.setAttribute("preserveAspectRatio", par);
     const dAttr = "M" + P.map(p => p.join(",")).join(" L");
     const halo = el("path", { d: dAttr, fill: "none", "stroke-width": 3.6, "stroke-linecap": "round", "stroke-linejoin": "round" });
     halo.style.stroke = "var(--surface)";
@@ -29,11 +22,105 @@ window.DSCharts = (function () {
     svg.appendChild(halo); svg.appendChild(line);
     const start = el("circle", { cx: P[0][0], cy: P[0][1], r: 2.4 });
     start.style.fill = "var(--ink)";
-    const endO = el("circle", { cx: P[P.length-1][0], cy: P[P.length-1][1], r: 2.8 });
+    const last = P[P.length - 1];
+    const endO = el("circle", { cx: last[0], cy: last[1], r: 2.8 });
     endO.style.fill = "var(--accent)";
-    const endI = el("circle", { cx: P[P.length-1][0], cy: P[P.length-1][1], r: 1.1 });
+    const endI = el("circle", { cx: last[0], cy: last[1], r: 1.1 });
     endI.style.fill = "var(--surface)";
     svg.appendChild(start); svg.appendChild(endO); svg.appendChild(endI);
+  }
+
+  /* ---- Hero route trace (abstract, auto-fit) ---- */
+  function renderRoute(svg, pts) {
+    const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    const sx = 84 / (maxX - minX), sy = 76 / (maxY - minY);
+    const s = Math.min(sx, sy);
+    const ox = (100 - (maxX - minX) * s) / 2 - minX * s;
+    const oy = (96 - (maxY - minY) * s) / 2 - minY * s;
+    const P = pts.map(p => [+(p[0] * s + ox).toFixed(2), +(p[1] * s + oy).toFixed(2)]);
+    drawTrace(svg, P, 100, 96, "xMidYMid meet");
+  }
+
+  /* ---- Static slippy-map background, with the route drawn on the map's
+     own Web-Mercator projection so the trace aligns with the tiles. Used in
+     activity cards that have no photo, in place of the blank grey panel. ---- */
+  const TILE = 256;
+  const mercX = (lng, s) => (lng + 180) / 360 * s;
+  const mercY = (lat, s) => {
+    const sin = Math.sin(lat * Math.PI / 180);
+    return (0.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI)) * s;
+  };
+
+  // ll: [[lat, lng], ...]. Returns false if the panel isn't laid out yet.
+  function renderTileMap(mapEl, svg, ll) {
+    const W = mapEl.clientWidth, H = mapEl.clientHeight;
+    if (!W || !H) return false;
+    const lats = ll.map(p => p[0]), lngs = ll.map(p => p[1]);
+    const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+    const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+    const pad = 0.82;  // leave a margin so the trace doesn't touch the edges
+    let z = 16;
+    for (; z > 2; z--) {
+      const s = TILE * Math.pow(2, z);
+      const w = mercX(maxLng, s) - mercX(minLng, s);
+      const h = mercY(minLat, s) - mercY(maxLat, s);
+      if (w <= W * pad && h <= H * pad) break;
+    }
+    const s = TILE * Math.pow(2, z), n = Math.pow(2, z);
+    const cx = (mercX(minLng, s) + mercX(maxLng, s)) / 2;
+    const cy = (mercY(minLat, s) + mercY(maxLat, s)) / 2;
+    const originX = cx - W / 2, originY = cy - H / 2;  // world px at panel's top-left
+
+    let bg = mapEl.querySelector(".fc-tiles");
+    if (!bg) { bg = document.createElement("div"); bg.className = "fc-tiles"; mapEl.insertBefore(bg, mapEl.firstChild); }
+    bg.innerHTML = "";
+    const sub = ["a", "b", "c", "d"];
+    const minTX = Math.floor(originX / TILE), maxTX = Math.floor((originX + W) / TILE);
+    const minTY = Math.max(0, Math.floor(originY / TILE)), maxTY = Math.min(n - 1, Math.floor((originY + H) / TILE));
+    for (let tx = minTX; tx <= maxTX; tx++) {
+      const wx = ((tx % n) + n) % n;  // wrap longitude
+      for (let ty = minTY; ty <= maxTY; ty++) {
+        const img = new Image();
+        img.alt = "";
+        img.src = `https://${sub[((wx + ty) % 4 + 4) % 4]}.basemaps.cartocdn.com/light_all/${z}/${wx}/${ty}@2x.png`;
+        img.style.cssText = `position:absolute;width:${TILE}px;height:${TILE}px;left:${tx * TILE - originX}px;top:${ty * TILE - originY}px;`;
+        bg.appendChild(img);
+      }
+    }
+    if (!mapEl.querySelector(".fc-attr")) {
+      const a = document.createElement("a");
+      a.className = "fc-attr";
+      a.target = "_blank"; a.rel = "noopener";
+      a.href = "https://carto.com/attributions";
+      a.textContent = "© OSM © CARTO";
+      mapEl.appendChild(a);
+    }
+    // Project the route into a 100-wide viewBox matching the panel's aspect.
+    const k = 100 / W;
+    const P = ll.map(p => [
+      +((mercX(p[1], s) - originX) * k).toFixed(2),
+      +((mercY(p[0], s) - originY) * k).toFixed(2),
+    ]);
+    drawTrace(svg, P, 100, +(H * k).toFixed(2), "none");
+    return true;
+  }
+
+  // Entry point for activity cards: draw a map-backed trace when the card has
+  // GPS and no photo, otherwise fall back to the abstract auto-fit trace.
+  function renderRouteSvg(svg) {
+    if (!svg || svg.dataset.fcRendered) return;
+    const pts = decodePolyline(svg.dataset.polyline || "");
+    if (!pts.length) return;
+    svg.dataset.fcRendered = "1";
+    const mapEl = svg.closest(".fc-map");
+    const ll = pts.map(p => [-p[1], p[0]]);  // decodePolyline yields [lng, -lat]
+    const moves = pts.length > 1 &&
+      (Math.min(...ll.map(p => p[0])) !== Math.max(...ll.map(p => p[0])) ||
+       Math.min(...ll.map(p => p[1])) !== Math.max(...ll.map(p => p[1])));
+    if (mapEl && !mapEl.querySelector(".fc-photo") && moves && renderTileMap(mapEl, svg, ll)) return;
+    renderRoute(svg, pts);
   }
 
   /* ---- Elevation profile (small area chart) ---- */
@@ -236,5 +323,5 @@ window.DSCharts = (function () {
     return pts;
   }
 
-  return { renderRoute, renderProfile, renderDensity, renderTrends, renderCalendar, decodePolyline };
+  return { renderRoute, renderRouteSvg, renderProfile, renderDensity, renderTrends, renderCalendar, decodePolyline };
 })();

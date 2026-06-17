@@ -85,8 +85,7 @@
 <script>
 function renderRoutes(root) {
   (root || document).querySelectorAll('.fc-route[data-polyline]').forEach(function(svg) {
-    var pts = window.DSCharts.decodePolyline(svg.dataset.polyline);
-    if (pts.length) window.DSCharts.renderRoute(svg, pts);
+    window.DSCharts.renderRouteSvg(svg);
   });
 }
 renderRoutes(document);

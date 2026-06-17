@@ -675,10 +675,7 @@ endpoint the map uses) into .act-modal-host.
   window.renderCardRoute = function(card) {
     if (!card) return;
     var svg = card.querySelector('.fc-route[data-polyline]');
-    if (!svg || svg.dataset.rendered) return;
-    svg.dataset.rendered = '1';
-    var pts = window.DSCharts.decodePolyline(svg.dataset.polyline);
-    if (pts.length) window.DSCharts.renderRoute(svg, pts);
+    if (svg) window.DSCharts.renderRouteSvg(svg);
   };
   // Render only the cards already visible on load (e.g. the latest-activity hero).
   document.querySelectorAll('.float-card').forEach(function(card) {
