@@ -1,4 +1,4 @@
-{% extends "pages/base.html" %}
+{% extends "strava/pages/base.html" %}
 {% load static humanize %}
 
 {% block title %}Gear{% endblock %}
@@ -67,7 +67,7 @@
 
   <!-- Gear feed — rendered server-side, swapped by htmx -->
   <div id="gear-results">
-    {% include "pages/_gear_results.html" %}
+    {% include "strava/pages/_gear_results.html" %}
   </div>
 
 </main>

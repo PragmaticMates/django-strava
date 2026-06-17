@@ -25,11 +25,11 @@
 
 <!-- Activity feed -->
 {% if view == 'table' %}
-  {% include "tables/activities.html" %}
+  {% include "strava/tables/activities.html" %}
 {% else %}
   <div class="acts-feed" id="feed-grid">
     {% for activity in activities %}
-      {% include "widgets/activity.html" with activity=activity show_close=False %}
+      {% include "strava/widgets/activity.html" with activity=activity show_close=False %}
     {% endfor %}
   </div>
 {% endif %}

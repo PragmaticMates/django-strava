@@ -30,7 +30,7 @@
     <span class="gear-section-count">{{ bikes|length }} bike{{ bikes|length|pluralize }}</span>
   </div>
   <div class="gear-grid">
-    {% for gear in bikes %}{% include "widgets/gear_card.html" %}{% endfor %}
+    {% for gear in bikes %}{% include "strava/widgets/gear_card.html" %}{% endfor %}
   </div>
 </section>
 {% endif %}
@@ -46,7 +46,7 @@
     <span class="gear-section-count">{{ shoes|length }} pair{{ shoes|length|pluralize }}</span>
   </div>
   <div class="gear-grid">
-    {% for gear in shoes %}{% include "widgets/gear_card.html" %}{% endfor %}
+    {% for gear in shoes %}{% include "strava/widgets/gear_card.html" %}{% endfor %}
   </div>
 </section>
 {% endif %}

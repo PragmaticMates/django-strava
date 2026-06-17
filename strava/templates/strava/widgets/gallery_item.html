@@ -9,12 +9,12 @@
       <img src="{{ activity.photo }}" alt="{{ activity.name }}" loading="lazy">
     </div>
     <div class="gallery-type-badge">
-      <span class="fc-pill">{% include "widgets/sport_icon.html" with type=activity.type %} {{ activity.get_sport_type_display }}</span>
+      <span class="fc-pill">{% include "strava/widgets/sport_icon.html" with type=activity.type %} {{ activity.get_sport_type_display }}</span>
     </div>
     <div class="gallery-hover-overlay">
       <div class="hov-title">{{ activity.name }}</div>
       <div class="hov-meta">
-        {% include "widgets/sport_icon.html" with type=activity.type %} {{ activity.get_sport_type_display }} · {{ activity.dist }} km
+        {% include "strava/widgets/sport_icon.html" with type=activity.type %} {{ activity.get_sport_type_display }} · {{ activity.dist }} km
         <span class="hov-kudos">
           <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
           {{ activity.kudos }}

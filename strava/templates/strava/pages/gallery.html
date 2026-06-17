@@ -1,4 +1,4 @@
-{% extends "pages/base.html" %}
+{% extends "strava/pages/base.html" %}
 {% load static humanize %}
 
 {% block title %}Gallery{% endblock %}
@@ -78,25 +78,25 @@
   <div class="sport-tabs" id="sport-tabs">
     <button type="button" class="sport-tab{% if sport == 'all' %} active{% endif %}" onclick="setSport('all', this)">All sports</button>
     <button type="button" class="sport-tab{% if sport == 'run' %} active{% endif %}" onclick="setSport('run', this)">
-      {% include "widgets/sport_icon.html" with type='run' %} Run
+      {% include "strava/widgets/sport_icon.html" with type='run' %} Run
     </button>
     <button type="button" class="sport-tab{% if sport == 'ride' %} active{% endif %}" onclick="setSport('ride', this)">
-      {% include "widgets/sport_icon.html" with type='ride' %} Ride
+      {% include "strava/widgets/sport_icon.html" with type='ride' %} Ride
     </button>
     <button type="button" class="sport-tab{% if sport == 'trail' %} active{% endif %}" onclick="setSport('trail', this)">
-      {% include "widgets/sport_icon.html" with type='trail' %} Trail Run
+      {% include "strava/widgets/sport_icon.html" with type='trail' %} Trail Run
     </button>
     <button type="button" class="sport-tab{% if sport == 'hike' %} active{% endif %}" onclick="setSport('hike', this)">
-      {% include "widgets/sport_icon.html" with type='hike' %} Hike
+      {% include "strava/widgets/sport_icon.html" with type='hike' %} Hike
     </button>
     <button type="button" class="sport-tab{% if sport == 'swim' %} active{% endif %}" onclick="setSport('swim', this)">
-      {% include "widgets/sport_icon.html" with type='swim' %} Swim
+      {% include "strava/widgets/sport_icon.html" with type='swim' %} Swim
     </button>
   </div>
 
   <!-- Grid — rendered server-side, swapped by htmx -->
   <div id="gallery-results">
-    {% include "pages/_gallery_results.html" %}
+    {% include "strava/pages/_gallery_results.html" %}
   </div>
 
 </main>

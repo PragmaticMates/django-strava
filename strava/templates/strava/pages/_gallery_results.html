@@ -1,6 +1,6 @@
 {% load humanize %}
 <div class="gallery-grid" id="gallery-grid">
-  {% for activity in photos %}{% include "widgets/gallery_item.html" %}{% endfor %}
+  {% for activity in photos %}{% include "strava/widgets/gallery_item.html" %}{% endfor %}
 </div>
 
 {% if not photos %}

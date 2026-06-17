@@ -1,4 +1,4 @@
-{% extends "pages/base.html" %}
+{% extends "strava/pages/base.html" %}
 {% load static humanize %}
 
 {% block title %}Activities{% endblock %}
@@ -75,7 +75,7 @@
 
   <!-- Activity feed — rendered server-side, swapped by htmx -->
   <div id="acts-results">
-    {% include "pages/_activities_results.html" %}
+    {% include "strava/pages/_activities_results.html" %}
   </div>
 
 </main>

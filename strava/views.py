@@ -25,13 +25,13 @@ GEAR_DONUT_PALETTE = [
 
 
 class DashboardView(TemplateView):
-    template_name = 'pages/dashboard.html'
+    template_name = 'strava/pages/dashboard.html'
 
     def get_template_names(self):
         # An htmx request comes from the map filter controls (search + sport/gear/year
         # pills); it only needs the recomputed sections, swapped in via hx-swap-oob.
         if getattr(self.request, 'htmx', False):
-            return ['pages/_dashboard_results.html']
+            return ['strava/pages/_dashboard_results.html']
         return [self.template_name]
 
     def get_context_data(self, **kwargs):
@@ -508,12 +508,12 @@ class DashboardView(TemplateView):
 
 class ActivitiesView(ListView):
     model = Activity
-    template_name = 'pages/activities.html'
+    template_name = 'strava/pages/activities.html'
     context_object_name = 'activities'
 
     def get_template_names(self):
         if getattr(self.request, 'htmx', False):
-            return ['pages/_activities_results.html']
+            return ['strava/pages/_activities_results.html']
         return [self.template_name]
 
     def get_queryset(self):
@@ -571,12 +571,12 @@ class ActivitiesView(ListView):
 
 class GearView(ListView):
     model = Gear
-    template_name = 'pages/gear.html'
+    template_name = 'strava/pages/gear.html'
     context_object_name = 'gear_list'
 
     def get_template_names(self):
         if getattr(self.request, 'htmx', False):
-            return ['pages/_gear_results.html']
+            return ['strava/pages/_gear_results.html']
         return [self.template_name]
 
     def get_queryset(self):
@@ -635,12 +635,12 @@ class GearView(ListView):
 
 class GalleryView(ListView):
     model = Activity
-    template_name = 'pages/gallery.html'
+    template_name = 'strava/pages/gallery.html'
     context_object_name = 'photos'
 
     def get_template_names(self):
         if getattr(self.request, 'htmx', False):
-            return ['pages/_gallery_results.html']
+            return ['strava/pages/_gallery_results.html']
         return [self.template_name]
 
     def get_queryset(self):
@@ -683,7 +683,7 @@ class ActivityCardView(DetailView):
     clicked. Keeps the dashboard from server-rendering a card for every marker up
     front (which dominated page load once the marker cap was raised)."""
     model = Activity
-    template_name = 'widgets/activity.html'
+    template_name = 'strava/widgets/activity.html'
     context_object_name = 'activity'
 
     def get_queryset(self):

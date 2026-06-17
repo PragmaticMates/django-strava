@@ -14,13 +14,13 @@
     {% if not map_card %}<svg class="fc-route" role="img" aria-label="Route trace"{% if activity.polyline %} data-polyline="{{ activity.polyline }}"{% endif %}></svg>{% endif %}
     {% if activity.pb %}<span class="act-gcard-pr">★ PR</span>{% endif %}
     <div class="fc-pills">
-      {% include "widgets/_fc_pill.html" %}
+      {% include "strava/widgets/_fc_pill.html" %}
     </div>
   </div>
   {% else %}
   <div class="fc-hero fc-hero--{{ activity.type|default:'run' }}">
     <div class="fc-pills">
-      {% include "widgets/_fc_pill.html" %}
+      {% include "strava/widgets/_fc_pill.html" %}
       {% if activity.pb %}<span class="act-gcard-pr">★ PR</span>{% endif %}
     </div>
   </div>

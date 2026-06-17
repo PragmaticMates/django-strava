@@ -1,4 +1,4 @@
-{% extends "pages/base.html" %}
+{% extends "strava/pages/base.html" %}
 {% load static humanize %}
 
 {% block title %}Dashboard{% endblock %}
@@ -43,7 +43,7 @@
     </button>
     <button class="pill-btn" type="button" id="map-gear-btn"><span class="pill-label">All Gear</span> <span class="caret">▾</span></button>
   </div>
-  {% include "pages/_dash_map_note.html" %}
+  {% include "strava/pages/_dash_map_note.html" %}
   {% comment %}
   Activity cards are fetched lazily when a marker is clicked (see map JS) rather than
   server-rendered for every marker — rendering ~1000 hidden cards dominated page load.
@@ -79,7 +79,7 @@ endpoint the map uses) into .act-modal-host.
 <main class="page">
 
   <!-- ============ Stat band ============ -->
-  {% include "pages/_dash_statband.html" %}
+  {% include "strava/pages/_dash_statband.html" %}
 
 
   <!-- ============ Records · performance · AOTY ============ -->
@@ -99,9 +99,9 @@ endpoint the map uses) into .act-modal-host.
       <div id="rec-list"></div>
     </section>
 
-    {% include "pages/_dash_run_perf.html" %}
+    {% include "strava/pages/_dash_run_perf.html" %}
 
-    {% include "pages/_dash_aoty.html" %}
+    {% include "strava/pages/_dash_aoty.html" %}
 
   </div>
 
@@ -109,7 +109,7 @@ endpoint the map uses) into .act-modal-host.
   <div class="row" data-screen-label="Latest activities">
     <div class="latest-act-wrap">
       <h2 class="section-title">Latest Activities</h2>
-      {% include "pages/_dash_latest.html" %}
+      {% include "strava/pages/_dash_latest.html" %}
     </div><!-- /.latest-act-wrap -->
   </div><!-- /.row -->
 
@@ -161,7 +161,7 @@ endpoint the map uses) into .act-modal-host.
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18h18"></path><path d="M5 18V9c0-1 .5-2 2-2h4l4 3h2c1 0 2 .5 2 2v6"></path><path d="M9 7V6"></path><path d="M5 14h14"></path></svg>
         <h2 class="card-title">Gear Health</h2>
       </div>
-      {% include "pages/_dash_gear_body.html" %}
+      {% include "strava/pages/_dash_gear_body.html" %}
     </section>
 
     <section class="card" data-screen-label="Gear usage">
@@ -180,7 +180,7 @@ endpoint the map uses) into .act-modal-host.
 
   <!-- ============ Fun Stats ============ -->
   <h2 class="section-title" style="margin-bottom: 0; margin-top: var(--gap);">By the Numbers</h2>
-  {% include "pages/_dash_numbers.html" %}
+  {% include "strava/pages/_dash_numbers.html" %}
 
   <footer class="foot" data-screen-label="Footer">
     <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"></rect><line x1="8" y1="3" x2="8" y2="7"></line><line x1="16" y1="3" x2="16" y2="7"></line><line x1="4" y1="10" x2="20" y2="10"></line></svg>
@@ -191,7 +191,7 @@ endpoint the map uses) into .act-modal-host.
 {% endblock %}
 
 {% block extra_js %}
-{% include "pages/_dash_data.html" %}
+{% include "strava/pages/_dash_data.html" %}
 {{ map_markers|json_script:"map-markers" }}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" integrity="sha256-Hk4dIpcqOSb0hZjgyvFOP+cEmDXUKKNE/tT542ZbNQg=" crossorigin=""></script>
