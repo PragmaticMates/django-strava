@@ -16,7 +16,12 @@ django_package/
 │   │   └── gallery.css        # Gallery page styles
 │   └── js/
 │       ├── charts.js          # DSCharts module (SVG/canvas chart renderers)
-│       └── classic-data.js    # Dashboard wiring (records tabs, trends, calendar)
+│       ├── ui.js              # Site-wide UI (nav + user menu, photo lightbox, load timing)
+│       ├── dashboard-map.js   # Dashboard Leaflet activity map
+│       ├── dashboard.js       # Dashboard wiring (records/trends/calendar, modal, gear donut)
+│       ├── activities.js      # Activities page (route SVGs, view + sort)
+│       ├── gallery.js         # Gallery page (view toggle, sport tabs, lightbox)
+│       └── gear.js            # Gear page (gear detail sheet)
 ├── templates/
 │   ├── dashboard.html
 │   ├── activities.html
@@ -72,10 +77,10 @@ See `sample_views.py`.
 
 ## Dashboard Data
 
-`classic-data.js` wires up the dashboard's records list, calendar dots and trends
-chart. It reads real server data from the JSON `<script>` blocks rendered by
-`_dash_data.html` (`dashboard-records`, `dashboard-trends`, `dashboard-calendar`)
-and falls back to a small deterministic demo series only when those are absent.
+`dashboard.js` wires up the dashboard's records list, calendar dots and trends
+chart. It reads real server data exclusively from the JSON `<script>` blocks
+rendered by `_dash_data.html` (`dashboard-records`, `dashboard-trends`,
+`dashboard-calendar`); when a block is absent the section simply renders empty.
 To feed it real data, populate those JSON blocks from your Django view; no
 JavaScript changes are needed.
 
