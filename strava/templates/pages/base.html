@@ -13,7 +13,7 @@
 </head>
 <body>
 
-<header class="nav" data-screen-label="Top nav">
+<header class="nav" id="site-nav" data-screen-label="Top nav">
   <a class="logo" href="{% url 'strava:dashboard' %}">
     <svg width="178" height="32" viewBox="0 0 178 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="django-strava">
       <rect x="2" y="8" width="16" height="16" rx="2.5" transform="rotate(45 10 16)" fill="var(--accent)"/>
@@ -24,7 +24,10 @@
       </text>
     </svg>
   </a>
-  <nav class="nav-items">
+  <button type="button" class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false" onclick="toggleNav(event)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+  </button>
+  <nav class="nav-items" id="nav-items">
     <a class="nav-item" href="{% url 'strava:dashboard' %}"{% if active_page == 'dashboard' %} aria-current="page"{% endif %}>
       <svg viewBox="0 0 24 24"><polyline points="3 11 12 4 21 11"></polyline><polyline points="5 10 5 20 19 20 19 10"></polyline></svg>
       Dashboard
@@ -72,6 +75,22 @@
 <script src="{% static 'js/image-slot.js' %}"></script>
 {% htmx_script %}
 <script>
+function toggleNav(e) {
+  e.stopPropagation();
+  const nav = document.getElementById('site-nav');
+  const btn = document.getElementById('nav-toggle');
+  const open = nav.classList.toggle('open');
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+document.addEventListener('click', function(e) {
+  const nav = document.getElementById('site-nav');
+  const btn = document.getElementById('nav-toggle');
+  const items = document.getElementById('nav-items');
+  if (!nav || !nav.classList.contains('open')) return;
+  if (btn.contains(e.target) || items.contains(e.target)) return;
+  nav.classList.remove('open');
+  btn.setAttribute('aria-expanded', 'false');
+});
 function toggleUserMenu(e) {
   e.stopPropagation();
   const trigger = document.getElementById('user-menu-trigger');

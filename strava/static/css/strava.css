@@ -87,6 +87,15 @@ body {
 .user-dd-item svg { width: 17px; height: 17px; flex: none; color: var(--ink-3); }
 .user-dd-item:hover svg { color: var(--accent); }
 .avatar-slot { width: 36px; height: 36px; flex: none; }
+.nav-toggle {
+  display: none; align-self: center; margin-left: auto;
+  width: 40px; height: 40px; flex: none;
+  appearance: none; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  color: var(--ink-2); place-items: center;
+}
+.nav-toggle:hover { color: var(--ink); }
+.nav-toggle svg { width: 20px; height: 20px; }
 
 /* ============ Map hero ============ */
 .maphero { position: relative; height: 700px; background: #D7E9F4; overflow: hidden; }
@@ -167,6 +176,15 @@ body {
   position: absolute; inset: 0; z-index: 1; pointer-events: none;
   mix-blend-mode: multiply; background: rgba(201,80,28,0.03);
 }
+/* Touch hint shown when a one-finger swipe is attempted on the map (two fingers pan). */
+.map-gesture-hint {
+  position: absolute; inset: 0; z-index: 7; display: none;
+  align-items: center; justify-content: center; text-align: center;
+  padding: 24px; pointer-events: none;
+  background: rgba(20,16,12,0.45); color: #fff;
+  font: 600 16px var(--font-body);
+}
+.map-gesture-hint.show { display: flex; }
 .maphero::after {
   content: ""; position: absolute; left: 0; right: 0; bottom: 0;
   height: var(--map-grad-h);
@@ -649,9 +667,100 @@ img.act-photo, img.aoty-photo { object-fit: cover; }
   .statband { grid-template-columns: 1fr 1fr; }
   .statband .cell { border-left: none; }
   .gear-fun { grid-template-columns: 1fr; }
-  .nav { gap: 12px; padding: 0 16px; }
-  .nav-item { padding: 0 8px; }
   .float-card { left: 50%; top: 43%; transform: translate(-50%, -50%); }
+
+  /* Collapse the header nav into a toggle-able dropdown so the items stay reachable. */
+  .nav { gap: 12px; padding: 0 16px; position: relative; }
+  .nav-toggle { display: grid; order: 3; margin-left: 8px; }
+  .nav-user { margin-left: auto; order: 2; }
+  .nav-user .uname, .nav-user .caret { display: none; }
+  .nav-items {
+    display: none; position: absolute; top: 62px; left: 0; right: 0;
+    flex-direction: column; align-items: stretch; gap: 0; margin: 0; flex: none;
+    background: var(--surface); border-bottom: 1px solid var(--line);
+    box-shadow: var(--shadow); z-index: 1100;
+  }
+  .nav.open .nav-items { display: flex; }
+  .nav-item { height: 48px; padding: 0 20px; font-size: 15px; }
+  .nav-item[aria-current="page"]::after { display: none; }
+
+  /* Stack the paired sections so each card gets a full row. */
+  .row-trends-aoty,
+  .row-gear-fun,
+  .fun-stats-row { grid-template-columns: 1fr; }
+
+  /* Trends: let the metric/range switchers drop below the title and wrap so every
+     option stays visible instead of being clipped by the single-line card head. */
+  .row-trends-aoty .card-head { flex-wrap: wrap; row-gap: 10px; }
+  .row-trends-aoty .card-head .spacer { display: none; }
+  .row-trends-aoty .card-head .seg {
+    margin-left: 0 !important; width: 100%;
+    flex-wrap: wrap; gap: 2px;
+  }
+
+  /* Latest activities: one card per row so each is full-width. */
+  .act-cards { grid-template-columns: 1fr; }
+
+  /* Gear usage: stack the legend below the donut (wrapping horizontally) rather
+     than beside it. */
+  .gear-donut-wrap { flex-direction: column; }
+  .gear-donut-legend {
+    flex-direction: row; flex-wrap: wrap; justify-content: center;
+    gap: 8px 16px; width: 100%;
+  }
+  .donut-legend-name { flex: none; }
+
+  /* Fun Stats / Summary: one stat per line instead of a side-by-side strip. */
+  .fun-stats-row .fun-list { flex-direction: column; }
+  .fun-stats-row .fun-row {
+    display: flex; align-items: center; gap: 11px;
+    padding: 6px 0; border-top: 1px solid var(--line-2);
+  }
+  .fun-stats-row .fun-row:first-child { border-top: none; }
+  .fun-stats-row .fun-row svg { width: 18px; height: 18px; }
+  .fun-stats-row .fun-row .k { flex: 1; font-size: 13.5px; white-space: normal; overflow: visible; }
+  .fun-stats-row .fun-row .v { font-size: 17px; }
+
+  /* Keep filter pills on-screen (clear of the left zoom rail) and let them wrap. */
+  .map-filters { left: 64px; right: 18px; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+  .map-search-input { width: 110px; }
+  .sports-dd { max-width: calc(100vw - 24px); }
+  /* Lift the "no GPS" note above the stat band that overlaps the map's bottom edge. */
+  .map-note { bottom: 96px; }
+}
+@media (max-width: 560px) {
+  .statband { grid-template-columns: 1fr; }
+  .statband .cell { padding: 12px 14px; gap: 12px; }
+  .statband .ic { width: 40px; height: 40px; }
+  .statband .ic svg { width: 30px; height: 30px; }
+
+  /* Running performance: 2x2 so the four distances fit on two lines. */
+  .perf-grid { grid-template-columns: repeat(2, 1fr); row-gap: 16px; }
+  .perf-col:nth-child(odd) { border-left: none; }
+}
+@media (max-width: 780px) {
+  /* Gear health: the fixed-width columns (incl. the 260px progress bar) overflow a
+     narrow card, so stack each row into a compact block instead of a wide table. */
+  .gear-table thead { display: none; }
+  .gear-table, .gear-table tbody { display: block; width: 100%; }
+  .gear-table tbody tr {
+    display: grid; grid-template-columns: 1fr auto;
+    align-items: center; column-gap: 10px;
+    height: auto; padding: 12px 0; border-bottom: 1px solid var(--line-2);
+  }
+  .gear-table tbody tr:last-child { border-bottom: none; }
+  .gear-table td,
+  .gear-table td:nth-child(1),
+  .gear-table td:nth-child(2),
+  .gear-table td:nth-child(3),
+  .gear-table tbody tr:first-child td {
+    display: block; width: auto; padding: 0; border: none;
+  }
+  .gear-table .gname { font-size: 14px; }
+  .gear-table .gtype { text-align: right; }
+  .gear-table td:nth-child(3) { grid-column: 1 / -1; padding-top: 10px; }
+  .gear-table td.used { grid-column: 1 / -1; padding-top: 6px; }
+  .prog { width: 100%; }
 }
 /* ============ Activities-specific styles ============ */
 .acts-page {

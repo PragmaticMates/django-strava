@@ -12,6 +12,7 @@
 <section class="maphero" data-screen-label="Activity map">
   <div id="activity-map" class="mapfill" data-screen-label="Activity map"></div>
   <div class="map-tint" id="map-tint"></div>
+  <div class="map-gesture-hint" id="map-gesture-hint" aria-hidden="true">Use two fingers to move the map</div>
   <div class="zoom">
     <button type="button" class="zoom-end" id="map-zoom-in" aria-label="Zoom in">+</button>
     <input type="range" class="zoom-slider" id="map-zoom-slider" aria-label="Zoom level" step="1">
@@ -516,6 +517,33 @@ endpoint the map uses) into .act-modal-host.
   }
   resetView();  // frame all markers on load
 
+  // On touch devices a one-finger drag would both pan the map and scroll the page.
+  // Require two fingers to pan (pinch-zoom already needs two), so a single-finger
+  // swipe scrolls the page past the map; a brief hint explains the gesture.
+  if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
+    map.dragging.disable();
+    const hint = document.getElementById('map-gesture-hint');
+    let hintTimer;
+    el.addEventListener('touchstart', function(e) {
+      if (e.touches.length >= 2) {
+        map.dragging.enable();
+        if (hint) hint.classList.remove('show');
+      } else {
+        map.dragging.disable();
+      }
+    }, { passive: true });
+    el.addEventListener('touchmove', function(e) {
+      if (e.touches.length < 2 && hint) {
+        hint.classList.add('show');
+        clearTimeout(hintTimer);
+        hintTimer = setTimeout(function() { hint.classList.remove('show'); }, 1100);
+      }
+    }, { passive: true });
+    el.addEventListener('touchend', function(e) {
+      if (e.touches.length < 2) map.dragging.disable();
+    });
+  }
+
   // Wire the zoom slider + / − buttons to the map (two-way: controls drive zoom,
   // map moves sync back).
   const zslider = document.getElementById('map-zoom-slider');
@@ -781,6 +809,8 @@ endpoint the map uses) into .act-modal-host.
     const cal = document.querySelector('.row-trends-aoty section.card:first-child');
     if (!trends || !cal) return;
     cal.style.minHeight = '';
+    // Stacked single-column on mobile — don't stretch the calendar to the chart's height.
+    if (window.matchMedia('(max-width: 900px)').matches) return;
     cal.style.minHeight = trends.getBoundingClientRect().height + 'px';
   }
   window.addEventListener('load', syncRowHeights);
