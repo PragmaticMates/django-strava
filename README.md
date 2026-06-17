@@ -53,6 +53,22 @@ STRAVA_REFRESH_TOKEN=...
 STRAVA_TOKEN_EXPIRES=...  # optional, format: 2024-01-01T00:00:00Z
 ```
 
+### Rate limiting
+
+API calls respect [Strava's rate limits](https://developers.strava.com/docs/rate-limits/).
+Requests are proactively spaced out to stay within the limits, and any `429`
+(rate limit exceeded) response is retried after sleeping until the offending
+limit window resets. Two optional environment variables tune this behaviour:
+
+```
+STRAVA_RATE_LIMIT_PRIORITY=medium  # optional, one of: high, medium, low (default: medium)
+STRAVA_RATE_LIMIT_MAX_RETRIES=3    # optional, retries after a 429 (default: 3)
+```
+
+- `high` — no proactive throttling (burst until a limit is hit)
+- `medium` — spread requests so the short-term (15 min) limit is not exceeded
+- `low` — spread requests so the daily limit is not exceeded
+
 ## Usage
 
 ### Import activities
