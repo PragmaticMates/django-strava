@@ -399,6 +399,7 @@
   // closing the card can restore the previous position/zoom (unless the user moved).
   let routeLayer = null;
   let hoverLayer = null;
+  let selectedMarker = null;   // lone pin shown while a card is open (others hidden)
   let allRoutesLayer = null;   // overlay of every visible activity's route, toggled on
   let showAllRoutes = false;
   let savedView = null;
@@ -423,7 +424,7 @@
   // Follows the active filter and stays beneath the hover/selected route.
   function renderAllRoutes() {
     if (allRoutesLayer) { map.removeLayer(allRoutesLayer); allRoutesLayer = null; }
-    if (!showAllRoutes || map.getZoom() < ROUTE_ZOOM_MIN) return;
+    if (!showAllRoutes || selectedMarker || map.getZoom() < ROUTE_ZOOM_MIN) return;
     const bounds = map.getBounds();
     const lines = [];
     visibleMarkers.forEach(function(m) {
@@ -507,6 +508,20 @@
       });
   }
 
+  // Hide every other marker/cluster and the routes overlay, leaving a lone pin for the
+  // selected activity. Restored by restoreMarkers() when the card closes.
+  function hideOtherMarkers(m) {
+    if (clusters && map.hasLayer(clusters)) map.removeLayer(clusters);
+    if (allRoutesLayer) { map.removeLayer(allRoutesLayer); allRoutesLayer = null; }
+    if (selectedMarker) map.removeLayer(selectedMarker);
+    selectedMarker = L.marker([m.lat, m.lng], { icon: pinIcon(m.type) }).addTo(map);
+  }
+  function restoreMarkers() {
+    if (selectedMarker) { map.removeLayer(selectedMarker); selectedMarker = null; }
+    if (clusters && !map.hasLayer(clusters)) map.addLayer(clusters);
+    renderAllRoutes();
+  }
+
   // Draw the activity's route (replacing any previous one), load its card, frame the map.
   function selectActivity(m) {
     clearHoverRoute();
@@ -515,6 +530,7 @@
     if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
     const coords = activityCoords(m);
     if (!coords.length) return;
+    hideOtherMarkers(m);
     const color = COLORS[m.type] || COLORS.run;
     routeLayer = L.layerGroup([
       L.polyline(coords, { color: '#fff', weight: 7, opacity: 0.85 }),
@@ -527,6 +543,7 @@
   function closeCard() {
     if (cardHost) cardHost.innerHTML = '';
     if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
+    restoreMarkers();
     savedView = null;
     userMoved = false;
   }
