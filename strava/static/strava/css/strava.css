@@ -1495,10 +1495,11 @@ img.act-photo, img.aoty-photo { object-fit: cover; }
 .sport-tab.active { background: var(--ink); color: #fff; border-color: var(--ink); }
 .sport-tab.active svg { stroke: #fff; }
 
-/* Gallery grid — masonry-like using CSS columns */
+/* Gallery grid — row-flowing CSS grid (squares/wall override below) */
 .gallery-grid {
-  columns: 4;
-  column-gap: 14px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
 }
 /* Squares: CSS grid, 1:1 ratio, no footer */
 .gallery-grid[data-view="squares"] {
@@ -1542,7 +1543,7 @@ img.act-photo, img.aoty-photo { object-fit: cover; }
 
 .gallery-item {
   break-inside: avoid;
-  margin-bottom: 14px;
+  margin-bottom: 0;
   border-radius: 16px;
   overflow: hidden;
   background: var(--surface);
@@ -1872,9 +1873,18 @@ img.act-photo, img.aoty-photo { object-fit: cover; }
 .load-more-btn:hover { color: var(--ink); border-color: var(--ink-3); }
 
 /* Responsive */
-@media (max-width: 1100px) { .gallery-grid { columns: 3; } }
-@media (max-width: 780px)  { .gallery-grid { columns: 2; } }
-@media (max-width: 480px)  { .gallery-grid { columns: 1; } }/* ============ Gear-specific styles ============ */
+@media (max-width: 1100px) {
+  .gallery-grid, .gallery-grid[data-view="squares"] { grid-template-columns: repeat(3, 1fr); }
+  .gallery-grid[data-view="wall"] { columns: 3; }
+}
+@media (max-width: 780px) {
+  .gallery-grid, .gallery-grid[data-view="squares"] { grid-template-columns: repeat(2, 1fr); }
+  .gallery-grid[data-view="wall"] { columns: 2; }
+}
+@media (max-width: 480px) {
+  .gallery-grid, .gallery-grid[data-view="squares"] { grid-template-columns: 1fr; }
+  .gallery-grid[data-view="wall"] { columns: 1; }
+}/* ============ Gear-specific styles ============ */
 .gear-page {
   max-width: 1200px;
   margin: 0 auto;
