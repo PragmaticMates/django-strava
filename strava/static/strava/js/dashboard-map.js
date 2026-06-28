@@ -110,13 +110,15 @@
     const bounds = map.getBounds();
     const lines = [];
     visibleMarkers.forEach(function(m) {
-      if (!bounds.contains([m.lat, m.lng])) return;  // viewport cull
       const coords = activityCoords(m);
-      if (coords.length) {
-        // Clicking a route selects its activity, just like clicking its marker.
-        lines.push(L.polyline(coords, { color: COLORS[m.type] || COLORS.run, weight: 2.5, opacity: 0.65 })
-          .on('click', function() { selectActivity(m); }));
-      }
+      if (!coords.length) return;
+      // Viewport cull: keep any route whose extent overlaps the current view,
+      // not only those whose start point is in view — otherwise panning the
+      // start point off-screen would drop a route still crossing the viewport.
+      if (!bounds.intersects(L.latLngBounds(coords))) return;
+      // Clicking a route selects its activity, just like clicking its marker.
+      lines.push(L.polyline(coords, { color: COLORS[m.type] || COLORS.run, weight: 2.5, opacity: 0.65 })
+        .on('click', function() { selectActivity(m); }));
     });
     allRoutesLayer = L.layerGroup(lines).addTo(map);
   }
