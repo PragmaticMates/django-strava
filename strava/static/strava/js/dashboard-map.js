@@ -177,7 +177,18 @@
     const cardW = (card && card.offsetWidth) || 360;
     const gap = 90;
     const fit = Object.assign({ maxZoom: 16, animate: false }, FIT);
-    if (size.x <= 900) { card.style.left = ''; map.fitBounds(coords, fit); return; }
+    // Narrow screens: no room beside the route, so the card docks as a bottom sheet
+    // (see strava.css). Frame the route into the strip above it by reserving the card's
+    // height at the bottom of the fit, keeping the route visible rather than covered.
+    if (size.x <= 900) {
+      card.style.left = '';
+      const reserve = (card.offsetHeight || 0) + 40;  // card height + dock gap
+      map.fitBounds(coords, Object.assign({}, fit, {
+        paddingTopLeft: [40, FIT.paddingTopLeft[1]],
+        paddingBottomRight: [40, Math.max(reserve, FIT.paddingBottomRight[1])],
+      }));
+      return;
+    }
 
     // Pass 1 — frame the route on the left (card column reserved on the right) to learn its
     // rendered pixel width at the fitted zoom.

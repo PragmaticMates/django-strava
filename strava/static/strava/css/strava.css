@@ -672,7 +672,15 @@ img.act-photo, img.aoty-photo { object-fit: cover; }
   .statband { grid-template-columns: 1fr 1fr; }
   .statband .cell { border-left: none; }
   .gear-fun { grid-template-columns: 1fr; }
-  .float-card { left: 50%; top: 43%; transform: translate(-50%, -50%); }
+  /* No room to sit the card beside the route here, so dock it as a bottom sheet and let
+     frameRouteBesideCard() frame the route into the strip above it (keeps route visible). */
+  .float-card {
+    left: 50%; top: auto; bottom: 12px; transform: translateX(-50%);
+    width: calc(100% - 24px); max-width: 420px;
+  }
+  /* Taller map on mobile so the route keeps a usable strip above the bottom-docked card,
+     which keeps its original 300px photo hero. */
+  .maphero { height: 100vh; height: 100dvh; min-height: 820px; }
 
   /* Collapse the header nav into a toggle-able dropdown so the items stay reachable. */
   .nav { gap: 12px; padding: 0 16px; position: relative; }
