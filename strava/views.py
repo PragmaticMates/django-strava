@@ -103,12 +103,16 @@ class DashboardView(TemplateView):
         context['map_markers'], context['map_activities'], _ = self._map_data(all_activities)
         context['map_hidden_count'] = sum(1 for a in activities if not self._has_gps(a))
 
-        # ---- Activity of the year (longest this year, else longest overall) ----
+        # ---- Activity of the year (biggest effort this year, else overall) ----
         # A selected year sets the "year"; otherwise it's the current one.
+        # Ranked by calories burned rather than distance: distance isn't comparable
+        # across sports (20 km running is a far bigger effort than 20 km riding),
+        # whereas calories is a cross-sport effort proxy. Calories is a
+        # DetailedActivity-only field, so summary-only activities count as 0.
         season_year = int(year) if year != 'all' and year.isdigit() else today.year
         year_acts = [a for a in activities if local_date(a).year == season_year]
         pool = year_acts or activities
-        context['aoty'] = max(pool, key=lambda a: a.distance) if pool else None
+        context['aoty'] = max(pool, key=lambda a: a.json.get('calories') or 0) if pool else None
 
         # ---- Personal records (per sport tab) ----
         # Each record carries the id of the activity that set it so the widget can
