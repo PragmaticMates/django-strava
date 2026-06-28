@@ -324,24 +324,14 @@
 
   // On touch devices a one-finger drag would both pan the map and scroll the page.
   // Require two fingers to pan (pinch-zoom already needs two), so a single-finger
-  // swipe scrolls the page past the map; a brief hint explains the gesture.
+  // swipe scrolls the page past the map.
   if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
     map.dragging.disable();
-    const hint = document.getElementById('map-gesture-hint');
-    let hintTimer;
     el.addEventListener('touchstart', function(e) {
       if (e.touches.length >= 2) {
         map.dragging.enable();
-        if (hint) hint.classList.remove('show');
       } else {
         map.dragging.disable();
-      }
-    }, { passive: true });
-    el.addEventListener('touchmove', function(e) {
-      if (e.touches.length < 2 && hint) {
-        hint.classList.add('show');
-        clearTimeout(hintTimer);
-        hintTimer = setTimeout(function() { hint.classList.remove('show'); }, 1100);
       }
     }, { passive: true });
     el.addEventListener('touchend', function(e) {

@@ -177,15 +177,6 @@ body {
   position: absolute; inset: 0; z-index: 1; pointer-events: none;
   mix-blend-mode: multiply; background: rgba(201,80,28,0.03);
 }
-/* Touch hint shown when a one-finger swipe is attempted on the map (two fingers pan). */
-.map-gesture-hint {
-  position: absolute; inset: 0; z-index: 7; display: none;
-  align-items: center; justify-content: center; text-align: center;
-  padding: 24px; pointer-events: none;
-  background: rgba(20,16,12,0.45); color: #fff;
-  font: 600 16px var(--font-body);
-}
-.map-gesture-hint.show { display: flex; }
 .maphero::after {
   content: ""; position: absolute; left: 0; right: 0; bottom: 0;
   height: var(--map-grad-h);
