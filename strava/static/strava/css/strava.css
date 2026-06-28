@@ -1436,6 +1436,14 @@ img.act-photo, img.aoty-photo { object-fit: cover; }
   font: 500 13.5px var(--font-body); color: var(--ink); width: 180px;
 }
 .gf-search input::placeholder { color: var(--ink-3); }
+
+/* iOS Safari auto-zooms when a focused input's font-size is below 16px. Bump the
+   search inputs to 16px on touch devices only, leaving the desktop look untouched. */
+@media (pointer: coarse) {
+  .af-search input,
+  .gf-search input,
+  .map-search-input { font-size: 16px; }
+}
 .gf-btn {
   appearance: none; cursor: pointer;
   display: flex; align-items: center; gap: 7px;
