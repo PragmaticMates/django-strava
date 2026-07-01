@@ -78,6 +78,39 @@ def _seconds_until_limit_resets(response):
   return get_seconds_until_next_quarter()
 
 
+def format_strava_error(error):
+  """Human-readable summary of a Strava API failure.
+
+  Pulls the status code, message and per-field errors out of a stravalib
+  ``Fault``'s response body — e.g. a 403 with
+  ``{"message": "Forbidden", "errors": [{"resource": "Application",
+  "field": "Status", "code": "Inactive"}]}`` becomes
+  "Forbidden — Application Status: Inactive (HTTP 403)". Falls back to the
+  exception text for non-API errors (network failures, timeouts).
+  """
+  response = getattr(error, "response", None)
+  status_code = getattr(response, "status_code", None)
+
+  payload = {}
+  if response is not None:
+    try:
+      payload = response.json()
+    except (ValueError, AttributeError):
+      payload = {}
+
+  message = payload.get("message")
+  details = ", ".join(
+    " ".join(filter(None, (e.get("resource"), e.get("field")))) + f": {e.get('code')}"
+    for e in (payload.get("errors") or [])
+    if isinstance(e, dict) and e.get("code")
+  )
+
+  summary = " — ".join(part for part in (message, details) if part) or str(error)
+  if status_code:
+    summary = f"{summary} (HTTP {status_code})"
+  return summary
+
+
 class StravaApi:
   def __init__(self):
     self.client = Client(

@@ -1,13 +1,20 @@
 import datetime
+import logging
 import math
 import unicodedata
 
+from django.contrib.auth.mixins import UserPassesTestMixin
+from django.core.management import call_command
 from django.db.models import Count, F, Max, Sum
+from django.shortcuts import render
 from django.utils import timezone
 from django.views.generic import DetailView, ListView, TemplateView
 
+from strava.api import format_strava_error
 from strava.models import Activity, Gear
 
+
+logger = logging.getLogger('strava')
 
 MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -508,6 +515,40 @@ class DashboardView(TemplateView):
                 break
         no_gps_count = sum(1 for a in activities if not has_gps(a))
         return markers, map_activities, no_gps_count
+
+
+class RefreshView(UserPassesTestMixin, DashboardView):
+    """Footer refresh button (POST): run the ``import_strava`` management command to
+    pull the latest activities from the Strava API, then re-render every dashboard
+    section as out-of-band swaps (plus the footer timestamp) so the page updates in
+    place. GET is not allowed — the button always posts.
+
+    Restricted to logged-in superusers (the button is hidden for everyone else, and
+    this guards the endpoint against direct requests) — importing hits the Strava API
+    and writes to the database, so it isn't a public action."""
+
+    raise_exception = True  # 403 for non-superusers instead of a login redirect
+    http_method_names = ['post']
+
+    def test_func(self):
+        return self.request.user.is_superuser
+    template_name = 'strava/hx/dashboard_refresh.html'
+    error_template_name = 'strava/hx/dashboard_refresh_error.html'
+
+    def get_template_names(self):
+        return [self.template_name]
+
+    def post(self, request, *args, **kwargs):
+        try:
+            call_command('import_strava')
+        except Exception as error:
+            # The Strava API can reject the import (inactive app, expired token, rate
+            # limit, outage). Surface the reason in the footer instead of a 500 that
+            # would leave the button spinning with no feedback.
+            logger.exception('Strava import from the dashboard refresh button failed')
+            return render(request, self.error_template_name, {'error': format_strava_error(error)})
+        context = self.get_context_data()
+        return self.render_to_response(context)
 
 
 class ActivitiesView(ListView):

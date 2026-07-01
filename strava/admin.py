@@ -1,8 +1,9 @@
 import datetime
+import logging
 
 from decimal import Decimal
 
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.core.management import call_command
 from django.db.models import Count, Sum
 from django.shortcuts import redirect
@@ -13,8 +14,12 @@ from django.utils.translation import gettext_lazy as _
 from unfold.contrib.filters.admin import RangeNumericListFilter
 from unfold.decorators import action, display
 
+from strava.api import format_strava_error
 from strava.choices import SportType
 from strava.models import Activity, Gear
+
+
+logger = logging.getLogger('strava')
 
 
 class ActivitySyncFilter(admin.SimpleListFilter):
@@ -81,7 +86,19 @@ class ActivityAdmin(admin.ModelAdmin):
 
     @action(description=_("Import from Strava"), url_path="import-strava")
     def import_strava(self, request, *args):
-        call_command('import_strava')
+        try:
+            call_command('import_strava')
+        except Exception as error:
+            # The Strava API can reject the import (inactive app, expired token, rate
+            # limit, outage). Show the reason as an admin message instead of a 500.
+            logger.exception('Strava import from the admin action failed')
+            self.message_user(
+                request,
+                _("Import from Strava failed — %(error)s") % {"error": format_strava_error(error)},
+                level=messages.ERROR,
+            )
+        else:
+            self.message_user(request, _("Import from Strava completed."), level=messages.SUCCESS)
         return redirect(request.META.get("HTTP_REFERER", reverse_lazy("admin:strava_activity_changelist")))
 
     @action(description=_("Show activities on Strava"), url_path="open-strava-activities")

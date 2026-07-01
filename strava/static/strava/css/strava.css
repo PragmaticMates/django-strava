@@ -655,6 +655,10 @@ img.act-photo, img.aoty-photo { object-fit: cover; }
 .foot svg { width: 15px; height: 15px; stroke: var(--ink-3); fill: none; stroke-width: 1.7; stroke-linecap: round; }
 .foot button { appearance: none; border: none; background: none; cursor: pointer; color: var(--ink-3); font-size: 20px; line-height: 1; padding: 2px; }
 .foot button:hover { color: var(--ink); }
+.foot-refresh.htmx-request { color: var(--accent); pointer-events: none; animation: foot-spin 0.8s linear infinite; }
+.foot-refresh:disabled { cursor: default; }
+@keyframes foot-spin { to { transform: rotate(360deg); } }
+.foot-error { color: var(--accent); }
 
 /* ============ Responsive ============ */
 @media (max-width: 1240px) {
