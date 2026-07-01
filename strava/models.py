@@ -21,7 +21,11 @@ class Activity(models.Model):
   max_speed = models.FloatField(_("max speed"), null=True, blank=True)
   average_heartrate = models.FloatField(_("average heartrate"), null=True, blank=True)
   max_heartrate = models.FloatField(_("max heartrate"), null=True, blank=True)
+  calories = models.PositiveSmallIntegerField(_("calories"), null=True, blank=True)
   kudos_count = models.PositiveIntegerField(_("kudos"), default=0)
+  comment_count = models.PositiveIntegerField(_("comments"), default=0)
+  pr_count = models.PositiveSmallIntegerField(_("PRs"), default=0)
+  achievement_count = models.PositiveSmallIntegerField(_("achievements"), default=0)
   total_photo_count = models.PositiveIntegerField(_("photos"), default=0)
   photo_url = models.URLField(_("photo URL"), max_length=500, blank=True, default="")
   start_lat = models.FloatField(_("start latitude"), null=True, blank=True)
@@ -64,7 +68,12 @@ class Activity(models.Model):
       'max_speed': json.get('max_speed'),
       'average_heartrate': json.get('average_heartrate'),
       'max_heartrate': json.get('max_heartrate'),
+      # calories is a DetailedActivity-only field; Strava sends it as a whole-number float.
+      'calories': round(calories) if (calories := json.get('calories')) is not None else None,
       'kudos_count': json.get('kudos_count', 0) or 0,
+      'comment_count': json.get('comment_count', 0) or 0,
+      'pr_count': json.get('pr_count', 0) or 0,
+      'achievement_count': json.get('achievement_count', 0) or 0,
       'total_photo_count': json.get('total_photo_count', 0) or 0,
       'photo_url': urls.get('600') or urls.get('100') or '',
       'start_lat': round(float(latlng[0]), 6) if has_gps else None,
@@ -187,7 +196,7 @@ class Activity(models.Model):
 
   @property
   def comments(self):
-    return self.json.get('comment_count', 0)
+    return self.comment_count
 
   @property
   def photo_count(self):
@@ -195,7 +204,7 @@ class Activity(models.Model):
 
   @property
   def pb(self):
-    return bool(self.json.get('pr_count', 0))
+    return bool(self.pr_count)
 
   @property
   def photo(self):

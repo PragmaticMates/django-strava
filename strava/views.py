@@ -124,7 +124,7 @@ class DashboardView(TemplateView):
         season_year = int(year) if year != 'all' and year.isdigit() else today.year
         year_acts = [a for a in activities if local_date(a).year == season_year]
         pool = year_acts or activities
-        context['aoty'] = max(pool, key=lambda a: a.json.get('calories') or 0) if pool else None
+        context['aoty'] = max(pool, key=lambda a: a.calories or 0) if pool else None
 
         # ---- Personal records (per sport tab) ----
         # Each record carries the id of the activity that set it so the widget can
@@ -465,11 +465,11 @@ class DashboardView(TemplateView):
         }
         summary = {
             'photos': sum(a.photo_count for a in activities),
-            'calories': round(sum((a.json.get('calories') or 0) for a in activities)),
+            'calories': sum((a.calories or 0) for a in activities),
             'kudos': sum(a.kudos_count for a in activities),
             'avg_hr': avg_hr,
-            'achievements': sum((a.json.get('achievement_count') or 0) for a in activities),
-            'prs': sum((a.json.get('pr_count') or 0) for a in activities),
+            'achievements': sum(a.achievement_count for a in activities),
+            'prs': sum(a.pr_count for a in activities),
         }
         return fun_stats, summary
 

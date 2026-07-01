@@ -65,7 +65,7 @@ class ActivityAdmin(admin.ModelAdmin):
     actions_list = ["import_strava", "open_strava_activities"]
     date_hierarchy = "start_date"
     list_display = ("show_start_date", "name_and_id", "show_sport_type", "show_distance", "show_elevation", "show_time",
-                    "show_speed", "show_heartrate", "gear")
+                    "show_speed", "show_heartrate", "show_calories", "gear")
     list_select_related = ("gear",)
     list_display_links = ("name_and_id",)
     list_editable = ("gear",)
@@ -164,7 +164,7 @@ class ActivityAdmin(admin.ModelAdmin):
         # if any(x in obj.sport_type.lower() for x in ('ride', 'ski', 'walk', 'inline')):
         time_hod = Decimal(obj.elapsed_time / 60 / 60)
         distance_km = obj.distance / 1000
-        speed = f'{round(distance_km / time_hod, 2)} km / hod'
+        speed = f'{round(distance_km / time_hod, 2)} km / h'
 
         return [
             pace,
@@ -181,6 +181,12 @@ class ActivityAdmin(admin.ModelAdmin):
             f'Max: {obj.max_heartrate}',
             # '♥'
         ]
+
+    @display(description=_("Calories"), ordering="calories")
+    def show_calories(self, obj):
+        if obj.calories is None:
+            return '-'
+        return f'{obj.calories} kcal'
 
     @display(description=_("Date"), header=True, ordering="start_date")
     def show_start_date(self, obj):
