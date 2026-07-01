@@ -2,7 +2,7 @@
 <section class="card" id="dash-aoty" hx-swap-oob="true" data-screen-label="Activity of the year">
   <div class="card-head">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="5.5"></circle><polyline points="9 13.5 7 21 12 18.5 17 21 15 13.5"></polyline></svg>
-    <h2 class="card-title">Activity of the Year</h2>
+    <h2 class="card-title">Activity of the Year {{ aoty.start_date|date:"Y" }}</h2>
   </div>
   {% if aoty %}
   <div class="aoty">
