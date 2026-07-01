@@ -12,7 +12,7 @@ from django.views.generic import DetailView, ListView, TemplateView
 
 from strava.api import format_strava_error
 from strava.models import Activity, Gear
-from strava.sports import group_data, sport_matches, sport_options
+from strava.sports import SPORT_GROUPS, group_data, sport_matches, sport_options
 
 
 logger = logging.getLogger('strava')
@@ -725,6 +725,262 @@ class GalleryView(ListView):
         context['sport_options'] = sport_options(Activity.objects.exclude(photo_url=''))
         context['sport_groups'] = group_data()
         return context
+
+
+class CompareView(TemplateView):
+    """Year-over-year comparison matrix: one metric per row, one season per column.
+
+    Each numeric row is scaled into a bar (relative to the row's best year) and
+    carries a year-on-year delta; the best year gets a crown, the current year is
+    highlighted. A trailing block of "signature effort" rows names the standout
+    activity per year (activity of the year, longest, biggest climb, …). The single
+    control is a sport filter, wired via htmx to re-render just the matrix body."""
+
+    template_name = 'strava/pages/compare.html'
+
+    # Activity.type values that have a meaningful "/km" pace (rides use km/h, swims
+    # /100m, so they're excluded from the pace metric and the fastest-pace effort row).
+    PACE_TYPES = {'run', 'trail', 'hike', 'walk'}
+    # Paces faster than this (seconds per km) are GPS/distance glitches — a corrupt
+    # near-zero distance or time reads as an impossibly quick pace — not real efforts;
+    # 2:30/km is already quicker than an elite 10k, so anything below is dropped.
+    MIN_PLAUSIBLE_PACE_SEC = 150
+
+    def _paceable(self, a):
+        """A run/trail/hike/walk with a plausible /km pace (see MIN_PLAUSIBLE_PACE_SEC)."""
+        if a.type not in self.PACE_TYPES or not a.moving_time or not a.distance:
+            return False
+        return a.moving_time / (float(a.distance) / 1000) >= self.MIN_PLAUSIBLE_PACE_SEC
+
+    def get_template_names(self):
+        # A sport-filter click posts here via htmx; it only needs the matrix body
+        # (filter bar + table), swapped into #cmp-body.
+        if getattr(self.request, 'htmx', False):
+            return ['strava/hx/compare_body.html']
+        return [self.template_name]
+
+    @staticmethod
+    def _local_date(activity):
+        return timezone.localtime(activity.start_date).date()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['active_page'] = 'compare'
+
+        sport = self.request.GET.get('sport') or 'all'
+        context['sport'] = sport
+
+        all_activities = list(Activity.objects.select_related('gear'))
+        activities = [a for a in all_activities if sport_matches(sport, a.sport_type)]
+
+        # Sport filter: "All sports" plus the top-sport groups actually present in the
+        # data (an empty group would filter to nothing, so it's hidden).
+        present = {a.sport_type for a in all_activities}
+        seg = [{'key': 'all', 'label': 'All sports', 'icon': 'all', 'active': sport == 'all'}]
+        for group in SPORT_GROUPS:
+            if present.intersection(group['types']):
+                seg.append({'key': group['key'], 'label': str(group['label']),
+                            'icon': group['icon'], 'active': sport == group['key']})
+        context['sport_seg'] = seg
+
+        today = timezone.localdate()
+
+        by_year = {}
+        for a in activities:
+            by_year.setdefault(self._local_date(a).year, []).append(a)
+
+        if not by_year:
+            context['years'] = context['rows'] = context['aoty_rows'] = []
+            return context
+
+        # Contiguous span so every season sits side by side, even a gap year.
+        years = list(range(min(by_year), max(by_year) + 1))
+        context['years'] = [
+            {'year': y, 'current': y == today.year,
+             'tag': (f'through {MONTHS[today.month - 1]} {today.day}'
+                     if y == today.year else 'full season')}
+            for y in years
+        ]
+
+        context['rows'] = self._numeric_rows(years, by_year, today)
+        context['aoty_rows'] = self._effort_rows(years, by_year,
+                                                 DashboardView._home_location(all_activities), today)
+        return context
+
+    def _numeric_rows(self, years, by_year, today):
+        ld = self._local_date
+
+        def distance(acts):
+            return round(sum(float(a.distance) for a in acts) / 1000) if acts else None
+
+        def elevation(acts):
+            return round(sum((a.total_elevation_gain or 0) for a in acts)) if acts else None
+
+        def hours(acts):
+            return int(round(sum((a.moving_time or 0) for a in acts) / 3600)) if acts else None
+
+        def count(acts):
+            return len(acts) or None
+
+        def active_days(acts):
+            return len({ld(a) for a in acts}) or None
+
+        def kudos(acts):
+            return sum(a.kudos_count for a in acts) if acts else None
+
+        def prs(acts):
+            return sum(a.pr_count for a in acts) if acts else None
+
+        def achievements(acts):
+            return sum(a.achievement_count for a in acts) if acts else None
+
+        def best_pace(acts):
+            paces = [a.moving_time / (float(a.distance) / 1000)
+                     for a in acts if self._paceable(a)]
+            return min(paces) if paces else None
+
+        def biggest_week(acts):
+            if not acts:
+                return None
+            daily = {}
+            for a in acts:
+                daily[ld(a)] = daily.get(ld(a), 0.0) + float(a.distance) / 1000
+            items = list(daily.items())
+            best = 0.0
+            for d0, _ in items:
+                window = sum(km for d, km in items if 0 <= (d - d0).days <= 6)
+                best = max(best, window)
+            return round(best) or None
+
+        # (name, unit, icon, small-unit, format, lower-is-better, value fn)
+        specs = [
+            ('Distance', 'kilometres', 'dist', 'km', 'int', False, distance),
+            ('Elevation gain', 'metres climbed', 'elev', 'm', 'int', False, elevation),
+            ('Moving time', 'hours active', 'time', 'h', 'int', False, hours),
+            ('Activities', 'sessions logged', 'acts', '', 'int', False, count),
+            ('Active days', 'days on the move', 'days', 'd', 'int', False, active_days),
+            ('Best avg pace', 'lower is faster', 'pace', '/km', 'pace', True, best_pace),
+            ('Biggest week', 'peak 7-day block', 'week', 'km', 'int', False, biggest_week),
+            ('Kudos received', 'from the community', 'kudos', '', 'int', False, kudos),
+            ('PRs set', 'personal records', 'prs', '', 'int', False, prs),
+            ('Achievements', 'badges earned', 'ach', '', 'int', False, achievements),
+        ]
+        rows = []
+        for name, unit, icon, small, fmt, lower, fn in specs:
+            values = [fn(by_year.get(y, [])) for y in years]
+            if any(v is not None for v in values):
+                rows.append(self._numeric_row(years, values, name, unit, icon, small, fmt, lower, today))
+        return rows
+
+    def _numeric_row(self, years, values, name, unit, icon, small, fmt, lower, today):
+        present = [v for v in values if v is not None]
+        best_val = (min if lower else max)(present)
+        vmax, vmin = max(present), min(present)
+        first_idx = next(i for i, v in enumerate(values) if v is not None)
+        best_idx = values.index(best_val)  # first year holding the best value (ties → earliest)
+
+        cells = []
+        for i, (year, v) in enumerate(zip(years, values)):
+            current = year == today.year
+            if v is None:
+                cells.append({'has': False, 'current': current})
+                continue
+            if lower:
+                # Lower is better (pace): the fastest year fills the bar; slower years
+                # shrink toward a 30% floor so the spread stays legible.
+                width = 100.0 if vmax == vmin else 30 + (vmax - v) / (vmax - vmin) * 70
+            else:
+                width = 100.0 if vmax == 0 else v / vmax * 100
+            if i == first_idx:
+                delta = {'kind': 'base'}
+            elif values[i - 1] is None:
+                delta = {'kind': 'none'}
+            else:
+                delta = self._delta(values[i - 1], v, lower)
+            cells.append({
+                'has': True, 'current': current, 'best': i == best_idx,
+                'display': self._fmt_value(v, fmt), 'small': small,
+                'w': round(width, 1), 'delta': delta,
+            })
+        return {'name': name, 'unit': unit, 'icon': icon, 'cells': cells}
+
+    @staticmethod
+    def _delta(prev, value, lower):
+        """Year-on-year change badge. For pace (lower-better) the change is shown in
+        seconds and a drop counts as improvement; otherwise it's a percentage."""
+        if lower:
+            diff = int(round(value - prev))
+            if diff < 0:
+                return {'dir': 'up', 'text': f'−{abs(diff)}s'}
+            if diff > 0:
+                return {'dir': 'down', 'text': f'+{diff}s'}
+            return {'dir': 'up', 'text': '0s'}
+        if prev == 0:
+            return {'dir': 'up' if value >= 0 else 'down', 'text': '—'}
+        pct = round((value - prev) / prev * 100)
+        return {'dir': 'up' if value >= prev else 'down',
+                'text': f'{"+" if pct >= 0 else "−"}{abs(pct)}%'}
+
+    @staticmethod
+    def _fmt_value(value, fmt):
+        if fmt == 'pace':
+            return DashboardView._fmt_pace(value)
+        return f'{value:,}'
+
+    def _effort_rows(self, years, by_year, home, today):
+        """Signature-effort rows: the standout activity per year for a handful of
+        superlatives, shown as name + a compact stat line."""
+        def dist_seg(a):
+            return {'v': f'{a.dist:.1f}', 'u': 'km'}
+
+        def elev_seg(a):
+            return {'v': f'{a.elev:,}', 'u': 'm'}
+
+        def pace_of(a):
+            return a.moving_time / (float(a.distance) / 1000)
+
+        def build(icon, name, unit, pick, segs, valid=None):
+            cells, any_present = [], False
+            for y in years:
+                acts = by_year.get(y, [])
+                if valid:
+                    acts = [a for a in acts if valid(a)]
+                current = y == today.year
+                if not acts:
+                    cells.append({'current': current})
+                    continue
+                any_present = True
+                best = pick(acts)
+                cells.append({'current': current, 'id': best.pk,
+                              'title': best.name, 'segments': segs(best)})
+            return {'icon': icon, 'name': name, 'unit': unit, 'cells': cells} if any_present else None
+
+        haversine = DashboardView._haversine_km
+        rows = [
+            build('trophy', 'Activity of the year', 'signature effort',
+                  lambda acts: max(acts, key=lambda a: a.calories or 0),
+                  lambda a: [dist_seg(a), elev_seg(a)]),
+            build('longest', 'Longest activity', 'biggest single outing',
+                  lambda acts: max(acts, key=lambda a: a.distance),
+                  lambda a: [dist_seg(a), elev_seg(a)]),
+            build('climb', 'Most elevation', 'single climb',
+                  lambda acts: max(acts, key=lambda a: a.total_elevation_gain or 0),
+                  lambda a: [elev_seg(a), dist_seg(a)],
+                  valid=lambda a: a.total_elevation_gain),
+        ]
+        if home:
+            rows.append(build(
+                'pin', 'Furthest from home', 'travel effort',
+                lambda acts: max(acts, key=lambda a: haversine(home[0], home[1], a.start_lat, a.start_lng)),
+                lambda a: [{'v': f'{round(haversine(home[0], home[1], a.start_lat, a.start_lng)):,}',
+                            'u': 'km away'}],
+                valid=lambda a: a.start_lat is not None and a.start_lng is not None))
+        rows.append(build(
+            'bolt', 'Fastest avg pace', 'quickest effort',
+            lambda acts: min(acts, key=pace_of),
+            lambda a: [{'v': DashboardView._fmt_pace(pace_of(a)), 'u': '/km'}, dist_seg(a)],
+            valid=self._paceable))
+        return [r for r in rows if r]
 
 
 class ActivityCardView(DetailView):

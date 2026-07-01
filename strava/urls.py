@@ -11,4 +11,5 @@ urlpatterns = [
     path('activities/',   views.ActivitiesView.as_view(),  name='activities'),
     path('gear/',         views.GearView.as_view(),  name='gear'),
     path('gallery/',      views.GalleryView.as_view(),  name='gallery'),
+    path('compare/',      views.CompareView.as_view(),  name='compare'),
 ]

@@ -1,0 +1,12 @@
+{% comment %}
+Year-on-year delta badge. `delta.kind == 'base'` marks the first year (no prior to
+compare), `'none'` a gap after an empty year; otherwise `delta.dir` is up/down.
+{% endcomment %}{% if delta.kind == 'base' %}
+<span class="cmp-delta base">baseline</span>
+{% elif delta.kind == 'none' %}
+<span class="cmp-delta">—</span>
+{% else %}
+<span class="cmp-delta {{ delta.dir }}">
+  {% if delta.dir == 'up' %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 15 12 9 18 15"></polyline></svg>{% else %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>{% endif %}{{ delta.text }}
+</span>
+{% endif %}

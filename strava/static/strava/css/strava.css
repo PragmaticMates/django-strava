@@ -2325,4 +2325,117 @@ img.act-photo, img.aoty-photo { object-fit: cover; }
 .gs-btn-ghost:hover { color: var(--ink); border-color: var(--ink-3); }
 .gs-btn-primary { background: var(--accent); border: none; color: #fff; }
 .gs-btn-primary:hover { opacity: 0.88; }
+
+/* ============ Compare page ============ */
+.cmp-page {
+  max-width: 1512px; margin: 0 auto; padding: 36px 28px 72px;
+  display: grid; gap: 24px;
+}
+/* Let the matrix scroll inside .cmp-scroll instead of stretching the grid item
+   (a grid item's default min-width:auto would otherwise grow to the table width,
+   overflowing the page and breaking the sticky metric column). */
+.cmp-page > * { min-width: 0; }
+.cmp-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.cmp-hero-eyebrow {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-3); margin: 0 0 6px; font-family: var(--font-title);
+}
+.cmp-hero h1 {
+  font-family: "Barlow Condensed", "Arial Narrow", sans-serif; font-weight: 700;
+  font-size: 42px; letter-spacing: -0.01em; margin: 0; color: var(--ink); line-height: 1;
+}
+.cmp-hero-sub { font-size: 14px; color: var(--ink-3); margin-top: 8px; font-weight: 500; max-width: 540px; }
+.cmp-controls { display: flex; align-items: center; gap: 14px; }
+.cmp-legend { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-2); font-weight: 500; }
+.cmp-legend .swatch {
+  width: 14px; height: 14px; border-radius: 4px; flex: none;
+  background: var(--accent); border: 1.5px solid var(--accent);
+}
+
+/* Sport filter bar */
+.cmp-filterbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+.cmp-filter-label { font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+
+/* Full-width toggle — pushed to the right of the filter row */
+.cmp-page.is-wide { max-width: none; }
+.cmp-expand {
+  margin-left: auto; appearance: none; cursor: pointer;
+  display: inline-flex; align-items: center;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+  font: 600 12.5px var(--font-body); color: var(--ink-2); padding: 6px 13px;
+  transition: color 0.12s, border-color 0.12s;
+}
+.cmp-expand:hover { color: var(--ink); border-color: var(--ink-3); }
+.cmp-expand svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.cmp-expand-in, .cmp-expand-out { display: inline-flex; align-items: center; gap: 6px; }
+.cmp-expand-out { display: none; }
+.cmp-page.is-wide .cmp-expand-in { display: none; }
+.cmp-page.is-wide .cmp-expand-out { display: inline-flex; }
+.cmp-seg { flex-wrap: wrap; }
+.cmp-seg button { display: inline-flex; align-items: center; gap: 7px; }
+.cmp-seg button svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.cmp-seg button svg polygon[fill="currentColor"] { fill: currentColor; }
+
+/* Matrix table (horizontally scrollable; first column sticky) */
+.cmp-card { padding: 0; overflow: hidden; }
+.cmp-scroll { overflow-x: auto; }
+.cmp-table { width: max-content; min-width: 100%; }
+
+.cmp-head, .cmp-row { display: flex; }
+.cmp-corner, .cmp-metric {
+  position: sticky; left: 0; z-index: 2; width: 244px; flex: none;
+  background: var(--surface); border-right: 1px solid var(--line);
+}
+.cmp-yhead, .cmp-cell { width: 172px; flex: none; border-left: 1px solid var(--line-2); }
+
+.cmp-corner, .cmp-yhead { border-bottom: 1px solid var(--line); }
+.cmp-corner {
+  display: flex; align-items: flex-end; padding: 16px 18px 12px;
+  font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3);
+}
+.cmp-yhead { padding: 16px; text-align: center; }
+.cmp-yhead .yr { font-family: "Barlow Condensed", sans-serif; font-size: 30px; font-weight: 700; color: var(--ink); line-height: 1; }
+.cmp-yhead .ytag { font-size: 10px; color: var(--ink-3); margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.cmp-yhead.is-current { background: color-mix(in srgb, var(--accent) 7%, white); }
+.cmp-yhead.is-current .yr,
+.cmp-yhead.is-current .ytag { color: var(--accent); }
+
+.cmp-metric, .cmp-cell { border-top: 1px solid var(--line-2); }
+.cmp-metric { display: flex; align-items: center; gap: 12px; padding: 14px 18px; }
+.cmp-metric .mic { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 8px; background: var(--paper); border: 1px solid var(--line); color: var(--accent); }
+.cmp-metric .mic svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.cmp-metric .mic svg polygon[fill="currentColor"], .cmp-metric .mic svg circle[fill="currentColor"] { fill: currentColor; }
+.cmp-metric .mname { font-size: 15.5px; font-weight: 600; color: var(--ink); }
+.cmp-metric .munit { font-size: 11px; color: var(--ink-3); }
+
+.cmp-cell { padding: 12px 16px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 6px; text-align: left; }
+.cmp-cell .cval { font-family: "Barlow Condensed", sans-serif; font-size: 24px; font-weight: 700; color: var(--ink); line-height: 1; display: inline-flex; align-items: baseline; gap: 3px; }
+.cmp-cell .cval small { font-size: 11px; font-weight: 600; color: var(--ink-3); }
+.cval-empty, .aoty-empty { color: var(--line); }
+.cmp-cell .crown { width: 13px; height: 13px; color: var(--accent); align-self: center; }
+
+.cmp-bar { display: block; width: 100%; height: 5px; border-radius: 3px; background: var(--line-2); overflow: hidden; }
+.cmp-bar > i { display: block; height: 100%; width: 0; border-radius: 3px; background: var(--ink-3); transition: width 0.55s cubic-bezier(0.2, 0.7, 0.2, 1); }
+
+.cmp-delta { font-size: 11.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 2px; color: var(--ink-3); }
+.cmp-delta svg { width: 12px; height: 12px; }
+.cmp-delta.up { color: #3A8050; }
+.cmp-delta.down { color: #C0392B; }
+.cmp-delta.base { font-weight: 500; }
+
+.cmp-cell.is-current { background: color-mix(in srgb, var(--accent) 4%, white); }
+.cmp-cell.is-best .cval { color: var(--accent); }
+.cmp-cell.is-best .cmp-bar > i { background: var(--accent); }
+
+/* Signature-effort rows (name + stat, left-aligned, no bar/delta) */
+.cmp-row.cmp-effort-start .cmp-metric,
+.cmp-row.cmp-effort-start .cmp-cell { border-top: 2px solid var(--line); }
+.cmp-aoty .cmp-cell { align-items: flex-start; text-align: left; gap: 3px; }
+.aoty-name { font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.3; }
+.aoty-link { cursor: pointer; transition: color 0.12s; }
+.aoty-link:hover, .aoty-link:focus-visible { color: var(--accent); outline: none; }
+.aoty-stat { font-size: 15px; color: var(--ink); font-family: "Barlow Condensed", sans-serif; font-weight: 700; margin-top: 2px; }
+.aoty-stat small { font-size: 11px; font-weight: 600; color: var(--ink-3); margin-left: 1px; }
+
+.cmp-empty { padding: 48px; text-align: center; color: var(--ink-3); font-size: 14px; }
 .gs-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.8; }
