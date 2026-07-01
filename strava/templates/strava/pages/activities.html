@@ -73,6 +73,16 @@
     {% include "strava/hx/activities_results.html" %}
   </div>
 
+  {% comment %}
+  Centered overlay for an activity's card, opened by clicking a table row. The card
+  HTML is fetched lazily from ActivityCardView (the same endpoint the dashboard and
+  compare pages use) into .act-modal-host.
+  {% endcomment %}
+  <div id="activity-modal" class="act-modal" data-card-url="{% url 'strava:activity_card' 0 %}" hidden>
+    <div class="act-modal-backdrop"></div>
+    <div class="act-modal-host"></div>
+  </div>
+
 </main>
 
 {% block extra_js %}

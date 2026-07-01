@@ -111,6 +111,7 @@ class ActivityQuerySet(models.QuerySet):
             'dist': F('distance'),
             'time': F('moving_time'),
             'elev': F('total_elevation_gain'),
+            'cal': F('calories'),
             'pace': ExpressionWrapper(
                 F('moving_time') / Func(F('distance'), Value(0), function='NULLIF'),
                 output_field=FloatField(),

@@ -799,7 +799,7 @@ img.act-photo, img.aoty-photo { object-fit: cover; }
 }
 /* ============ Activities-specific styles ============ */
 .acts-page {
-  max-width: 1100px;
+  max-width: 1360px;
   margin: 0 auto;
   padding: 36px 28px 72px;
 }
@@ -1117,7 +1117,9 @@ img.act-photo, img.aoty-photo { object-fit: cover; }
   transition: background 0.12s;
 }
 .acts-table tbody tr:last-child { border-bottom: none; }
+.acts-table tbody tr.at-row { cursor: pointer; }
 .acts-table tbody tr:hover { background: var(--paper); }
+.acts-table tbody tr.at-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; background: var(--paper); }
 .acts-table td {
   padding: 11px 14px;
   color: var(--ink);
@@ -1132,6 +1134,7 @@ img.act-photo, img.aoty-photo { object-fit: cover; }
 }
 .at-type-icon svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .at-name { font-weight: 700; color: var(--ink); }
+.at-empty { color: var(--line); }
 .at-date { color: var(--ink-3); font-size: 12.5px; white-space: nowrap; }
 .at-num {
   font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
