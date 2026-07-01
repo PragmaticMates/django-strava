@@ -14,13 +14,16 @@ function setView(view, btn) {
   applyView();
 }
 
-// ——— Sport tabs drive the filter form ———
-function setSport(sport, btn) {
-  document.getElementById('g-sport').value = sport;
-  document.querySelectorAll('.sport-tab').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('gallery-filters').requestSubmit();
-}
+// ——— Sport dropdown drives the filter form ———
+(function() {
+  const btn = document.getElementById('gallery-sport-btn');
+  if (btn && window.DSSport) {
+    DSSport.build(btn, { onSelect: function(value) {
+      document.getElementById('g-sport').value = value;
+      document.getElementById('gallery-filters').requestSubmit();
+    }});
+  }
+})();
 
 // Re-apply the chosen layout after htmx swaps in a fresh grid.
 document.body.addEventListener('htmx:afterSwap', function(e) {

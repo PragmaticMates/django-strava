@@ -60,7 +60,7 @@ class DistanceFilter(RangeNumericListFilter):
 
 @admin.register(Activity)
 class ActivityAdmin(admin.ModelAdmin):
-    search_fields = ("id", "name__unaccent", "gear__brand_name", "gear__model_name")
+    search_fields = ("id", "name__unaccent")
     actions = ["update_from_json", "fetch_from_api", "send_to_api"]
     actions_list = ["import_strava", "open_strava_activities"]
     date_hierarchy = "start_date"

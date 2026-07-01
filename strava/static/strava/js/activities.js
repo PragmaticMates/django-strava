@@ -7,6 +7,17 @@ function renderRoutes(root) {
 renderRoutes(document);
 document.body.addEventListener('htmx:afterSwap', function(e) { renderRoutes(e.target); });
 
+// ——— Sport dropdown drives the filter form ———
+(function() {
+  var btn = document.getElementById('acts-sport-btn');
+  if (btn && window.DSSport) {
+    window.DSSport.build(btn, { onSelect: function(value) {
+      document.getElementById('f-sport').value = value;
+      document.getElementById('acts-filters').requestSubmit();
+    }});
+  }
+})();
+
 function setView(view) {
   document.getElementById('view-grid').classList.toggle('active', view === 'grid');
   document.getElementById('view-table').classList.toggle('active', view === 'table');

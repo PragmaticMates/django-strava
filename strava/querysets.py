@@ -53,6 +53,14 @@ class ActivityQuerySet(models.QuerySet):
             return self
         return self.filter(sport_type=sport_type)
 
+    def for_sport_selection(self, value):
+        # Group-aware sport filter shared by the dashboard, activities and gallery.
+        # ``value`` is 'all', a group key ('group-run', …) or an exact sport_type.
+        from strava.sports import types_for
+        if not value or value == 'all':
+            return self
+        return self.filter(sport_type__in=types_for(value))
+
     def for_gear(self, gear_id):
         if not gear_id or gear_id == 'all':
             return self

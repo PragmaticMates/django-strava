@@ -28,6 +28,8 @@
         <input type="text" placeholder="Search photos…" id="gallery-search" name="q" value="{{ q }}">
       </div>
 
+      {% include "strava/widgets/sport_filter.html" with btn_id="gallery-sport-btn" options_id="gallery-sport-options" groups_id="gallery-sport-groups" current=sport trigger_class="af-sport-trigger sport-pill" %}
+
       <div class="af-sport-wrap">
         <select class="af-sport-select" name="year">
           <option value="all"{% if year == 'all' %} selected{% endif %}>All years</option>
@@ -74,26 +76,6 @@
     </form>
   </div>
 
-  <!-- Sport filter tabs -->
-  <div class="sport-tabs" id="sport-tabs">
-    <button type="button" class="sport-tab{% if sport == 'all' %} active{% endif %}" onclick="setSport('all', this)">All sports</button>
-    <button type="button" class="sport-tab{% if sport == 'run' %} active{% endif %}" onclick="setSport('run', this)">
-      {% include "strava/widgets/sport_icon.html" with type='run' %} Run
-    </button>
-    <button type="button" class="sport-tab{% if sport == 'ride' %} active{% endif %}" onclick="setSport('ride', this)">
-      {% include "strava/widgets/sport_icon.html" with type='ride' %} Ride
-    </button>
-    <button type="button" class="sport-tab{% if sport == 'trail' %} active{% endif %}" onclick="setSport('trail', this)">
-      {% include "strava/widgets/sport_icon.html" with type='trail' %} Trail Run
-    </button>
-    <button type="button" class="sport-tab{% if sport == 'hike' %} active{% endif %}" onclick="setSport('hike', this)">
-      {% include "strava/widgets/sport_icon.html" with type='hike' %} Hike
-    </button>
-    <button type="button" class="sport-tab{% if sport == 'swim' %} active{% endif %}" onclick="setSport('swim', this)">
-      {% include "strava/widgets/sport_icon.html" with type='swim' %} Swim
-    </button>
-  </div>
-
   <!-- Grid — rendered server-side, swapped by htmx -->
   <div id="gallery-results">
     {% include "strava/hx/gallery_results.html" %}
@@ -131,5 +113,6 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'strava/js/sport-filter.js' %}"></script>
 <script src="{% static 'strava/js/gallery.js' %}"></script>
 {% endblock %}

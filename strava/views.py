@@ -12,6 +12,7 @@ from django.views.generic import DetailView, ListView, TemplateView
 
 from strava.api import format_strava_error
 from strava.models import Activity, Gear
+from strava.sports import group_data, sport_matches, sport_options
 
 
 logger = logging.getLogger('strava')
@@ -68,13 +69,17 @@ class DashboardView(TemplateView):
         year = params.get('year') or 'all'
         context['q'], context['sport'], context['gear'], context['year'] = q, sport, gear, year
 
+        # Sport filter dropdown: every sport in the data (not just GPS-mapped ones) + groups.
+        context['sport_options'] = sport_options(Activity.objects.all())
+        context['sport_groups'] = group_data()
+
         tokens = self._unaccent(q).split()
 
         def matches(a):
             haystack = self._unaccent(f'{a.name} {a.type}')
             return (
                 all(t in haystack for t in tokens)
-                and (sport == 'all' or a.sport_type == sport)
+                and sport_matches(sport, a.sport_type)
                 and (gear == 'all' or str(a.gear_id or '') == gear)
                 and (year == 'all' or str(local_date(a).year) == year)
             )
@@ -566,7 +571,7 @@ class ActivitiesView(ListView):
         return (
             Activity.objects.select_related('gear')
             .search(params.get('q'))
-            .for_sport(params.get('sport'))
+            .for_sport_selection(params.get('sport'))
             .for_gear(params.get('gear'))
             .for_month(params.get('month'))
             .sorted_by(params.get('sort'), params.get('dir', 'desc'))
@@ -594,11 +599,8 @@ class ActivitiesView(ListView):
         today = timezone.now().date()
         week_start = today - datetime.timedelta(days=today.weekday())
 
-        from strava.choices import SportType
-        context['sport_type_list'] = [
-            (st, SportType(st).label)
-            for st in Activity.objects.values_list('sport_type', flat=True).distinct().order_by('sport_type')
-        ]
+        context['sport_options'] = sport_options(Activity.objects.all())
+        context['sport_groups'] = group_data()
         context['gear_list'] = Gear.objects.filter(activity__isnull=False).distinct().order_by('brand_name', 'model_name')
         context['month_list'] = [
             (d.strftime('%Y-%m'), d.strftime('%b %Y'))
@@ -695,7 +697,7 @@ class GalleryView(ListView):
             Activity.objects
             .exclude(photo_url='')
             .search(params.get('q'))
-            .for_sport_category(params.get('sport'))
+            .for_sport_selection(params.get('sport'))
             .for_year(params.get('year'))
         )
         sort = params.get('sort', 'newest')
@@ -720,6 +722,8 @@ class GalleryView(ListView):
         context['photos'] = photos
         context['count'] = len(photos)
         context['year_list'] = [d.year for d in Activity.objects.dates('start_date', 'year', order='DESC')]
+        context['sport_options'] = sport_options(Activity.objects.exclude(photo_url=''))
+        context['sport_groups'] = group_data()
         return context
 
 
