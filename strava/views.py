@@ -834,10 +834,12 @@ class CompareView(TemplateView):
         def achievements(acts):
             return sum(a.achievement_count for a in acts) if acts else None
 
-        def best_pace(acts):
-            paces = [a.moving_time / (float(a.distance) / 1000)
-                     for a in acts if self._paceable(a)]
-            return min(paces) if paces else None
+        def avg_pace(acts):
+            # Distance-weighted pace for the whole year (total time / total distance),
+            # not the single fastest run — a short sprint race isn't representative.
+            paceable = [a for a in acts if self._paceable(a)]
+            total_km = sum(float(a.distance) for a in paceable) / 1000
+            return sum(a.moving_time for a in paceable) / total_km if total_km else None
 
         def biggest_week(acts):
             if not acts:
@@ -859,7 +861,7 @@ class CompareView(TemplateView):
             ('Moving time', 'hours active', 'time', 'h', 'int', False, hours),
             ('Activities', 'sessions logged', 'acts', '', 'int', False, count),
             ('Active days', 'days on the move', 'days', 'd', 'int', False, active_days),
-            ('Best avg pace', 'lower is faster', 'pace', '/km', 'pace', True, best_pace),
+            ('Average pace', 'lower is faster', 'pace', '/km', 'pace', True, avg_pace),
             ('Biggest week', 'peak 7-day block', 'week', 'km', 'int', False, biggest_week),
             ('Kudos received', 'from the community', 'kudos', '', 'int', False, kudos),
             ('PRs set', 'personal records', 'prs', '', 'int', False, prs),
