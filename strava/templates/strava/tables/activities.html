@@ -28,10 +28,10 @@
           {% if activity.pb %}<span class="at-pr-pip" title="Personal Record"></span>{% endif %}
         </td>
         <td class="at-date">{{ activity.start_date|date:"M j, Y" }}</td>
-        <td class="at-num">{{ activity.dist }} <small>km</small></td>
-        <td class="at-num">{{ activity.dur }}</td>
+        <td class="at-num">{{ activity.distance_km }} <small>km</small></td>
+        <td class="at-num">{{ activity.duration }}</td>
         <td class="at-num">{{ activity.pace }}</td>
-        <td class="at-num">{{ activity.elev }} <small>m</small></td>
+        <td class="at-num">{{ activity.elevation }} <small>m</small></td>
         <td class="at-num">{% if activity.calories %}{{ activity.calories|intcomma }} <small>kcal</small>{% else %}<span class="at-empty">–</span>{% endif %}</td>
         <td class="at-gear-cell">{{ activity.gear|default:'' }}</td>
         <td></td>

@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import pytest
 from django.test import RequestFactory
 
+from strava import helpers
 from strava.models import Activity, Gear
 from strava.views import DashboardView
 
@@ -60,18 +61,18 @@ def dashboard_context(**params):
 # --------------------------------------------------------------------------- #
 class TestHaversine:
     def test_zero_distance(self):
-        assert DashboardView._haversine_km(48.7, 21.2, 48.7, 21.2) == pytest.approx(0, abs=1e-6)
+        assert helpers.haversine_km(48.7, 21.2, 48.7, 21.2) == pytest.approx(0, abs=1e-6)
 
     def test_kosice_to_vienna(self):
         # ~360 km apart
-        d = DashboardView._haversine_km(48.72, 21.26, 48.21, 16.37)
+        d = helpers.haversine_km(48.72, 21.26, 48.21, 16.37)
         assert 350 < d < 375
 
 
 class TestHomeLocation:
     def test_none_without_gps(self):
         acts = [SimpleNamespace(start_lat=None, start_lng=None)]
-        assert DashboardView._home_location(acts) is None
+        assert helpers.home_location(acts) is None
 
     def test_busiest_cluster_wins(self):
         acts = [
@@ -80,7 +81,7 @@ class TestHomeLocation:
             SimpleNamespace(start_lat=48.719, start_lng=21.260),
             SimpleNamespace(start_lat=48.210, start_lng=16.370),  # lone outlier
         ]
-        lat, lng = DashboardView._home_location(acts)
+        lat, lng = helpers.home_location(acts)
         assert lat == pytest.approx(48.72, abs=0.01)
         assert lng == pytest.approx(21.26, abs=0.01)
 
@@ -91,20 +92,20 @@ class TestHomeLocation:
             SimpleNamespace(start_lat=48.720, start_lng=21.258),
             SimpleNamespace(start_lat=48.721, start_lng=21.262),
         ]
-        lat, lng = DashboardView._home_location(acts)
+        lat, lng = helpers.home_location(acts)
         assert lat == pytest.approx(48.72, abs=0.01)
 
 
 class TestFormatters:
     def test_fmt_pace(self):
-        assert DashboardView._fmt_pace(330) == "5:30"
-        assert DashboardView._fmt_pace(112) == "1:52"
+        assert helpers.fmt_pace(330) == "5:30"
+        assert helpers.fmt_pace(112) == "1:52"
 
     def test_fmt_hms_under_hour(self):
-        assert DashboardView._fmt_hms(1665) == "27:45"
+        assert helpers.fmt_hms(1665) == "27:45"
 
     def test_fmt_hms_over_hour(self):
-        assert DashboardView._fmt_hms(14683) == "4:04:43"
+        assert helpers.fmt_hms(14683) == "4:04:43"
 
 
 # --------------------------------------------------------------------------- #

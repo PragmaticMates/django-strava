@@ -44,8 +44,6 @@ class Command(BaseCommand):
         data = Activity.read_json(json_data)
         data['json'] = json_data
 
-        Activity.objects.filter(id=json_data["id"]).update(json=json_data)
-
         Gear.get_or_create(data.get('gear_id', None))
         activity, created = Activity.objects.update_or_create(
             id=json_data["id"],

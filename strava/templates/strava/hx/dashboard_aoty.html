@@ -9,9 +9,9 @@
     <div>
       <h3 class="aoty-title">{{ aoty.name }}</h3>
       <div class="aoty-stats">
-        <div><div class="v">{{ aoty.dist }} <small>km</small></div><div class="l">Distance</div></div>
-        <div><div class="v">{{ aoty.elev|intcomma }} <small>m</small></div><div class="l">Elevation Gain</div></div>
-        <div><div class="v">{{ aoty.dur }}</div><div class="l">Moving Time</div></div>
+        <div><div class="v">{{ aoty.distance_km }} <small>km</small></div><div class="l">Distance</div></div>
+        <div><div class="v">{{ aoty.elevation|intcomma }} <small>m</small></div><div class="l">Elevation Gain</div></div>
+        <div><div class="v">{{ aoty.duration }}</div><div class="l">Moving Time</div></div>
       </div>
       <div class="aoty-meta">
         <div>
@@ -30,8 +30,8 @@
         </div>
       </div>
     </div>
-    {% if aoty.photo %}
-    <img class="aoty-photo" src="{{ aoty.photo }}" alt="{{ aoty.name }}">
+    {% if aoty.photo_url %}
+    <img class="aoty-photo" src="{{ aoty.photo_url }}" alt="{{ aoty.name }}">
     {% else %}
     <div class="aoty-photo aoty-photo-empty">No photo</div>
     {% endif %}

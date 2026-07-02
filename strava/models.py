@@ -6,14 +6,18 @@ from django.utils.translation import gettext_lazy as _
 
 from strava.api import StravaApi
 from strava.choices import SportType
-from strava.querysets import ActivityQuerySet, GearQuerySet, DETAIL_MARKER_FIELDS
+from strava.consts import BIKE_LIFESPAN_KM, DETAIL_MARKER_FIELDS, SHOE_LIFESPAN_KM
+from strava.querysets import ActivityQuerySet, GearQuerySet
+from strava.sports import category_for
 
 
 class Activity(models.Model):
   name = models.CharField(_("name"), max_length=100)
   start_date = models.DateTimeField(_("start date"))
   sport_type = models.CharField(_("sport type"), max_length=29, choices=SportType.choices)
-  distance = models.DecimalField(_("distance"), max_digits=12, decimal_places=2)
+  # Metres. Stored as a float (Strava sends a float and every consumer works in floats);
+  # no exact-decimal arithmetic is needed, so a DecimalField only added casting noise.
+  distance = models.FloatField(_("distance"))
   moving_time = models.PositiveIntegerField(_("moving time"), null=True, blank=True)
   elapsed_time = models.PositiveIntegerField(_("elapsed time"), null=True, blank=True)
   total_elevation_gain = models.FloatField(_("elevation gain"), null=True, blank=True)
@@ -30,6 +34,8 @@ class Activity(models.Model):
   photo_url = models.URLField(_("photo URL"), max_length=500, blank=True, default="")
   start_lat = models.FloatField(_("start latitude"), null=True, blank=True)
   start_lng = models.FloatField(_("start longitude"), null=True, blank=True)
+  polyline = models.TextField(_("polyline"), blank=True, default="")
+  is_detailed = models.BooleanField(_("detailed"), default=False)
   gear = models.ForeignKey("Gear", on_delete=models.SET_NULL,
                            blank=True, null=True, default=None)
   json = models.JSONField()
@@ -54,6 +60,7 @@ class Activity(models.Model):
     latlng = json.get('start_latlng') or []
     # Treat (0, 0) / missing coords as "no GPS" (e.g. pool swims, treadmill runs).
     has_gps = len(latlng) == 2 and bool(latlng[0] or latlng[1])
+    route = json.get('map') or {}
     return {
       # 'id': json['id'],
       'name': json['name'],
@@ -78,6 +85,8 @@ class Activity(models.Model):
       'photo_url': urls.get('600') or urls.get('100') or '',
       'start_lat': round(float(latlng[0]), 6) if has_gps else None,
       'start_lng': round(float(latlng[1]), 6) if has_gps else None,
+      'polyline': route.get('polyline') or route.get('summary_polyline') or '',
+      'is_detailed': any(json.get(field) is not None for field in DETAIL_MARKER_FIELDS),
     }
 
   def update_from_json(self):
@@ -86,17 +95,9 @@ class Activity(models.Model):
 
     if self.gear_id and not Gear.objects.filter(id=self.gear_id).exists():
       gear_data = StravaApi().get_gear(self.gear_id)
-      print(gear_data)
-
       data = Gear.read_json(gear_data)
       data['json'] = gear_data
-
-      # logger.info(data)
-      obj, created = Gear.objects.get_or_create(
-        id=gear_data["id"],
-        defaults=data,
-      )
-      print(obj, created)
+      Gear.objects.get_or_create(id=gear_data["id"], defaults=data)
 
     self.save()
 
@@ -130,33 +131,17 @@ class Activity(models.Model):
       return all(conditions)
   is_gear_synced.boolean = True
 
-  def is_detailed(self):
-      # True once the full DetailedActivity payload has been fetched; summary-only
-      # records carry these fields as null/absent and need fetch_from_api().
-      return any(self.json.get(field) is not None for field in DETAIL_MARKER_FIELDS)
-  is_detailed.boolean = True
-
   @property
   def type(self):
-    s = self.sport_type
-    if 'Trail' in s:
-      return 'trail'
-    if s in ('Hike', 'Snowshoe'):
-      return 'hike'
-    if s == 'Walk':
-      return 'walk'
-    if 'Ride' in s:
-      return 'ride'
-    if 'Swim' in s:
-      return 'swim'
-    return 'run'
+    # Broad category (trail/hike/walk/ride/swim/run); defined once in strava.sports.
+    return category_for(self.sport_type)
 
   @property
-  def dist(self):
-    return round(float(self.distance) / 1000, 1)
+  def distance_km(self):
+    return round(self.distance / 1000, 1)
 
   @property
-  def dur(self):
+  def duration(self):
     t = self.moving_time or 0
     h, r = divmod(t, 3600)
     m, s = divmod(r, 60)
@@ -165,7 +150,7 @@ class Activity(models.Model):
   @property
   def pace_parts(self):
     t = self.moving_time or 0
-    d = float(self.distance)
+    d = self.distance
     if not t or not d:
       return '-', ''
     d_km = d / 1000
@@ -187,28 +172,12 @@ class Activity(models.Model):
     return f'{val} {unit}'
 
   @property
-  def elev(self):
+  def elevation(self):
     return round(self.total_elevation_gain or 0)
-
-  @property
-  def kudos(self):
-    return self.kudos_count
-
-  @property
-  def comments(self):
-    return self.comment_count
-
-  @property
-  def photo_count(self):
-    return self.total_photo_count
 
   @property
   def pb(self):
     return bool(self.pr_count)
-
-  @property
-  def photo(self):
-    return self.photo_url or None
 
   @property
   def has_gps(self):
@@ -219,15 +188,13 @@ class Activity(models.Model):
     return self.average_heartrate is not None and self.max_heartrate is not None
 
   @property
-  def polyline(self):
-    m = self.json.get('map') or {}
-    return m.get('polyline') or m.get('summary_polyline', '')
+  def best_efforts(self):
+    # Strava's per-run best efforts (5k/10k/… splits) — a nested array kept in `json`
+    # rather than promoted to columns; exposed here so callers don't reach into the blob.
+    return self.json.get('best_efforts') or []
 
 
 class Gear(models.Model):
-  SHOE_LIFESPAN_KM = 700
-  BIKE_LIFESPAN_KM = 12000
-
   GEAR_TYPES = (('bike', _("bike")), ('shoe', _("shoe")))
 
   id = models.CharField(max_length=36, primary_key=True, editable=False)  # default=uuid.uuid4
@@ -255,7 +222,7 @@ class Gear(models.Model):
 
   @property
   def lifespan_km(self):
-    return self.BIKE_LIFESPAN_KM if self.gear_type == 'bike' else self.SHOE_LIFESPAN_KM
+    return BIKE_LIFESPAN_KM if self.gear_type == 'bike' else SHOE_LIFESPAN_KM
 
   @classmethod
   def get_or_create(cls, id):

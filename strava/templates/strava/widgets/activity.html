@@ -8,9 +8,9 @@
   behind the card. With a photo they show it as a full-bleed hero; without one they get a
   sport-colored hero band (matching the route's colour on the map) instead of an empty
   band, carrying the sport pill and PR badge.{% endcomment %}
-  {% if not map_card or activity.photo %}
+  {% if not map_card or activity.photo_url %}
   <div class="fc-map{% if map_card %} fc-photo-hero{% endif %}">
-    {% if activity.photo %}<img class="fc-photo" src="{{ activity.photo }}" alt="" aria-hidden="true">{% endif %}
+    {% if activity.photo_url %}<img class="fc-photo" src="{{ activity.photo_url }}" alt="" aria-hidden="true">{% endif %}
     {% if not map_card %}<svg class="fc-route" role="img" aria-label="Route trace"{% if activity.polyline %} data-polyline="{{ activity.polyline }}"{% endif %}></svg>{% endif %}
     {% if activity.pb %}<span class="act-gcard-pr">★ PR</span>{% endif %}
     <div class="fc-pills">
@@ -32,7 +32,7 @@
     </a>
     <div class="fc-stats">
       <div class="fc-stat-big">
-        <span class="fc-big-val">{{ activity.dist }} <span class="fc-big-unit">KM</span></span>
+        <span class="fc-big-val">{{ activity.distance_km }} <span class="fc-big-unit">KM</span></span>
       </div>
       <div class="fc-stat-group">
         <div class="fc-stat">
@@ -40,12 +40,12 @@
           <span class="fc-lbl">{% if activity.type == 'ride' %}Speed{% else %}Pace{% endif %}</span>
         </div>
         <div class="fc-stat">
-          <span class="fc-val">{{ activity.dur }}</span>
+          <span class="fc-val">{{ activity.duration }}</span>
           <span class="fc-lbl">Time</span>
         </div>
         {% if activity.type != 'swim' %}
         <div class="fc-stat">
-          <span class="fc-val">{{ activity.elev }} <small>m</small></span>
+          <span class="fc-val">{{ activity.elevation }} <small>m</small></span>
           <span class="fc-lbl">Elev.</span>
         </div>
         {% endif %}
@@ -54,11 +54,11 @@
     <div class="fc-engage">
       <button class="fc-engbtn" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-        {{ activity.kudos }}
+        {{ activity.kudos_count }}
       </button>
       <button class="fc-engbtn" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-        {{ activity.comments }}
+        {{ activity.comment_count }}
       </button>
       {% if activity.gear %}
         <span class="fc-gear-tag">

@@ -1,14 +1,13 @@
 import datetime
 import logging
 
-from decimal import Decimal
-
 from django.contrib import admin, messages
 from django.core.management import call_command
 from django.db.models import Count, Sum
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.utils import timezone
+from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from unfold.contrib.filters.admin import RangeNumericListFilter
@@ -122,8 +121,10 @@ class ActivityAdmin(admin.ModelAdmin):
 
     @display(description=_("Name"), header=True, ordering="name")
     def name_and_id(self, obj):
+        # Activity names are athlete-supplied free text, so escape them (format_html)
+        # rather than mark_safe'ing raw HTML — otherwise a crafted name is stored XSS.
         return [
-            mark_safe(f'<span class="text-primary-600">{obj.name}</span>'),
+            format_html('<span class="text-primary-600">{}</span>', obj.name),
             obj.id
         ]
 
@@ -156,15 +157,9 @@ class ActivityAdmin(admin.ModelAdmin):
         if obj.distance == 0 or not obj.elapsed_time:
             return ['-', '']
 
-        # if any(x in obj.sport_type.lower() for x in ('run', 'swim', 'hike')):
-        time_min = Decimal(obj.elapsed_time / 60)
         distance_km = obj.distance / 1000
-        pace = f'{round(time_min / distance_km, 2)} min / km'
-
-        # if any(x in obj.sport_type.lower() for x in ('ride', 'ski', 'walk', 'inline')):
-        time_hod = Decimal(obj.elapsed_time / 60 / 60)
-        distance_km = obj.distance / 1000
-        speed = f'{round(distance_km / time_hod, 2)} km / h'
+        pace = f'{round((obj.elapsed_time / 60) / distance_km, 2)} min / km'
+        speed = f'{round(distance_km / (obj.elapsed_time / 3600), 2)} km / h'
 
         return [
             pace,

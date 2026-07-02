@@ -5,6 +5,7 @@ from unittest.mock import patch
 import pytest
 from django.utils import timezone as dj_timezone
 
+from strava.consts import BIKE_LIFESPAN_KM, SHOE_LIFESPAN_KM
 from strava.models import Activity, Gear
 
 
@@ -19,6 +20,13 @@ def activity(**overrides):
     )
     defaults.update(overrides)
     return Activity(**defaults)
+
+
+# Minimal valid Strava summary payload for exercising Activity.read_json.
+READ_BASE = {
+    "name": "Act", "gear_id": None, "sport_type": "Run", "distance": 1000,
+    "start_date": "2025-06-15T07:00:00+00:00",
+}
 
 
 # --------------------------------------------------------------------------- #
@@ -46,22 +54,22 @@ class TestActivityType:
 class TestScalars:
     def test_dist_km_rounded(self):
         # 10240 m → 10.24 km → 10.2 km (1 decimal)
-        assert activity(distance=10240).dist == 10.2
+        assert activity(distance=10240).distance_km == 10.2
 
     def test_dur_with_hours(self):
-        assert activity(moving_time=3725).dur == "1h 02m"
+        assert activity(moving_time=3725).duration == "1h 02m"
 
     def test_dur_under_hour(self):
-        assert activity(moving_time=125).dur == "2m 05s"
+        assert activity(moving_time=125).duration == "2m 05s"
 
     def test_dur_zero_when_missing(self):
-        assert activity(moving_time=None).dur == "0m 00s"
+        assert activity(moving_time=None).duration == "0m 00s"
 
     def test_elev_rounds(self):
-        assert activity(total_elevation_gain=123.6).elev == 124
+        assert activity(total_elevation_gain=123.6).elevation == 124
 
     def test_elev_zero_when_missing(self):
-        assert activity(total_elevation_gain=None).elev == 0
+        assert activity(total_elevation_gain=None).elevation == 0
 
 
 # --------------------------------------------------------------------------- #
@@ -95,20 +103,12 @@ class TestPace:
 
 
 # --------------------------------------------------------------------------- #
-# Passthrough / flag properties
+# Flag properties
 # --------------------------------------------------------------------------- #
 class TestFlags:
-    def test_count_aliases(self):
-        a = activity(kudos_count=7, comment_count=3, total_photo_count=2)
-        assert (a.kudos, a.comments, a.photo_count) == (7, 3, 2)
-
     def test_pb_true_false(self):
         assert activity(pr_count=1).pb is True
         assert activity(pr_count=0).pb is False
-
-    def test_photo_none_when_blank(self):
-        assert activity(photo_url="").photo is None
-        assert activity(photo_url="http://x/p.jpg").photo == "http://x/p.jpg"
 
     def test_has_gps(self):
         assert activity(start_lat=48.7).has_gps is True
@@ -119,15 +119,20 @@ class TestFlags:
         assert activity(average_heartrate=None, max_heartrate=180.0).has_heartrate is False
 
     def test_polyline_prefers_full_over_summary(self):
-        a = activity(json={"map": {"polyline": "FULL", "summary_polyline": "SUM"}})
-        assert a.polyline == "FULL"
+        # polyline is promoted by read_json (prefers the full trace over the summary).
+        data = Activity.read_json({**READ_BASE, "map": {"polyline": "FULL", "summary_polyline": "SUM"}})
+        assert data["polyline"] == "FULL"
 
     def test_polyline_falls_back_to_summary(self):
-        a = activity(json={"map": {"summary_polyline": "SUM"}})
-        assert a.polyline == "SUM"
+        data = Activity.read_json({**READ_BASE, "map": {"summary_polyline": "SUM"}})
+        assert data["polyline"] == "SUM"
 
     def test_polyline_empty_without_map(self):
-        assert activity(json={}).polyline == ""
+        assert Activity.read_json(READ_BASE)["polyline"] == ""
+
+    def test_best_efforts_reads_json(self):
+        assert activity(json={"best_efforts": [{"name": "5k"}]}).best_efforts == [{"name": "5k"}]
+        assert activity(json={}).best_efforts == []
 
     def test_get_absolute_url(self):
         a = activity()
@@ -205,8 +210,8 @@ class TestGear:
         assert g.distance == 8000
 
     def test_lifespan_km_by_type(self):
-        assert self._gear(id="s", gear_type="shoe").lifespan_km == Gear.SHOE_LIFESPAN_KM
-        assert self._gear(id="b", gear_type="bike").lifespan_km == Gear.BIKE_LIFESPAN_KM
+        assert self._gear(id="s", gear_type="shoe").lifespan_km == SHOE_LIFESPAN_KM
+        assert self._gear(id="b", gear_type="bike").lifespan_km == BIKE_LIFESPAN_KM
 
     def test_is_old_without_activities(self):
         # Never used → treated as old.

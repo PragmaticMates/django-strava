@@ -11,6 +11,7 @@ A filter value is one of: ``'all'``, a group key (``'group-run'`` …) or an exa
 ``sport_type`` (``'Run'``, ``'TrailRun'`` …).
 """
 
+from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 
 from strava.choices import SportType
@@ -18,6 +19,72 @@ from strava.choices import SportType
 
 def _is_cycling(sport_type):
     return "Ride" in sport_type or sport_type in ("Velomobile", "Handcycle")
+
+
+# --------------------------------------------------------------------------- #
+# Broad activity categories
+# --------------------------------------------------------------------------- #
+# The coarse bucket a sport falls in, used for map-marker styling (Activity.type) and
+# the category filter (ActivityQuerySet.for_sport_category). Each sport maps to exactly
+# one bucket: the first matching rule wins, and anything unmatched is DEFAULT_CATEGORY.
+# A rule is either a substring test ("contains") or an explicit membership set ("values").
+# This is the single source of truth — Activity.type and the queryset filter both derive
+# from it, so the Python and SQL views of "what category is this?" can't drift apart.
+ACTIVITY_CATEGORIES = (
+    ("trail", {"contains": "Trail"}),
+    ("hike", {"values": ("Hike", "Snowshoe")}),
+    ("walk", {"values": ("Walk",)}),
+    ("ride", {"contains": "Ride"}),
+    ("swim", {"contains": "Swim"}),
+)
+DEFAULT_CATEGORY = "run"
+
+
+def _rule_matches(rule, sport_type):
+    if "contains" in rule:
+        return rule["contains"] in sport_type
+    return sport_type in rule["values"]
+
+
+def _rule_q(rule):
+    if "contains" in rule:
+        return Q(sport_type__contains=rule["contains"])
+    return Q(sport_type__in=list(rule["values"]))
+
+
+def category_for(sport_type):
+    """The broad category ('trail'/'hike'/'walk'/'ride'/'swim'/'run') for a sport_type."""
+    for name, rule in ACTIVITY_CATEGORIES:
+        if _rule_matches(rule, sport_type):
+            return name
+    return DEFAULT_CATEGORY
+
+
+def category_q(category):
+    """A ``Q`` selecting activities in a broad ``category``, or ``None`` for an unknown
+    one (so callers pass the queryset through unfiltered). ``DEFAULT_CATEGORY`` ('run') is
+    the catch-all: everything matching none of the explicit category rules."""
+    rules = dict(ACTIVITY_CATEGORIES)
+    if category in rules:
+        return _rule_q(rules[category])
+    if category == DEFAULT_CATEGORY:
+        q = Q()
+        for _name, rule in ACTIVITY_CATEGORIES:
+            q &= ~_rule_q(rule)
+        return q
+    return None
+
+
+# Exact sport types per personal-records / compare tab. An explicit allow-list (rather
+# than the coarse categories above, whose "run" fallback would swallow every unlisted
+# sport) keeps unrelated fast activities out of the running/cycling PRs, and lets e-bikes
+# be excluded from cycling (motor assistance would unfairly dominate the records).
+RECORD_SPORTS = {
+    "Running": {"Run", "TrailRun", "VirtualRun"},
+    "Cycling": {"Ride", "GravelRide", "MountainBikeRide", "VirtualRide", "Velomobile", "Handcycle"},
+    "Hiking": {"Hike", "Snowshoe", "Walk"},
+    "Swimming": {"Swim"},
+}
 
 
 # Ordered "Top sports" groups. ``icon`` names a glyph in sport-filter.js.
