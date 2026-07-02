@@ -8,7 +8,7 @@ from strava.api import StravaApi
 from strava.choices import SportType
 from strava.consts import BIKE_LIFESPAN_KM, DETAIL_MARKER_FIELDS, SHOE_LIFESPAN_KM
 from strava.querysets import ActivityQuerySet, GearQuerySet
-from strava.sports import map_sport_type_for
+from strava.sports import is_speed_sport, is_swim_sport, map_sport_type_for
 
 
 class Activity(models.Model):
@@ -148,15 +148,25 @@ class Activity(models.Model):
     return f'{h}h {m:02d}m' if h else f'{m}m {s:02d}s'
 
   @property
+  def is_speed_sport(self):
+    # Cycling — its effort reads as speed (km/h), so cards label it "Speed" not "Pace".
+    return is_speed_sport(self.sport_type)
+
+  @property
+  def is_swim_sport(self):
+    # Swimming — per-100 m pace, and cards hide the (always-zero) elevation stat.
+    return is_swim_sport(self.sport_type)
+
+  @property
   def pace_parts(self):
     t = self.moving_time or 0
     d = self.distance
     if not t or not d:
       return '-', ''
     d_km = d / 1000
-    if self.map_sport_type == 'ride':
+    if is_speed_sport(self.sport_type):
       return f'{d_km / (t / 3600):.1f}', 'km/h'
-    if self.map_sport_type == 'swim':
+    if is_swim_sport(self.sport_type):
       pace_s = t / (d / 100)
       m, s = divmod(int(pace_s), 60)
       return f'{m}:{s:02d}', '/100m'

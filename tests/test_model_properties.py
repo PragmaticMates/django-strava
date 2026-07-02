@@ -94,6 +94,19 @@ class TestPace:
         val, unit = activity(sport_type="Swim", distance=2000, moving_time=3000).pace_parts
         assert (val, unit) == ("2:30", "/100m")
 
+    def test_velomobile_pace_kmh(self):
+        # Pace keys off sport_type, not the map bucket: a velomobile is 'other' on the map
+        # but is still cycling, so it must read as speed (km/h), not a /km pace.
+        a = activity(sport_type="Velomobile", distance=30000, moving_time=3600)
+        assert a.map_sport_type == "other"
+        assert a.is_speed_sport is True
+        assert a.pace_parts == ("30.0", "km/h")
+
+    def test_swim_flags_and_run_defaults(self):
+        assert activity(sport_type="Swim").is_swim_sport is True
+        assert activity(sport_type="Run").is_speed_sport is False
+        assert activity(sport_type="Run").is_swim_sport is False
+
     def test_no_data_returns_dash(self):
         assert activity(moving_time=0).pace_parts == ("-", "")
 

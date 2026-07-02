@@ -54,6 +54,29 @@ def map_sport_type_for(sport_type):
     return DEFAULT_MAP_SPORT_TYPE
 
 
+# --------------------------------------------------------------------------- #
+# Pace / speed semantics
+# --------------------------------------------------------------------------- #
+# How an activity's effort reads on screen — keyed off sport_type, independent of the
+# map-colour bucket: cycling is shown as speed (km/h), swimming as a per-100 m pace, and
+# everything else as a per-km pace. Kept here (not derived from MAP_SPORT_TYPES) so map
+# styling and pace display can evolve separately.
+def is_speed_sport(sport_type):
+    """Cycling — shown as km/h rather than a per-distance pace (includes velomobile/handcycle)."""
+    return _is_cycling(sport_type)
+
+
+def is_swim_sport(sport_type):
+    """Swimming — shown as a per-100 m pace."""
+    return "Swim" in sport_type
+
+
+# Sport types with a meaningful "/km" pace, eligible for the fastest-pace effort row and the
+# run-performance ranking. A deliberate curation of foot sports (not a derived rule): rides
+# use km/h, swims /100 m, and miscellaneous sports have no comparable per-km pace.
+PACE_SPORT_TYPES = {"Run", "TrailRun", "VirtualRun", "Hike", "Snowshoe", "Walk"}
+
+
 # Exact sport types per personal-records / compare tab. An explicit allow-list (rather
 # than the coarse categories above, whose "other" catch-all would swallow every unlisted
 # sport) keeps unrelated fast activities out of the running/cycling PRs. Cycling is limited

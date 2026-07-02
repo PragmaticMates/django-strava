@@ -37,13 +37,13 @@
       <div class="fc-stat-group">
         <div class="fc-stat">
           <span class="fc-val">{{ activity.pace_parts.0 }} <small>{{ activity.pace_parts.1 }}</small></span>
-          <span class="fc-lbl">{% if activity.map_sport_type == 'ride' %}Speed{% else %}Pace{% endif %}</span>
+          <span class="fc-lbl">{% if activity.is_speed_sport %}Speed{% else %}Pace{% endif %}</span>
         </div>
         <div class="fc-stat">
           <span class="fc-val">{{ activity.duration }}</span>
           <span class="fc-lbl">Time</span>
         </div>
-        {% if activity.map_sport_type != 'swim' %}
+        {% if not activity.is_swim_sport %}
         <div class="fc-stat">
           <span class="fc-val">{{ activity.elevation }} <small>m</small></span>
           <span class="fc-lbl">Elev.</span>

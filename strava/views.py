@@ -12,7 +12,7 @@ from strava import analytics, helpers
 from strava.api import format_strava_error
 from strava.consts import MONTHS
 from strava.models import Activity, Gear
-from strava.sports import TOP_SPORT_TYPES, group_data, sport_matches, sport_options
+from strava.sports import PACE_SPORT_TYPES, TOP_SPORT_TYPES, group_data, sport_matches, sport_options
 
 
 logger = logging.getLogger('strava')
@@ -376,17 +376,14 @@ class CompareView(TemplateView):
 
     template_name = 'strava/pages/compare.html'
 
-    # Activity.map_sport_type values that have a meaningful "/km" pace (rides use km/h,
-    # swims /100m, so they're excluded from the pace metric and fastest-pace effort row).
-    PACE_TYPES = {'run', 'trail', 'hike', 'walk'}
     # Paces faster than this (seconds per km) are GPS/distance glitches — a corrupt
     # near-zero distance or time reads as an impossibly quick pace — not real efforts;
     # 2:30/km is already quicker than an elite 10k, so anything below is dropped.
     MIN_PLAUSIBLE_PACE_SEC = 150
 
     def _paceable(self, a):
-        """A run/trail/hike/walk with a plausible /km pace (see MIN_PLAUSIBLE_PACE_SEC)."""
-        if a.map_sport_type not in self.PACE_TYPES or not a.moving_time or not a.distance:
+        """A foot sport (PACE_SPORT_TYPES) with a plausible /km pace (see MIN_PLAUSIBLE_PACE_SEC)."""
+        if a.sport_type not in PACE_SPORT_TYPES or not a.moving_time or not a.distance:
             return False
         return a.moving_time / (a.distance / 1000) >= self.MIN_PLAUSIBLE_PACE_SEC
 
