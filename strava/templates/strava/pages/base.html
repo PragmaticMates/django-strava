@@ -1,5 +1,5 @@
-{% load static django_htmx strava_athlete %}
-{% strava_athlete as athlete %}
+{% load static django_htmx %}
+{# `athlete`, `athlete_id` and `athletes` come from AthleteScopedMixin (see strava.views). #}
 <!DOCTYPE html>
 <html lang="en" data-density="comfortable">
 <head>

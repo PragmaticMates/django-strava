@@ -304,7 +304,7 @@ class AthleteAdmin(admin.ModelAdmin):
 
     @action(description=_("Sync athletes from Strava"), url_path="sync-strava-athlete")
     def sync_from_api(self, request, *args):
-        connected = Athlete.objects.exclude(access_token="")
+        connected = Athlete.objects.connected()
         if not connected.exists():
             self.message_user(request, _("No connected athletes to sync."), level=messages.WARNING)
             return redirect(request.META.get("HTTP_REFERER", reverse_lazy("admin:strava_athlete_changelist")))

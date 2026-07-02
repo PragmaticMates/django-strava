@@ -29,7 +29,9 @@ classifiers = [
 ]
 dependencies = [
     "Django>=5.1",
-    "stravalib",
+    # 2.0 is the first release whose Client accepts refresh_token/token_expires and
+    # auto-refreshes an expired token — the per-athlete token layer depends on it.
+    "stravalib>=2.0",
     "django-unfold",
     "django-htmx",
 ]

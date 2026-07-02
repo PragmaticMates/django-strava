@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.core.management import call_command
+from django.db import IntegrityError, transaction
 from django.db.models import Count, F, Max, Sum
 from django.http import HttpResponseBadRequest
 from django.shortcuts import redirect, render
@@ -375,7 +376,10 @@ def oauth_callback(request):
         messages.error(request, _("Strava connection cancelled."))
         return redirect('admin:strava_athlete_changelist')
 
-    if request.GET.get('state') != request.session.pop('strava_oauth_state', None):
+    # Reject a missing/blank stored state too: without this an attacker-forged callback in a
+    # session that never started the flow would pass the check (None == None).
+    expected_state = request.session.pop('strava_oauth_state', None)
+    if not expected_state or request.GET.get('state') != expected_state:
         return HttpResponseBadRequest("Invalid OAuth state")
 
     api = StravaApi()
@@ -393,8 +397,16 @@ def oauth_callback(request):
     athlete.refresh_token = info['refresh_token']
     athlete.token_expires_at = _from_epoch(info['expires_at'])
     athlete.scope = request.GET.get('scope', '')
-    if not Athlete.objects.filter(is_default=True).exclude(pk=athlete.pk).exists():
-        athlete.is_default = True
-    athlete.save()
+    # Become the default only if none exists. Guard the check-then-set against the partial
+    # unique constraint: if a concurrent connect wins the race, keep this athlete's tokens
+    # but not the default flag rather than 500 on IntegrityError.
+    try:
+        with transaction.atomic():
+            if not Athlete.objects.filter(is_default=True).exclude(pk=athlete.pk).exists():
+                athlete.is_default = True
+            athlete.save()
+    except IntegrityError:
+        athlete.is_default = False
+        athlete.save()
     messages.success(request, _("Connected %(athlete)s.") % {"athlete": athlete})
     return redirect('admin:strava_athlete_change', athlete.pk)

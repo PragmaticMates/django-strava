@@ -2,6 +2,13 @@ from django.db import models
 from django.db.models import F, Value, Q, CharField, FloatField, Func, ExpressionWrapper
 
 
+class AthleteQuerySet(models.QuerySet):
+    def connected(self):
+        # Athletes that have been through the OAuth flow — both tokens present, matching
+        # Athlete.has_tokens. Import and admin-sync operate only on these.
+        return self.exclude(access_token="").exclude(refresh_token="")
+
+
 class ActivityQuerySet(models.QuerySet):
     def for_athlete(self, athlete):
         # Scope to one athlete's rows. ``None`` (no athlete selected/connected yet) is a

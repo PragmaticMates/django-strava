@@ -4,9 +4,10 @@ from unittest.mock import mock_open, patch
 
 import pytest
 from django.core.management import call_command
+from django.core.management.base import CommandError
 
 from strava.management.commands.import_strava import Command
-from strava.models import Activity, Athlete, Gear
+from strava.models import Activity, Athlete
 
 
 ATHLETE_JSON = {
@@ -93,36 +94,12 @@ class TestImportStrava:
         assert athlete.follower_count == 12
         assert Athlete.current() == athlete
 
-    @patch("strava.services.sync.gear_ensure", return_value=None)
-    @patch("strava.management.commands.import_strava.StravaApi")
-    def test_backfills_legacy_unowned_rows(self, mock_api_cls, mock_gear):
-        _connect_athlete()
-        # Rows imported before athlete linking existed carry no athlete...
-        legacy_activity = Activity.objects.create(
-            id=100,
-            name="Morning Run",
-            start_date=datetime(2024, 6, 15, 7, 30, tzinfo=timezone.utc),
-            sport_type="Run",
-            distance=5000,
-            json=ACTIVITY_JSON_1,
-        )
-        legacy_gear = Gear.objects.create(
-            id="g1", primary=False, brand_name="Nike", model_name="Pegasus",
-            description="", json={},
-        )
-        assert legacy_activity.athlete_id is None
-        assert legacy_gear.athlete_id is None
-
-        mock_api_cls.return_value.get_athlete.return_value = ATHLETE_JSON
-        mock_api_cls.return_value.get_activities.return_value = []
-
-        call_command("import_strava")
-
-        # ...and are backfilled to the synced athlete on the next import.
-        legacy_activity.refresh_from_db()
-        legacy_gear.refresh_from_db()
-        assert legacy_activity.athlete_id == 42
-        assert legacy_gear.athlete_id == 42
+    def test_raises_without_connected_athletes(self):
+        # No OAuth-connected athlete → the command fails loudly (surfaced to the refresh
+        # button / admin action) rather than silently importing nothing.
+        Athlete.objects.create(id=42, json={})  # exists but not connected (no tokens)
+        with pytest.raises(CommandError):
+            call_command("import_strava")
 
     @patch("strava.services.sync.gear_ensure", return_value=None)
     @patch("strava.management.commands.import_strava.StravaApi")

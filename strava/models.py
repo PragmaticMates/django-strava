@@ -6,7 +6,7 @@ from django.utils.translation import gettext_lazy as _
 
 from strava.choices import SportType
 from strava.consts import BIKE_LIFESPAN_KM, DETAIL_MARKER_FIELDS, SHOE_LIFESPAN_KM
-from strava.querysets import ActivityQuerySet, GearQuerySet
+from strava.querysets import ActivityQuerySet, AthleteQuerySet, GearQuerySet
 from strava.sports import is_speed_sport, is_swim_sport, map_sport_type_for
 
 
@@ -252,10 +252,11 @@ class Athlete(models.Model):
   refresh_token = models.CharField(_("refresh token"), max_length=100, blank=True, default="")
   token_expires_at = models.DateTimeField(_("token expires at"), null=True, blank=True)
   scope = models.CharField(_("scope"), max_length=200, blank=True, default="")
-  # The athlete rendered at the site root (and the target of the legacy single-athlete
-  # backfill). Exactly one row is default; the frontend switcher overrides per request.
+  # The athlete rendered at the site root. Exactly one row is default (enforced below);
+  # the frontend switcher overrides it per request.
   is_default = models.BooleanField(_("default"), default=False)
   json = models.JSONField()
+  objects = AthleteQuerySet.as_manager()
 
   class Meta:
     verbose_name = _("athlete")

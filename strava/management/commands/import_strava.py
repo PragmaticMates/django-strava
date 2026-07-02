@@ -2,10 +2,10 @@ import logging
 
 import os
 import json
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 from strava.api import StravaApi
-from strava.models import Activity, Athlete, Gear
+from strava.models import Activity, Athlete
 from strava.services import sync
 
 logger = logging.getLogger("file")
@@ -33,26 +33,20 @@ class Command(BaseCommand):
 
     def import_activities_from_api(self):
         # Import each connected athlete's activities with their own token. An athlete is
-        # "connected" once the OAuth flow has stored tokens on their row.
-        connected = Athlete.objects.exclude(access_token="")
-        if not connected.exists():
-            logger.warning("No connected athletes to import (run the OAuth connect flow first).")
-            return
+        # "connected" once the OAuth flow has stored tokens on their row. (Legacy unowned
+        # rows are attributed once, in migration 0011, not here.)
+        athletes = list(Athlete.objects.connected())
+        if not athletes:
+            raise CommandError("No connected athletes to import — run the OAuth connect flow first.")
 
-        single = Athlete.objects.count() == 1
-        for athlete in connected:
+        for athlete in athletes:
             api = StravaApi(athlete)
             # Refresh the athlete profile (nav name/avatar/counts) on every import.
             Athlete.store(api.get_athlete())
-            owned = Activity.objects.for_athlete(athlete)
-            after = owned.latest().start_date if owned.exists() else None
+            latest = Activity.objects.for_athlete(athlete).order_by('-start_date').first()
+            after = latest.start_date if latest else None
             for summary in api.get_activities(after=after):
                 self.create_activity_from_json(api.get_activity(summary['id']), athlete, api)
-            # Backfill rows imported before athlete linking existed. Only safe while exactly
-            # one athlete exists (every unowned row is theirs); assign them to the default.
-            if single and athlete.is_default:
-                Activity.objects.filter(athlete__isnull=True).update(athlete=athlete)
-                Gear.objects.filter(athlete__isnull=True).update(athlete=athlete)
 
     def create_activities(self, activities, athlete=None):
         for activity in activities:

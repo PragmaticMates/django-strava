@@ -124,6 +124,39 @@ class TestViewScoping:
 
 
 @pytest.mark.django_db
+class TestSeedMigration:
+    def _run(self):
+        # Exercise the 0011 data-migration function against the current models (its only
+        # apps usage is get_model + .objects, which the live registry satisfies).
+        import importlib
+        from django.apps import apps as global_apps
+        mod = importlib.import_module("strava.migrations.0011_seed_default_athlete")
+        mod.seed_default_athlete(global_apps, None)
+
+    def test_marks_default_and_backfills_unowned_rows(self):
+        athlete = Athlete.objects.create(id=1, json={})
+        act = Activity.objects.create(
+            id=1, name="Legacy", start_date=datetime(2024, 1, 1, tzinfo=tz.utc),
+            sport_type="Run", distance=1000, json={"id": 1},
+        )
+        gear = Gear.objects.create(id="g1", brand_name="N", model_name="P", description="", json={})
+        assert act.athlete_id is None and gear.athlete_id is None
+
+        self._run()
+
+        athlete.refresh_from_db()
+        act.refresh_from_db()
+        gear.refresh_from_db()
+        assert athlete.is_default is True
+        assert act.athlete_id == 1
+        assert gear.athlete_id == 1
+
+    def test_no_athlete_is_a_noop(self):
+        self._run()  # empty DB → must not raise
+        assert Athlete.objects.count() == 0
+
+
+@pytest.mark.django_db
 class TestTokenPersistence:
     def _client(self, **tokens):
         return SimpleNamespace(protocol=SimpleNamespace(), **tokens)
