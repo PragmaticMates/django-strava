@@ -185,7 +185,11 @@ window.DSCharts = (function () {
       ? (v) => { const m = Math.floor(v); return m + ":" + String(Math.round((v - m) * 60)).padStart(2, "0"); }
       : fmtTick;
     const vals = rows.map(x => x[metric]);
-    const maxV = Math.max(...vals) * 1.12;
+    // Fall back to 1 when every value is 0 (e.g. a distanceless sport — weight
+    // training, yoga — viewed with the km metric): a 0 maxV makes niceStep()
+    // return a 0 step, and the gridline loop below (v * step <= maxV) would spin
+    // forever appending nodes and hang the tab.
+    const maxV = Math.max(...vals) * 1.12 || 1;
     // y gridlines: 4 nice steps
     const step = niceStep(maxV / 4);
     for (let v = 0; v * step <= maxV; v++) {
@@ -237,6 +241,7 @@ window.DSCharts = (function () {
     host.appendChild(svg);
   }
   function niceStep(raw) {
+    if (!(raw > 0)) return 1;  // guard: log10(0) → 0 step → caller's gridline loop never ends
     const mag = Math.pow(10, Math.floor(Math.log10(raw)));
     const m = raw / mag;
     return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * mag;
