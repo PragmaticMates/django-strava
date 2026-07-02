@@ -112,13 +112,19 @@
       // not only those whose start point is in view — otherwise panning the
       // start point off-screen would drop a route still crossing the viewport.
       if (!bounds.intersects(L.latLngBounds(coords))) return;
-      // Clicking a route selects its activity, and hovering it shows the same dashed
-      // preview + dimming as hovering the activity's marker.
-      const line = L.polyline(coords, { color: COLORS[m.map_sport_type] || COLORS.other, weight: 2.5, opacity: 0.65 })
+      const color = COLORS[m.map_sport_type] || COLORS.other;
+      // Visible thin route (non-interactive: the wide invisible hit line below owns
+      // the pointer, so a 2.5px route stays easy to hover without looking thicker).
+      lines.push(L.polyline(coords, { color: color, weight: 2.5, opacity: 0.65, interactive: false }));
+      // Transparent wide hit target. Clicking selects the activity; hovering shows the
+      // same preview + dimming as hovering the marker. Tagged so setRoutesDimmed leaves
+      // it invisible (opacity 0) instead of fading it into view.
+      const hit = L.polyline(coords, { color: color, weight: 16, opacity: 0 })
         .on('click', function() { selectActivity(m); })
         .on('mouseover', function() { showHoverRoute(m, m._marker); })
         .on('mouseout', function() { clearHoverRoute(); });
-      lines.push(line);
+      hit.options._hit = true;
+      lines.push(hit);
     });
     allRoutesLayer = L.layerGroup(lines).addTo(map);
   }
@@ -127,6 +133,7 @@
   function setRoutesDimmed(dimmed) {
     if (!allRoutesLayer) return;
     allRoutesLayer.eachLayer(function(line) {
+      if (line.options._hit) return;  // keep the invisible hit lines invisible
       line.setStyle({ opacity: dimmed ? 0.06 : 0.65 });
     });
   }
