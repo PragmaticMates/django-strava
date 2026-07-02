@@ -135,7 +135,7 @@ def run_performance(activities):
 
     perf = []
     for label, key, dist in RUN_PERF_DISTANCES:
-        row = {'dist': label, 'best': '—', 'best_id': None, 'est': '—'}
+        row = {'dist': label, 'best': '—', 'best_id': None, 'est': '—', 'est_pace': '—'}
         if key in best_by_name:
             t, pk = best_by_name[key]
             row['best'], row['best_id'] = fmt_hms(t), pk
@@ -148,6 +148,7 @@ def run_performance(activities):
         if projections:
             est = min(projections)
             row['est'] = f'{fmt_hms(est * 0.975)} – {fmt_hms(est * 1.025)}'
+            row['est_pace'] = f'{fmt_pace(est / (dist / 1000))}/km'
         perf.append(row)
     return perf
 
