@@ -1615,6 +1615,7 @@ img.act-photo, img.aoty-photo { object-fit: cover; }
 
 /* Wall: masonry, varied heights, no footer */
 .gallery-grid[data-view="wall"] {
+  display: block; /* leave CSS grid so the multicol `columns` below actually applies */
   columns: 4;
   column-gap: 6px;
 }
