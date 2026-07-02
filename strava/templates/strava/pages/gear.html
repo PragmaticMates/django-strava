@@ -47,6 +47,15 @@
     </div>
 
     <div class="af-sport-wrap">
+      <select class="af-sport-select" name="age">
+        <option value="all"{% if age == 'all' %} selected{% endif %}>All (incl. old)</option>
+        <option value="active"{% if age == 'active' %} selected{% endif %}>Active only</option>
+        <option value="old"{% if age == 'old' %} selected{% endif %}>Old only</option>
+      </select>
+      <span class="af-sport-caret"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
+    </div>
+
+    <div class="af-sport-wrap">
       <select class="af-sport-select" name="sort">
         <option value=""{% if not sort %} selected{% endif %}>Default order</option>
         <option value="name"{% if sort == 'name' %} selected{% endif %}>Name</option>

@@ -1,6 +1,10 @@
+from datetime import timedelta
+
 from django.db import models
 from django.db.models import F, Value, Q, CharField, FloatField, Func, ExpressionWrapper
+from django.utils import timezone
 
+from strava.consts import GEAR_OLD_DAYS
 from strava.helpers import to_float
 
 
@@ -139,6 +143,17 @@ class GearQuerySet(models.QuerySet):
         if gear_type in ('bike', 'shoe'):
             return self.filter(gear_type=gear_type)
         return self
+
+    def by_age(self, age):
+        # "old" gear = not used within GEAR_OLD_DAYS days (or never used), mirroring
+        # Gear.is_old; "active" is its complement. Relies on the ``last_activity``
+        # annotation added by GearView. Any other value (e.g. 'all') is a no-op.
+        if age not in ('old', 'active'):
+            return self
+        cutoff = timezone.now() - timedelta(days=GEAR_OLD_DAYS)
+        if age == 'old':
+            return self.filter(Q(last_activity__isnull=True) | Q(last_activity__lt=cutoff))
+        return self.filter(last_activity__gte=cutoff)
 
     def sorted_by(self, key, direction='asc'):
         # Sort fields reference annotations added by the view (see GearView).

@@ -248,6 +248,7 @@ class GearView(AthleteScopedMixin, ListView):
             )
             .search(params.get('q'))
             .of_type(params.get('type'))
+            .by_age(params.get('age'))
             .sorted_by(params.get('sort'), params.get('dir', 'asc'))
         )
 
@@ -258,6 +259,7 @@ class GearView(AthleteScopedMixin, ListView):
         params = self.request.GET
         context['q'] = params.get('q', '')
         context['type'] = params.get('type', 'all')
+        context['age'] = params.get('age', 'all')
         context['sort'] = params.get('sort', '')
         context['dir'] = params.get('dir', 'asc')
 

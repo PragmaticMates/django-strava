@@ -5,7 +5,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from strava.choices import SportType
-from strava.consts import BIKE_LIFESPAN_KM, DETAIL_MARKER_FIELDS, SHOE_LIFESPAN_KM
+from strava.consts import BIKE_LIFESPAN_KM, DETAIL_MARKER_FIELDS, GEAR_OLD_DAYS, SHOE_LIFESPAN_KM
 from strava.querysets import ActivityQuerySet, AthleteQuerySet, GearQuerySet
 from strava.sports import is_speed_sport, is_swim_sport, map_sport_type_for
 
@@ -207,7 +207,7 @@ class Gear(models.Model):
     last_used = self.activity_set.aggregate(models.Max('start_date'))['start_date__max']
     if last_used is None:
       return True
-    return last_used < timezone.now() - timedelta(days=365)
+    return last_used < timezone.now() - timedelta(days=GEAR_OLD_DAYS)
 
   @property
   def lifespan_km(self):

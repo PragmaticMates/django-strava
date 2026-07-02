@@ -19,6 +19,10 @@ MAP_MARKER_LIMIT = 1000   # cap markers so a busy map stays readable
 SHOE_LIFESPAN_KM = 700
 BIKE_LIFESPAN_KM = 12000
 
+# Gear not used within this many days (or never used) counts as "old" — hidden from the
+# dashboard's no-filter view and selectable via the gear page's age filter.
+GEAR_OLD_DAYS = 365
+
 # --- Personal-record plausibility caps ---
 # Rides averaging faster than this (km/h) are excluded from the fastest-avg-speed PR as
 # implausible (GPS errors or mis-tagged motorized activities).
