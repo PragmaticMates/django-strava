@@ -9,7 +9,7 @@
   // Per-sport glyphs, reused from the sport filter's options island (each entry is
   // [sport_type, label, svg] from strava/sport_icons.py) so the map draws the same icon
   // as the filter/grid/table/gallery without shipping a copy per marker. The colour still
-  // keys off the broad `type` bucket via the act-marker-<type> class.
+  // keys off the broad `map_sport_type` bucket via the act-marker-<map_sport_type> class.
   const GLYPH_BY_SPORT = (function() {
     const el = document.getElementById('map-sport-options');
     const map = {};
@@ -22,7 +22,7 @@
       iconSize: [34, 34],
       iconAnchor: [17, 17],
       popupAnchor: [0, -18],
-      html: '<span class="map-pin act-marker-' + m.type + '">' + (GLYPH_BY_SPORT[m.sport_type] || '') + '</span>',
+      html: '<span class="map-pin act-marker-' + m.map_sport_type + '">' + (GLYPH_BY_SPORT[m.sport_type] || '') + '</span>',
     });
   }
 
@@ -113,7 +113,7 @@
       // start point off-screen would drop a route still crossing the viewport.
       if (!bounds.intersects(L.latLngBounds(coords))) return;
       // Clicking a route selects its activity, just like clicking its marker.
-      lines.push(L.polyline(coords, { color: COLORS[m.type] || COLORS.run, weight: 2.5, opacity: 0.65 })
+      lines.push(L.polyline(coords, { color: COLORS[m.map_sport_type] || COLORS.other, weight: 2.5, opacity: 0.65 })
         .on('click', function() { selectActivity(m); }));
     });
     allRoutesLayer = L.layerGroup(lines).addTo(map);
@@ -149,7 +149,7 @@
     setMarkersDimmed(true, marker);
     hoverLayer = L.layerGroup([
       L.polyline(coords, { color: '#fff', weight: 5, opacity: 0.7 }),
-      L.polyline(coords, { color: COLORS[m.type] || COLORS.run, weight: 3, opacity: 0.9, dashArray: '4 5' }),
+      L.polyline(coords, { color: COLORS[m.map_sport_type] || COLORS.other, weight: 3, opacity: 0.9, dashArray: '4 5' }),
     ]).addTo(map);
   }
   function clearHoverRoute() {
@@ -253,7 +253,7 @@
     const coords = activityCoords(m);
     if (!coords.length) return;
     hideOtherMarkers(m);
-    const color = COLORS[m.type] || COLORS.run;
+    const color = COLORS[m.map_sport_type] || COLORS.other;
     routeLayer = L.layerGroup([
       L.polyline(coords, { color: '#fff', weight: 7, opacity: 0.85 }),
       L.polyline(coords, { color: color, weight: 4, opacity: 0.95 }),
@@ -428,7 +428,7 @@
     const shown = [];
     visibleMarkers = [];
     markers.forEach(function(m, i) {
-      const haystack = unaccent(m.title + ' ' + (m.type || ''));
+      const haystack = unaccent(m.title + ' ' + (m.map_sport_type || ''));
       const ok = tokens.every(function(t) { return haystack.indexOf(t) !== -1; })
         && (window.DSSport ? DSSport.match(filterState.sport, m.sport_type) : filterState.sport === 'all' || m.sport_type === filterState.sport)
         && (filterState.gear === 'all' || m.gear === filterState.gear)

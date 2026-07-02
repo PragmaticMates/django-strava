@@ -30,9 +30,9 @@ READ_BASE = {
 
 
 # --------------------------------------------------------------------------- #
-# Activity.type bucketing
+# Activity.map_sport_type bucketing
 # --------------------------------------------------------------------------- #
-class TestActivityType:
+class TestActivityMapSportType:
     @pytest.mark.parametrize("sport_type,expected", [
         ("TrailRun", "trail"),
         ("Hike", "hike"),
@@ -46,8 +46,8 @@ class TestActivityType:
         ("Workout", "other"),   # unlisted sports fall through to "other"
         ("Velomobile", "other"),  # no "Ride" substring → not the ride bucket
     ])
-    def test_type(self, sport_type, expected):
-        assert activity(sport_type=sport_type).type == expected
+    def test_map_sport_type(self, sport_type, expected):
+        assert activity(sport_type=sport_type).map_sport_type == expected
 
 
 # --------------------------------------------------------------------------- #

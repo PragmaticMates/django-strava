@@ -23,12 +23,12 @@ def _is_cycling(sport_type):
 # --------------------------------------------------------------------------- #
 # Broad activity categories
 # --------------------------------------------------------------------------- #
-# The coarse bucket a sport falls in, used for map-marker styling (Activity.type). Each
-# sport maps to exactly one bucket: the first matching rule wins, and anything unmatched
+# The coarse bucket a sport falls in, used for map-marker styling (Activity.map_sport_type).
+# Each sport maps to exactly one bucket: the first matching rule wins, and anything unmatched
 # is DEFAULT_MAP_SPORT_TYPE ('other') — the grab-bag for sports (Yoga, Tennis, AlpineSki,
 # Velomobile …) that have no dedicated bucket, so they get their own marker colour rather
 # than borrowing 'run's. A rule is either a substring test ("contains") or an explicit
-# membership set ("values"). This is the single source of truth behind Activity.type.
+# membership set ("values"). This is the single source of truth behind Activity.map_sport_type.
 MAP_SPORT_TYPES = (
     ("trail", {"contains": "Trail"}),
     ("hike", {"values": ("Hike", "Snowshoe")}),
@@ -46,8 +46,8 @@ def _rule_matches(rule, sport_type):
     return sport_type in rule["values"]
 
 
-def category_for(sport_type):
-    """The broad category ('trail'/'hike'/'walk'/'ride'/'swim'/'run'/'other') for a sport_type."""
+def map_sport_type_for(sport_type):
+    """The map sport type ('trail'/'hike'/'walk'/'ride'/'swim'/'run'/'other') for a sport_type."""
     for name, rule in MAP_SPORT_TYPES:
         if _rule_matches(rule, sport_type):
             return name
@@ -56,11 +56,12 @@ def category_for(sport_type):
 
 # Exact sport types per personal-records / compare tab. An explicit allow-list (rather
 # than the coarse categories above, whose "other" catch-all would swallow every unlisted
-# sport) keeps unrelated fast activities out of the running/cycling PRs, and lets e-bikes
-# be excluded from cycling (motor assistance would unfairly dominate the records).
+# sport) keeps unrelated fast activities out of the running/cycling PRs. Cycling is limited
+# to conventional bikes: e-bikes (motor assistance), velomobiles and handcycles (very
+# different mechanics/aerodynamics) would all unfairly distort the records.
 RECORDS_SPORT_TYPES = {
     "Running": {"Run", "TrailRun", "VirtualRun"},
-    "Cycling": {"Ride", "GravelRide", "MountainBikeRide", "VirtualRide", "Velomobile", "Handcycle"},
+    "Cycling": {"Ride", "GravelRide", "MountainBikeRide", "VirtualRide"},
     "Hiking": {"Hike", "Snowshoe", "Walk"},
     "Swimming": {"Swim"},
 }

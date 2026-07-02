@@ -266,7 +266,7 @@ def map_data(activities):
                 'id': a.pk,  # for lazily fetching the activity's card on marker click
                 'lat': a.start_lat,
                 'lng': a.start_lng,
-                'type': a.type,
+                'map_sport_type': a.map_sport_type,
                 'title': f'{a.name} · {a.distance_km} km',
                 'polyline': a.polyline,
                 'sport_type': a.sport_type,

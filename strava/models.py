@@ -8,7 +8,7 @@ from strava.api import StravaApi
 from strava.choices import SportType
 from strava.consts import BIKE_LIFESPAN_KM, DETAIL_MARKER_FIELDS, SHOE_LIFESPAN_KM
 from strava.querysets import ActivityQuerySet, GearQuerySet
-from strava.sports import category_for
+from strava.sports import map_sport_type_for
 
 
 class Activity(models.Model):
@@ -132,9 +132,9 @@ class Activity(models.Model):
   is_gear_synced.boolean = True
 
   @property
-  def type(self):
-    # Broad category (trail/hike/walk/ride/swim/run/other); defined once in strava.sports.
-    return category_for(self.sport_type)
+  def map_sport_type(self):
+    # Map sport type (trail/hike/walk/ride/swim/run/other); defined once in strava.sports.
+    return map_sport_type_for(self.sport_type)
 
   @property
   def distance_km(self):
@@ -154,9 +154,9 @@ class Activity(models.Model):
     if not t or not d:
       return '-', ''
     d_km = d / 1000
-    if self.type == 'ride':
+    if self.map_sport_type == 'ride':
       return f'{d_km / (t / 3600):.1f}', 'km/h'
-    if self.type == 'swim':
+    if self.map_sport_type == 'swim':
       pace_s = t / (d / 100)
       m, s = divmod(int(pace_s), 60)
       return f'{m}:{s:02d}', '/100m'
