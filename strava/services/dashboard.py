@@ -7,10 +7,14 @@ from strava import helpers
 from strava.sports import sport_matches
 
 
-def filter_activities(all_activities, q, sport, gear, year):
+def filter_activities(all_activities, q, sport, gear, year, dist_min=None, dist_max=None):
     """The activities matching the dashboard filter state (search text, sport group, gear,
-    year). Non-GPS activities (pool swims, treadmill runs) carry no marker but still count."""
+    year, distance window). Non-GPS activities (pool swims, treadmill runs) carry no marker
+    but still count. The distance bounds arrive in kilometres (the slider's unit) and are
+    compared against the metres stored on the row; a blank/non-numeric bound is ignored."""
     tokens = helpers.unaccent(q).split()
+    lower = helpers.to_float(dist_min)
+    upper = helpers.to_float(dist_max)
 
     def matches(a):
         haystack = helpers.unaccent(f'{a.name} {a.map_sport_type}')
@@ -19,6 +23,8 @@ def filter_activities(all_activities, q, sport, gear, year):
             and sport_matches(sport, a.sport_type)
             and (gear == 'all' or str(a.gear_id or '') == gear)
             and (year == 'all' or str(helpers.local_date(a).year) == year)
+            and (lower is None or a.distance >= lower * 1000)
+            and (upper is None or a.distance <= upper * 1000)
         )
 
     return [a for a in all_activities if matches(a)]

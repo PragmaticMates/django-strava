@@ -7,9 +7,11 @@ share them without pulling in the heavier analytics computations.
 import math
 import unicodedata
 
+from django.db.models import Max
 from django.utils import timezone
 
 from strava.consts import MIN_HIKE_PACE_SEC
+from strava.sports import TOP_SPORT_TYPES
 
 
 def local_date(activity):
@@ -28,6 +30,40 @@ def to_float(value):
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def distance_slider_context(public_qs, sport, params):
+    """Distance-slider context (per-sport ceilings + current window) shared by the
+    activities filter bar and the dashboard map filter bar.
+
+    ``public_qs`` is the athlete's public activities. The slider bounds are keyed by
+    sport selection so switching sport rescales the track (a swim tops out far below an
+    ultra): the top end is the longest activity in km, rounded up to the next 5 km with a
+    small floor so the track is never degenerate. ``dist_ceils`` maps every value the
+    sport dropdown can emit ('all', a group key or an exact ``sport_type``) to its
+    ceiling; the client reads it to rescale the slider on sport change without a
+    round-trip."""
+    per_sport_m = {
+        row['sport_type']: row['distance__max']
+        for row in public_qs.values('sport_type').annotate(Max('distance'))
+    }
+
+    def ceil_km(metres):
+        return max(5, math.ceil((metres or 0) / 1000 / 5) * 5)
+
+    dist_ceils = {'all': ceil_km(max(per_sport_m.values(), default=0))}
+    for group in TOP_SPORT_TYPES:
+        dist_ceils[group['key']] = ceil_km(max((per_sport_m.get(t, 0) for t in group['types']), default=0))
+    for sport_type, longest in per_sport_m.items():
+        dist_ceils[sport_type] = ceil_km(longest)
+
+    dist_ceil = dist_ceils.get(sport, dist_ceils['all'])
+    return {
+        'dist_ceils': dist_ceils,
+        'dist_ceil': dist_ceil,
+        'dist_min': params.get('dist_min', '0'),
+        'dist_max': params.get('dist_max', str(dist_ceil)),
+    }
 
 
 def unaccent(s):

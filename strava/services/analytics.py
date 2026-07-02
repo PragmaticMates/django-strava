@@ -273,6 +273,7 @@ def map_data(activities):
                 'lat': a.start_lat,
                 'lng': a.start_lng,
                 'map_sport_type': a.map_sport_type,
+                'distance': a.distance_km,  # km, for the distance range filter
                 'title': f'{a.name} · {a.distance_km} km',
                 'polyline': a.polyline,
                 'sport_type': a.sport_type,

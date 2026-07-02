@@ -38,7 +38,17 @@
     </button>
     {% include "strava/widgets/sport_filter.html" with btn_id="map-sport-btn" options_id="map-sport-options" groups_id="map-sport-groups" current=sport trigger_class="pill-btn sport-pill" %}
     <button class="pill-btn" type="button" id="map-gear-btn"><span class="pill-label">All Gear</span> <span class="caret">▾</span></button>
+    <div class="af-dist" id="map-dist-slider" data-ceil="{{ dist_ceil }}">
+      <span class="af-dist-label">Distance</span>
+      <div class="af-dist-track">
+        <div class="af-dist-fill"></div>
+        <input type="range" class="af-dist-range af-dist-min" min="0" max="{{ dist_ceil }}" step="1" value="{{ dist_min }}" aria-label="Minimum distance (km)">
+        <input type="range" class="af-dist-range af-dist-max" min="0" max="{{ dist_ceil }}" step="1" value="{{ dist_max }}" aria-label="Maximum distance (km)">
+      </div>
+      <span class="af-dist-value"><output class="af-dist-lo">{{ dist_min }}</output>–<output class="af-dist-hi">{{ dist_max }}</output> km</span>
+    </div>
   </div>
+  {{ dist_ceils|json_script:"map-dist-ceils" }}
   {% include "strava/hx/dashboard_map_note.html" %}
   {% comment %}
   Activity cards are fetched lazily when a marker is clicked (see map JS) rather than
@@ -60,6 +70,8 @@ server-side; the response arrives as out-of-band swaps absorbed by #dash-sink.
   <input type="hidden" name="sport" id="df-sport" value="{{ sport }}">
   <input type="hidden" name="gear" id="df-gear" value="{{ gear }}">
   <input type="hidden" name="year" id="df-year" value="{{ year }}">
+  <input type="hidden" name="dist_min" id="df-dist_min" value="{{ dist_min }}">
+  <input type="hidden" name="dist_max" id="df-dist_max" value="{{ dist_max }}">
 </form>
 <div id="dash-sink" hidden></div>
 
@@ -200,6 +212,7 @@ endpoint the map uses) into .act-modal-host.
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" integrity="sha256-Hk4dIpcqOSb0hZjgyvFOP+cEmDXUKKNE/tT542ZbNQg=" crossorigin=""></script>
 <script src="{% static 'strava/js/charts.js' %}"></script>
 <script src="{% static 'strava/js/sport-filter.js' %}"></script>
+<script src="{% static 'strava/js/dist-slider.js' %}"></script>
 <script src="{% static 'strava/js/dashboard-map.js' %}"></script>
 <script src="{% static 'strava/js/dashboard.js' %}"></script>
 

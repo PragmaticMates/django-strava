@@ -1,5 +1,4 @@
 import logging
-import math
 import secrets
 
 from django.contrib import messages
@@ -76,10 +75,17 @@ class DashboardView(AthleteScopedMixin, TemplateView):
         context['q'], context['sport'], context['gear'], context['year'] = q, sport, gear, year
 
         # Sport filter dropdown: every sport in the data (not just GPS-mapped ones) + groups.
-        context['sport_options'] = sport_options(Activity.objects.for_athlete(self.athlete).public())
+        public_qs = Activity.objects.for_athlete(self.athlete).public()
+        context['sport_options'] = sport_options(public_qs)
         context['sport_groups'] = group_data()
 
-        activities = services.dashboard.filter_activities(all_activities, q, sport, gear, year)
+        # Distance slider bounds (shared with the activities filter bar); the map filters
+        # markers client-side against dist_min/dist_max, mirrored here so every section
+        # recomputes over the same distance window.
+        context.update(helpers.distance_slider_context(public_qs, sport, params))
+        dist_min, dist_max = context['dist_min'], context['dist_max']
+
+        activities = services.dashboard.filter_activities(all_activities, q, sport, gear, year, dist_min, dist_max)
 
         # ---- Totals + latest activities for the active filter ----
         context['stat'] = services.dashboard.totals(activities)
@@ -199,31 +205,9 @@ class ActivitiesView(AthleteScopedMixin, ListView):
             (d.strftime('%Y-%m'), d.strftime('%b %Y'))
             for d in Activity.objects.for_athlete(self.athlete).public().dates('start_date', 'month', order='DESC')
         ]
-        # Distance slider bounds, keyed by sport selection so switching sport rescales
-        # the slider (a swim tops out far below an ultra). The top end is the longest
-        # activity in km, rounded up to the next 5 km with a small floor so the track is
-        # never degenerate. ``dist_ceils`` maps every value the sport dropdown can emit
-        # ('all', a group key or an exact sport_type) to its ceiling; the client reads it
-        # to rescale the slider on sport change without a round-trip.
-        per_sport_m = {
-            row['sport_type']: row['distance__max']
-            for row in Activity.objects.for_athlete(self.athlete).public().values('sport_type').annotate(Max('distance'))
-        }
-
-        def ceil_km(metres):
-            return max(5, math.ceil((metres or 0) / 1000 / 5) * 5)
-
-        dist_ceils = {'all': ceil_km(max(per_sport_m.values(), default=0))}
-        for group in TOP_SPORT_TYPES:
-            dist_ceils[group['key']] = ceil_km(max((per_sport_m.get(t, 0) for t in group['types']), default=0))
-        for sport_type, longest in per_sport_m.items():
-            dist_ceils[sport_type] = ceil_km(longest)
-
-        dist_ceil = dist_ceils.get(context['sport'], dist_ceils['all'])
-        context['dist_ceils'] = dist_ceils
-        context['dist_ceil'] = dist_ceil
-        context['dist_min'] = params.get('dist_min', '0')
-        context['dist_max'] = params.get('dist_max', str(dist_ceil))
+        context.update(helpers.distance_slider_context(
+            Activity.objects.for_athlete(self.athlete).public(), context['sport'], params,
+        ))
         context['summary'] = services.activities.summary(self.object_list, timezone.now().date())
         return context
 

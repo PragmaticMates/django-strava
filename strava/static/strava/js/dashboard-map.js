@@ -419,7 +419,7 @@
   // The map itself filters its markers client-side (below); the same state is mirrored
   // into the hidden #dash-filters form so the dependent dashboard sections (season
   // totals, latest activities, trends, calendar, gear stats) recompute server-side.
-  const filterState = { q: '', sport: 'all', gear: 'all', year: 'all' };
+  const filterState = { q: '', sport: 'all', gear: 'all', year: 'all', dist_min: 0, dist_max: Infinity };
 
   function syncDashboard() {
     const form = document.getElementById('dash-filters');
@@ -428,6 +428,8 @@
     document.getElementById('df-sport').value = filterState.sport;
     document.getElementById('df-gear').value = filterState.gear;
     document.getElementById('df-year').value = filterState.year;
+    document.getElementById('df-dist_min').value = filterState.dist_min;
+    document.getElementById('df-dist_max').value = filterState.dist_max;
     htmx.trigger(form, 'refresh');
   }
 
@@ -452,7 +454,8 @@
       const ok = tokens.every(function(t) { return haystack.indexOf(t) !== -1; })
         && (window.DSSport ? DSSport.match(filterState.sport, m.sport_type) : filterState.sport === 'all' || m.sport_type === filterState.sport)
         && (filterState.gear === 'all' || m.gear === filterState.gear)
-        && (filterState.year === 'all' || String(m.year) === filterState.year);
+        && (filterState.year === 'all' || String(m.year) === filterState.year)
+        && (m.distance >= filterState.dist_min && m.distance <= filterState.dist_max);
       if (ok) {
         clusters.addLayer(leafletMarkers[i]);
         visibleMarkers.push(m);
@@ -531,12 +534,30 @@
   const yearOpts = distinctOptions('year', 'year')
     .sort(function(a, b) { return Number(b.value) - Number(a.value); });
 
+  // Distance range slider (shared DSDistSlider module). Filtering runs client-side on
+  // release; the sport dropdown rescales the track to the selected sport's ceiling.
+  const distCeils = window.DSDistSlider.ceils('map-dist-ceils');
+  const distSlider = window.DSDistSlider.build(document.getElementById('map-dist-slider'), {
+    onChange: function(lo, hi) { filterState.dist_min = lo; filterState.dist_max = hi; applyFilters(); }
+  });
+  if (distSlider) { filterState.dist_min = distSlider.min(); filterState.dist_max = distSlider.max(); }
+
   // Sport uses the shared categorized icon dropdown (options come from the server so
   // GPS-less sports appear too); gear/year keep the simple flat pills.
   const sportBtn = document.getElementById('map-sport-btn');
   if (sportBtn && window.DSSport) {
     filterState.sport = sportBtn.getAttribute('data-sport-current') || 'all';
-    DSSport.build(sportBtn, { onSelect: function(value) { filterState.sport = value; applyFilters(); } });
+    DSSport.build(sportBtn, { onSelect: function(value) {
+      filterState.sport = value;
+      // Rescale the distance slider to the newly-selected sport and reset the window, so
+      // the reset dist_min/dist_max ride along in the same refresh.
+      if (distSlider) {
+        distSlider.setCeil(value in distCeils ? distCeils[value] : distCeils.all);
+        filterState.dist_min = distSlider.min();
+        filterState.dist_max = distSlider.max();
+      }
+      applyFilters();
+    } });
   }
   setupFilterPill(document.getElementById('map-gear-btn'), 'All Gear', gearOpts, 'gear');
   setupFilterPill(document.getElementById('map-year-btn'), 'All Years', yearOpts, 'year');
