@@ -1092,12 +1092,14 @@ img.act-photo, img.aoty-photo { object-fit: cover; }
   background: var(--surface);
   border: 1px solid var(--line-2);
   border-radius: 14px;
-  overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   box-shadow: var(--shadow);
   margin-bottom: 20px;
 }
 .acts-table {
   width: 100%;
+  min-width: 720px;
   border-collapse: collapse;
   font-size: 13.5px;
 }
