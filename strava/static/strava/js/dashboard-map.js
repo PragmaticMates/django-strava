@@ -61,7 +61,7 @@
   let hoverLayer = null;
   let selectedMarker = null;   // lone pin shown while a card is open (others hidden)
   let allRoutesLayer = null;   // overlay of every visible activity's route, toggled on
-  let showAllRoutes = false;
+  let showAllRoutes = true;    // on by default (routes overlay draws once zoomed past ROUTE_ZOOM_MIN)
   let savedView = null;
   let userMoved = false;
   function markUserMoved() { userMoved = true; }
@@ -113,8 +113,12 @@
       // start point off-screen would drop a route still crossing the viewport.
       if (!bounds.intersects(L.latLngBounds(coords))) return;
       // Clicking a route selects its activity, just like clicking its marker.
-      lines.push(L.polyline(coords, { color: COLORS[m.map_sport_type] || COLORS.other, weight: 2.5, opacity: 0.65 })
-        .on('click', function() { selectActivity(m); }));
+      // Hovering thickens it and lifts it above the other routes so it stands out.
+      const line = L.polyline(coords, { color: COLORS[m.map_sport_type] || COLORS.other, weight: 2.5, opacity: 0.65 })
+        .on('click', function() { selectActivity(m); })
+        .on('mouseover', function() { line.setStyle({ weight: 5, opacity: 0.95 }); line.bringToFront(); })
+        .on('mouseout', function() { line.setStyle({ weight: 2.5, opacity: 0.65 }); });
+      lines.push(line);
     });
     allRoutesLayer = L.layerGroup(lines).addTo(map);
   }
@@ -386,12 +390,18 @@
 
   // Routes toggle: overlay in-view routes (only when zoomed in), or clear them.
   const routesToggle = document.getElementById('map-routes-toggle');
-  if (routesToggle) routesToggle.addEventListener('click', function() {
-    showAllRoutes = !showAllRoutes;
+  if (routesToggle) {
+    // Reflect the default-on state on the button, then draw the initial overlay.
     routesToggle.classList.toggle('active', showAllRoutes);
     routesToggle.setAttribute('aria-pressed', showAllRoutes ? 'true' : 'false');
+    routesToggle.addEventListener('click', function() {
+      showAllRoutes = !showAllRoutes;
+      routesToggle.classList.toggle('active', showAllRoutes);
+      routesToggle.setAttribute('aria-pressed', showAllRoutes ? 'true' : 'false');
+      renderAllRoutes();
+    });
     renderAllRoutes();
-  });
+  }
   // Re-render as the view changes so routes appear once zoomed in and track the viewport.
   map.on('moveend zoomend', function() { if (showAllRoutes) renderAllRoutes(); });
 
