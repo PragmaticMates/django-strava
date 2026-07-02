@@ -13,7 +13,7 @@ from strava.models import Activity, Gear
 
 
 def make(id, sport_type="Run", distance=5000, moving_time=1800,
-         elevation=100, calories=None, start_date=None, gear_id=None):
+         elevation=100, calories=None, start_date=None, gear_id=None, is_private=False):
     return Activity.objects.create(
         id=id,
         name=f"Activity {id}",
@@ -24,6 +24,7 @@ def make(id, sport_type="Run", distance=5000, moving_time=1800,
         total_elevation_gain=elevation,
         calories=calories,
         gear_id=gear_id,
+        is_private=is_private,
         json={},
     )
 
@@ -69,6 +70,21 @@ class TestForSportSelection:
         make(2, "Ride")
         assert set(ids(Activity.objects.for_sport_selection("all"))) == {1, 2}
         assert set(ids(Activity.objects.for_sport_selection(None))) == {1, 2}
+
+
+@pytest.mark.django_db
+class TestPublic:
+    def test_excludes_private_activities(self):
+        make(1, is_private=False)
+        make(2, is_private=True)
+        make(3, is_private=False)
+        assert set(ids(Activity.objects.public())) == {1, 3}
+
+    def test_chains_with_other_filters(self):
+        make(1, "Run", is_private=False)
+        make(2, "Run", is_private=True)
+        make(3, "Ride", is_private=False)
+        assert ids(Activity.objects.public().for_sport("Run")) == [1]
 
 
 @pytest.mark.django_db

@@ -35,6 +35,10 @@ class Activity(models.Model):
   start_lng = models.FloatField(_("start longitude"), null=True, blank=True)
   polyline = models.TextField(_("polyline"), blank=True, default="")
   is_detailed = models.BooleanField(_("detailed"), default=False)
+  # Marked private by the athlete on Strava. Hidden from every public-facing surface
+  # (lists, map, records, statistics) via ActivityQuerySet.public(); the admin still
+  # shows these and offers a filter for them.
+  is_private = models.BooleanField(_("private"), default=False)
   gear = models.ForeignKey("Gear", on_delete=models.SET_NULL,
                            blank=True, null=True, default=None)
   # The activity's owner. Nullable because rows imported before athlete linking existed
@@ -90,6 +94,7 @@ class Activity(models.Model):
       'start_lng': round(float(latlng[1]), 6) if has_gps else None,
       'polyline': route.get('polyline') or route.get('summary_polyline') or '',
       'is_detailed': any(json.get(field) is not None for field in DETAIL_MARKER_FIELDS),
+      'is_private': bool(json.get('private')),
     }
 
   def is_synced(self):
@@ -200,11 +205,13 @@ class Gear(models.Model):
 
   @property
   def distance(self):
-      return self.activity_set.aggregate(models.Sum('distance'))['distance__sum']
+      # Private activities are excluded from the public gear mileage total.
+      return self.activity_set.public().aggregate(models.Sum('distance'))['distance__sum']
 
   @property
   def is_old(self):
-    last_used = self.activity_set.aggregate(models.Max('start_date'))['start_date__max']
+    # "Last used" ignores private activities, matching what the public gear page shows.
+    last_used = self.activity_set.public().aggregate(models.Max('start_date'))['start_date__max']
     if last_used is None:
       return True
     return last_used < timezone.now() - timedelta(days=GEAR_OLD_DAYS)

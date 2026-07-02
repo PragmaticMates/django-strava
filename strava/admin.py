@@ -66,14 +66,16 @@ class ActivityAdmin(admin.ModelAdmin):
     actions_list = ["import_strava", "open_strava_activities"]
     date_hierarchy = "start_date"
     list_display = ("show_start_date", "name_and_id", "show_sport_type", "show_distance", "show_elevation", "show_time",
-                    "show_speed", "show_heartrate", "show_calories", "gear")
+                    "show_speed", "show_heartrate", "show_calories", "gear", "is_private")
     list_select_related = ("gear",)
     list_display_links = ("name_and_id",)
     list_editable = ("gear",)
-    list_filter = (ActivitySyncFilter, ActivityDetailFilter, DistanceFilter,
+    list_filter = (ActivitySyncFilter, ActivityDetailFilter, DistanceFilter, "is_private",
                    ("athlete", RelatedDropdownFilter), ("gear", RelatedDropdownFilter), "sport_type")
     list_per_page = 100
-    readonly_fields = ('distance', 'json', 'start_date', 'athlete')
+    # is_private is derived from the Strava payload (see Activity.read_json), so it's shown
+    # read-only rather than hand-edited — a re-import would overwrite a manual change.
+    readonly_fields = ('distance', 'json', 'start_date', 'athlete', 'is_private')
     # autocomplete_fields = ("gear",)
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):

@@ -7,7 +7,7 @@ from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.core.management import call_command
 from django.db import IntegrityError, transaction
-from django.db.models import Count, F, Max, Sum
+from django.db.models import Count, F, Max, Q, Sum
 from django.http import HttpResponseBadRequest
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -60,7 +60,7 @@ class DashboardView(AthleteScopedMixin, TemplateView):
         context['active_page'] = 'dashboard'
 
         all_activities = list(
-            Activity.objects.for_athlete(self.athlete).select_related('gear').order_by('-start_date')
+            Activity.objects.for_athlete(self.athlete).public().select_related('gear').order_by('-start_date')
         )
         today = timezone.localdate()
 
@@ -76,7 +76,7 @@ class DashboardView(AthleteScopedMixin, TemplateView):
         context['q'], context['sport'], context['gear'], context['year'] = q, sport, gear, year
 
         # Sport filter dropdown: every sport in the data (not just GPS-mapped ones) + groups.
-        context['sport_options'] = sport_options(Activity.objects.for_athlete(self.athlete))
+        context['sport_options'] = sport_options(Activity.objects.for_athlete(self.athlete).public())
         context['sport_groups'] = group_data()
 
         activities = services.dashboard.filter_activities(all_activities, q, sport, gear, year)
@@ -166,6 +166,7 @@ class ActivitiesView(AthleteScopedMixin, ListView):
         params = self.request.GET
         return (
             Activity.objects.for_athlete(self.athlete)
+            .public()
             .select_related('gear')
             .search(params.get('q'))
             .for_sport_selection(params.get('sport'))
@@ -188,15 +189,15 @@ class ActivitiesView(AthleteScopedMixin, ListView):
         context['dir'] = params.get('dir', 'desc')
         context['view'] = params.get('view', 'grid')
 
-        context['sport_options'] = sport_options(Activity.objects.for_athlete(self.athlete))
+        context['sport_options'] = sport_options(Activity.objects.for_athlete(self.athlete).public())
         context['sport_groups'] = group_data()
         context['gear_list'] = (
             Gear.objects.for_athlete(self.athlete)
-            .filter(activity__isnull=False).distinct().order_by('brand_name', 'model_name')
+            .filter(activity__is_private=False).distinct().order_by('brand_name', 'model_name')
         )
         context['month_list'] = [
             (d.strftime('%Y-%m'), d.strftime('%b %Y'))
-            for d in Activity.objects.for_athlete(self.athlete).dates('start_date', 'month', order='DESC')
+            for d in Activity.objects.for_athlete(self.athlete).public().dates('start_date', 'month', order='DESC')
         ]
         # Distance slider bounds, keyed by sport selection so switching sport rescales
         # the slider (a swim tops out far below an ultra). The top end is the longest
@@ -206,7 +207,7 @@ class ActivitiesView(AthleteScopedMixin, ListView):
         # to rescale the slider on sport change without a round-trip.
         per_sport_m = {
             row['sport_type']: row['distance__max']
-            for row in Activity.objects.for_athlete(self.athlete).values('sport_type').annotate(Max('distance'))
+            for row in Activity.objects.for_athlete(self.athlete).public().values('sport_type').annotate(Max('distance'))
         }
 
         def ceil_km(metres):
@@ -242,9 +243,11 @@ class GearView(AthleteScopedMixin, ListView):
         return (
             Gear.objects.for_athlete(self.athlete)
             .annotate(
-                activity_count=Count('activity'),
-                distance_sum=Sum('activity__distance'),
-                last_activity=Max('activity__start_date'),
+                # Gear stats are public-facing, so private activities don't count toward
+                # a gear's ride count, mileage or last-used date.
+                activity_count=Count('activity', filter=Q(activity__is_private=False)),
+                distance_sum=Sum('activity__distance', filter=Q(activity__is_private=False)),
+                last_activity=Max('activity__start_date', filter=Q(activity__is_private=False)),
             )
             .search(params.get('q'))
             .of_type(params.get('type'))
@@ -287,6 +290,7 @@ class GalleryView(AthleteScopedMixin, ListView):
         # A gallery item is an activity with a primary photo; filter that in SQL.
         qs = (
             Activity.objects.for_athlete(self.athlete)
+            .public()
             .exclude(photo_url='')
             .search(params.get('q'))
             .for_sport_selection(params.get('sport'))
@@ -313,7 +317,7 @@ class GalleryView(AthleteScopedMixin, ListView):
         photos = list(context['photos'])
         context['photos'] = photos
         context['count'] = len(photos)
-        scoped = Activity.objects.for_athlete(self.athlete)
+        scoped = Activity.objects.for_athlete(self.athlete).public()
         context['year_list'] = [d.year for d in scoped.dates('start_date', 'year', order='DESC')]
         context['sport_options'] = sport_options(scoped.exclude(photo_url=''))
         context['sport_groups'] = group_data()
@@ -345,7 +349,7 @@ class CompareView(AthleteScopedMixin, TemplateView):
         sport = self.request.GET.get('sport') or 'all'
         context['sport'] = sport
 
-        all_activities = list(Activity.objects.for_athlete(self.athlete).select_related('gear'))
+        all_activities = list(Activity.objects.for_athlete(self.athlete).public().select_related('gear'))
         activities = [a for a in all_activities if sport_matches(sport, a.sport_type)]
 
         # Sport filter: "All sports" plus the top-sport groups actually present in the
@@ -374,7 +378,8 @@ class ActivityCardView(DetailView):
     def get_queryset(self):
         # Not athlete-scoped: cards are fetched by PK from JS (which doesn't carry the
         # selected athlete), and every athlete here is owner-curated public data anyway.
-        return Activity.objects.select_related('gear')
+        # Still public()-filtered so a private activity can't be surfaced by its PK.
+        return Activity.objects.public().select_related('gear')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

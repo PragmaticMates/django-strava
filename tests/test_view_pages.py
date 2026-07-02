@@ -8,6 +8,7 @@ import datetime
 from datetime import timezone as tz
 
 import pytest
+from django.http import Http404
 from django.test import RequestFactory
 
 from strava.models import Activity, Gear
@@ -24,7 +25,8 @@ def dt(y, m, d, h=12):
 def make_activity(id, sport_type="Run", distance=10000, moving_time=3000,
                   elevation=100, start_date=None, gear=None, kudos=0,
                   photo_url="", name=None, calories=0, pr_count=0,
-                  achievement_count=0, start_lat=None, start_lng=None):
+                  achievement_count=0, start_lat=None, start_lng=None,
+                  is_private=False):
     return Activity.objects.create(
         id=id,
         name=name or f"Activity {id}",
@@ -41,6 +43,7 @@ def make_activity(id, sport_type="Run", distance=10000, moving_time=3000,
         start_lat=start_lat,
         start_lng=start_lng,
         gear=gear,
+        is_private=is_private,
         json={"id": id},
     )
 
@@ -89,6 +92,15 @@ class TestActivitiesView:
         ctx = list_context(ActivitiesView, sport="Run")
         assert ctx["summary"]["count"] == 1
         assert [a.id for a in ctx["activities"]] == [1]
+
+    def test_private_activities_excluded(self):
+        make_activity(1, "Run", distance=10000)
+        make_activity(2, "Run", distance=99000, is_private=True)
+        ctx = list_context(ActivitiesView)
+        assert [a.id for a in ctx["activities"]] == [1]
+        # The private activity is also kept out of the headline summary totals.
+        assert ctx["summary"]["count"] == 1
+        assert ctx["summary"]["distance_km"] == 10
 
     def test_month_list_and_gear_list(self):
         g = make_gear("g1")
@@ -187,6 +199,14 @@ class TestGearView:
         assert g.wear_pct == 80
         assert g.badge_label == "Replace soon"
 
+    def test_private_activities_not_counted_in_gear_stats(self):
+        shoe = make_gear("s1", "shoe")
+        make_activity(1, "Run", distance=100000, gear=shoe)                    # 100 km public
+        make_activity(2, "Run", distance=600000, gear=shoe, is_private=True)   # private, ignored
+        g = {x.id: x for x in list_context(GearView)["gear_list"]}["s1"]
+        assert g.activity_count == 1
+        assert g.distance_km == 100
+
 
 # --------------------------------------------------------------------------- #
 # GalleryView
@@ -198,6 +218,12 @@ class TestGalleryView:
         make_activity(2, "Run", photo_url="")   # excluded
         ctx = list_context(GalleryView)
         assert ctx["count"] == 1
+        assert [a.id for a in ctx["photos"]] == [1]
+
+    def test_private_activities_excluded(self):
+        make_activity(1, "Run", photo_url="http://x/1.jpg")
+        make_activity(2, "Run", photo_url="http://x/2.jpg", is_private=True)   # excluded
+        ctx = list_context(GalleryView)
         assert [a.id for a in ctx["photos"]] == [1]
 
     def test_sort_oldest(self):
@@ -236,6 +262,13 @@ class TestCompareView:
         make_activity(2, "Run", start_date=dt(2025, 6, 1))   # gap at 2024
         ctx = template_context(CompareView)
         assert [y["year"] for y in ctx["years"]] == [2023, 2024, 2025]
+
+    def test_private_activities_excluded(self):
+        make_activity(1, "Run", start_date=dt(2024, 6, 1))
+        make_activity(2, "Run", start_date=dt(2025, 6, 1), is_private=True)   # excluded
+        ctx = template_context(CompareView)
+        # Only the public activity's season is present — no 2025 column from the private one.
+        assert [y["year"] for y in ctx["years"]] == [2024]
 
     def test_numeric_rows_present(self):
         make_activity(1, "Run", distance=10000, elevation=100, moving_time=3600,
@@ -326,6 +359,14 @@ class TestActivityCardView:
         make_activity(7)
         ctx = self._ctx(7, map="1")
         assert ctx["map_card"] is True
+
+    def test_private_activity_card_not_found(self):
+        # A private activity must not be reachable by its PK from the map-card endpoint.
+        make_activity(7, is_private=True)
+        view = ActivityCardView()
+        view.setup(RequestFactory().get("/"), pk=7)
+        with pytest.raises(Http404):
+            view.get_object()
 
 
 # --------------------------------------------------------------------------- #

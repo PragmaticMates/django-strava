@@ -23,6 +23,12 @@ class ActivityQuerySet(models.QuerySet):
             return self
         return self.filter(athlete=athlete)
 
+    def public(self):
+        # Activities the athlete kept public on Strava. Applied to every public-facing
+        # surface (lists, map, personal records, statistics) so private activities never
+        # leak to the frontend; the admin keeps using the unfiltered manager.
+        return self.filter(is_private=False)
+
     def gear_unsynced(self):
         # Compare the athlete-editable `gear_id` column against the gear_id in the stored
         # (immutable) Strava payload — a mismatch means an admin edit hasn't been pushed

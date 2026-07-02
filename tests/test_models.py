@@ -39,6 +39,14 @@ class TestActivityReadJson:
         result = Activity.read_json(json_data)
         assert result["gear_id"] is None
 
+    def test_private_flag_promoted(self):
+        assert Activity.read_json({**ACTIVITY_JSON, "private": True})["is_private"] is True
+        assert Activity.read_json({**ACTIVITY_JSON, "private": False})["is_private"] is False
+
+    def test_private_defaults_false_when_missing(self):
+        # SummaryActivity JSON without a `private` key is treated as public.
+        assert Activity.read_json(ACTIVITY_JSON)["is_private"] is False
+
 
 @pytest.mark.django_db
 class TestActivityStr:
@@ -113,6 +121,41 @@ class TestActivityIsGearSynced:
             json=ACTIVITY_JSON,
         )
         assert activity.is_gear_synced() is False
+
+
+@pytest.mark.django_db
+class TestBackfillIsPrivate:
+    def _run(self):
+        # Exercise the 0012 data-migration function against the current models (its only
+        # apps usage is get_model + .objects, which the live registry satisfies).
+        import importlib
+        from django.apps import apps as global_apps
+        mod = importlib.import_module("strava.migrations.0012_activity_is_private")
+        mod.backfill_is_private(global_apps, None)
+
+    def test_backfills_from_stored_json(self):
+        private = Activity.objects.create(
+            id=1, name="Secret", start_date=datetime(2024, 1, 1, tzinfo=timezone.utc),
+            sport_type="Run", distance=1000, json={"id": 1, "private": True},
+        )
+        public = Activity.objects.create(
+            id=2, name="Public", start_date=datetime(2024, 1, 2, tzinfo=timezone.utc),
+            sport_type="Run", distance=1000, json={"id": 2, "private": False},
+        )
+        # A legacy row whose JSON predates the `private` key is treated as public.
+        legacy = Activity.objects.create(
+            id=3, name="Legacy", start_date=datetime(2024, 1, 3, tzinfo=timezone.utc),
+            sport_type="Run", distance=1000, json={"id": 3},
+        )
+
+        self._run()
+
+        private.refresh_from_db()
+        public.refresh_from_db()
+        legacy.refresh_from_db()
+        assert private.is_private is True
+        assert public.is_private is False
+        assert legacy.is_private is False
 
 
 class TestActivityDetailed:
