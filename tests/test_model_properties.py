@@ -7,6 +7,7 @@ from django.utils import timezone as dj_timezone
 
 from strava.consts import BIKE_LIFESPAN_KM, SHOE_LIFESPAN_KM
 from strava.models import Activity, Gear
+from strava.services import sync
 
 
 def activity(**overrides):
@@ -165,28 +166,28 @@ class TestActivityApiHelpers:
         "distance": 8000, "start_date": "2025-06-15T07:00:00+00:00",
     }
 
-    @patch("strava.models.StravaApi")
+    @patch("strava.services.sync.StravaApi")
     def test_fetch_from_api_stores_and_updates(self, mock_api_cls):
         mock_api_cls.return_value.get_activity.return_value = self.ACT_JSON
         a = Activity.objects.create(
             id=5, name="Old", start_date=datetime(2020, 1, 1, tzinfo=timezone.utc),
             sport_type="Walk", distance=0, json={},
         )
-        a.fetch_from_api()
+        sync.activity_fetch(a)
         a.refresh_from_db()
         mock_api_cls.return_value.get_activity.assert_called_once_with(5)
         assert a.name == "Fetched"
         assert a.sport_type == "Run"
         assert a.json == self.ACT_JSON
 
-    @patch("strava.models.StravaApi")
+    @patch("strava.services.sync.StravaApi")
     def test_send_to_api_pushes_then_refetches(self, mock_api_cls):
         mock_api_cls.return_value.get_activity.return_value = self.ACT_JSON
         a = Activity.objects.create(
             id=5, name="Renamed", start_date=datetime(2025, 6, 15, tzinfo=timezone.utc),
             sport_type="Run", distance=8000, gear_id=None, json=self.ACT_JSON,
         )
-        a.send_to_api()
+        sync.activity_push(a)
         mock_api_cls.return_value.update_activity.assert_called_once_with(
             id=5, name="Renamed", sport_type="Run", gear_id=None,
         )
@@ -243,28 +244,28 @@ class TestGear:
         assert g.is_old is True
 
     def test_get_or_create_returns_none_for_falsy_id(self):
-        assert Gear.get_or_create(None) is None
-        assert Gear.get_or_create("") is None
+        assert sync.gear_ensure(gear_id=None) is None
+        assert sync.gear_ensure(gear_id="") is None
 
     def test_get_or_create_returns_existing(self):
         g = self._gear()
-        with patch("strava.models.StravaApi") as mock_api:
-            assert Gear.get_or_create("g1").pk == g.pk
+        with patch("strava.services.sync.StravaApi") as mock_api:
+            assert sync.gear_ensure(gear_id="g1").pk == g.pk
             mock_api.assert_not_called()   # no API hit when already present
 
-    @patch("strava.models.StravaApi")
+    @patch("strava.services.sync.StravaApi")
     def test_get_or_create_fetches_when_missing(self, mock_api_cls):
         mock_api_cls.return_value.get_gear.return_value = {**GEAR_JSON, "id": "g2"}
-        gear = Gear.get_or_create("g2")
+        gear = sync.gear_ensure(gear_id="g2")
         mock_api_cls.return_value.get_gear.assert_called_once_with("g2")
         assert gear.pk == "g2"
         assert gear.brand_name == "Nike"
 
-    @patch("strava.models.StravaApi")
+    @patch("strava.services.sync.StravaApi")
     def test_fetch_from_api_updates_fields(self, mock_api_cls):
         g = self._gear(brand_name="Old")
         mock_api_cls.return_value.get_gear.return_value = {**GEAR_JSON, "brand_name": "New"}
-        g.fetch_from_api()
+        sync.gear_fetch(g)
         g.refresh_from_db()
         assert g.brand_name == "New"
 

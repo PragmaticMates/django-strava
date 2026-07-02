@@ -4,7 +4,6 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from strava.api import StravaApi
 from strava.choices import SportType
 from strava.consts import BIKE_LIFESPAN_KM, DETAIL_MARKER_FIELDS, SHOE_LIFESPAN_KM
 from strava.querysets import ActivityQuerySet, GearQuerySet
@@ -92,34 +91,6 @@ class Activity(models.Model):
       'polyline': route.get('polyline') or route.get('summary_polyline') or '',
       'is_detailed': any(json.get(field) is not None for field in DETAIL_MARKER_FIELDS),
     }
-
-  def update_from_json(self):
-    for attr, value in Activity.read_json(self.json).items():
-      setattr(self, attr, value)
-
-    if self.gear_id and not Gear.objects.filter(id=self.gear_id).exists():
-      gear_data = StravaApi().get_gear(self.gear_id)
-      data = Gear.read_json(gear_data)
-      data['json'] = gear_data
-      data['athlete'] = self.athlete
-      Gear.objects.get_or_create(id=gear_data["id"], defaults=data)
-
-    self.save()
-
-  def fetch_from_api(self):
-    data = StravaApi().get_activity(self.id)
-    self.json = data
-    self.save(update_fields=["json"])
-    self.update_from_json()
-
-  def send_to_api(self):
-    StravaApi().update_activity(
-      id=self.id,
-      name=self.name,
-      sport_type=self.sport_type,
-      gear_id=self.gear_id
-    )
-    self.fetch_from_api()
 
   def is_synced(self):
       conditions = [
@@ -243,32 +214,6 @@ class Gear(models.Model):
     return BIKE_LIFESPAN_KM if self.gear_type == 'bike' else SHOE_LIFESPAN_KM
 
   @classmethod
-  def get_or_create(cls, id, athlete=None):
-    if not id:
-      return None
-    try:
-      return Gear.objects.get(id=id)
-    except Gear.DoesNotExist:
-      pass
-
-    gear_data = StravaApi().get_gear(id)
-    data = Gear.read_json(gear_data)
-    data['json'] = gear_data
-    data['athlete'] = athlete
-
-    gear, created = Gear.objects.get_or_create(
-      id=gear_data["id"],
-      defaults=data,
-    )
-    return gear
-
-  def fetch_from_api(self):
-    data = StravaApi().get_gear(self.id)
-    self.json = data
-    self.save(update_fields=["json"])
-    self.update_from_json()
-
-  @classmethod
   def read_json(cls, json):
     return {
       # 'id': json['id'],
@@ -279,11 +224,6 @@ class Gear(models.Model):
       # Per the Strava API, only bikes carry a frame_type (DetailedGear); shoes have none.
       'gear_type': 'bike' if json.get('frame_type') is not None else 'shoe',
     }
-
-  def update_from_json(self):
-    for attr, value in Gear.read_json(self.json).items():
-      setattr(self, attr, value)
-    self.save()
 
 
 class Athlete(models.Model):
@@ -359,10 +299,6 @@ class Athlete(models.Model):
     data['json'] = json_data
     athlete, _created = cls.objects.update_or_create(id=json_data['id'], defaults=data)
     return athlete
-
-  @classmethod
-  def sync_from_api(cls):
-    return cls.store(StravaApi().get_athlete())
 
   def update_from_json(self):
     for attr, value in Athlete.read_json(self.json).items():

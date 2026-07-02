@@ -6,6 +6,7 @@ from django.core.management.base import BaseCommand
 
 from strava.api import StravaApi
 from strava.models import Activity, Athlete, Gear
+from strava.services import sync
 
 logger = logging.getLogger("file")
 
@@ -51,7 +52,7 @@ class Command(BaseCommand):
         data['json'] = json_data
         data['athlete'] = athlete
 
-        Gear.get_or_create(data.get('gear_id', None), athlete)
+        sync.gear_ensure(gear_id=data.get('gear_id'), athlete=athlete)
         activity, created = Activity.objects.update_or_create(
             id=json_data["id"],
             defaults=data,

@@ -16,6 +16,7 @@ from unfold.decorators import action, display
 from strava.api import format_strava_error
 from strava.choices import SportType
 from strava.models import Activity, Athlete, Gear
+from strava.services import sync
 
 
 logger = logging.getLogger('strava')
@@ -108,17 +109,17 @@ class ActivityAdmin(admin.ModelAdmin):
     @action(description=_("Update from JSON"))
     def update_from_json(self, request, queryset):
         for obj in queryset:
-            obj.update_from_json()
+            sync.activity_apply_json(obj)
 
     @action(description=_("Fetch from API"))
     def fetch_from_api(self, request, queryset):
         for obj in queryset:
-            obj.fetch_from_api()
+            sync.activity_fetch(obj)
 
     @action(description=_("Send to API"))
     def send_to_api(self, request, queryset):
         for obj in queryset:
-            obj.send_to_api()
+            sync.activity_push(obj)
 
     @display(description=_("Name"), header=True, ordering="name")
     def name_and_id(self, obj):
@@ -228,7 +229,7 @@ class GearAdmin(admin.ModelAdmin):
     @action(description=_("Fetch from API"))
     def fetch_from_api(self, request, queryset):
         for obj in queryset:
-            obj.fetch_from_api()
+            sync.gear_fetch(obj)
 
     @display(description=_("Brand and model"), ordering="brand_name", header=True)
     def brand_and_model(self, obj):
@@ -281,7 +282,7 @@ class AthleteAdmin(admin.ModelAdmin):
     @action(description=_("Sync athlete from Strava"), url_path="sync-strava-athlete")
     def sync_from_api(self, request, *args):
         try:
-            Athlete.sync_from_api()
+            sync.athlete_sync()
         except Exception as error:
             logger.exception("Strava athlete sync from the admin action failed")
             self.message_user(

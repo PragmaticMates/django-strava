@@ -4,6 +4,7 @@ from unittest.mock import patch
 import pytest
 
 from strava.models import Activity, Athlete, Gear
+from strava.services import sync
 
 
 ACTIVITY_JSON = {
@@ -138,7 +139,7 @@ class TestActivityDetailed:
 
 @pytest.mark.django_db
 class TestActivityUpdateFromJson:
-    @patch("strava.models.StravaApi")
+    @patch("strava.services.sync.StravaApi")
     def test_updates_fields_from_json(self, mock_api_cls):
         gear = Gear.objects.create(
             id="g123",
@@ -156,7 +157,7 @@ class TestActivityUpdateFromJson:
             distance=0,
             json=ACTIVITY_JSON,
         )
-        activity.update_from_json()
+        sync.activity_apply_json(activity)
         activity.refresh_from_db()
 
         assert activity.name == "Morning Run"
@@ -166,7 +167,7 @@ class TestActivityUpdateFromJson:
         # API should not be called since gear already exists
         mock_api_cls.assert_not_called()
 
-    @patch("strava.models.StravaApi")
+    @patch("strava.services.sync.StravaApi")
     def test_fetches_gear_from_api_when_missing(self, mock_api_cls):
         mock_api_cls.return_value.get_gear.return_value = GEAR_JSON
 
@@ -178,7 +179,7 @@ class TestActivityUpdateFromJson:
             distance=0,
             json=ACTIVITY_JSON,
         )
-        activity.update_from_json()
+        sync.activity_apply_json(activity)
 
         mock_api_cls.return_value.get_gear.assert_called_once_with("g123")
         assert Gear.objects.filter(id="g123").exists()
@@ -261,9 +262,9 @@ class TestAthleteStore:
         assert athlete.follower_count == 99
 
     def test_sync_from_api_stores_fetched_athlete(self):
-        with patch("strava.models.StravaApi") as mock_api_cls:
+        with patch("strava.services.sync.StravaApi") as mock_api_cls:
             mock_api_cls.return_value.get_athlete.return_value = ATHLETE_JSON
-            athlete = Athlete.sync_from_api()
+            athlete = sync.athlete_sync()
         assert athlete.pk == 42
         assert Athlete.current() == athlete
 
@@ -302,9 +303,9 @@ class TestAthleteOwnership:
 
     def test_get_or_create_sets_gear_owner(self):
         athlete = Athlete.store(ATHLETE_JSON)
-        with patch("strava.models.StravaApi") as mock_api_cls:
+        with patch("strava.services.sync.StravaApi") as mock_api_cls:
             mock_api_cls.return_value.get_gear.return_value = GEAR_JSON
-            gear = Gear.get_or_create("g123", athlete)
+            gear = sync.gear_ensure(gear_id="g123", athlete=athlete)
         assert gear.athlete_id == athlete.pk
 
     def test_deleting_athlete_cascades_to_owned_rows(self):

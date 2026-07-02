@@ -41,7 +41,7 @@ ACTIVITY_JSON_2 = {
 
 @pytest.mark.django_db
 class TestImportStrava:
-    @patch("strava.models.Gear.get_or_create", return_value=None)
+    @patch("strava.services.sync.gear_ensure", return_value=None)
     @patch("strava.management.commands.import_strava.StravaApi")
     def test_creates_activities(self, mock_api_cls, mock_gear):
         mock_api_cls.return_value.get_athlete.return_value = ATHLETE_JSON
@@ -68,7 +68,7 @@ class TestImportStrava:
         assert a1.athlete_id == 42
         assert a2.athlete_id == 42
 
-    @patch("strava.models.Gear.get_or_create", return_value=None)
+    @patch("strava.services.sync.gear_ensure", return_value=None)
     @patch("strava.management.commands.import_strava.StravaApi")
     def test_imports_athlete(self, mock_api_cls, mock_gear):
         mock_api_cls.return_value.get_athlete.return_value = ATHLETE_JSON
@@ -81,7 +81,7 @@ class TestImportStrava:
         assert athlete.follower_count == 12
         assert Athlete.current() == athlete
 
-    @patch("strava.models.Gear.get_or_create", return_value=None)
+    @patch("strava.services.sync.gear_ensure", return_value=None)
     @patch("strava.management.commands.import_strava.StravaApi")
     def test_backfills_legacy_unowned_rows(self, mock_api_cls, mock_gear):
         # Rows imported before athlete linking existed carry no athlete...
@@ -111,7 +111,7 @@ class TestImportStrava:
         assert legacy_activity.athlete_id == 42
         assert legacy_gear.athlete_id == 42
 
-    @patch("strava.models.Gear.get_or_create", return_value=None)
+    @patch("strava.services.sync.gear_ensure", return_value=None)
     @patch("strava.management.commands.import_strava.StravaApi")
     def test_incremental_passes_after(self, mock_api_cls, mock_gear):
         # Create an existing activity so .exists() is True
@@ -133,7 +133,7 @@ class TestImportStrava:
             after=datetime(2024, 6, 15, 7, 30, tzinfo=timezone.utc)
         )
 
-    @patch("strava.models.Gear.get_or_create", return_value=None)
+    @patch("strava.services.sync.gear_ensure", return_value=None)
     @patch("strava.management.commands.import_strava.StravaApi")
     def test_updates_existing_activity(self, mock_api_cls, mock_gear):
         Activity.objects.create(
@@ -158,7 +158,7 @@ class TestImportStrava:
 
 @pytest.mark.django_db
 class TestImportFromFile:
-    @patch("strava.models.Gear.get_or_create", return_value=None)
+    @patch("strava.services.sync.gear_ensure", return_value=None)
     def test_creates_activities_from_file(self, mock_gear):
         payload = json_lib.dumps([ACTIVITY_JSON_1, ACTIVITY_JSON_2])
         with patch("strava.management.commands.import_strava.os.path.exists", return_value=True), \
