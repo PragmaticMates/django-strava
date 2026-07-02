@@ -85,8 +85,13 @@ window.DSCharts = (function () {
       for (let ty = minTY; ty <= maxTY; ty++) {
         const img = new Image();
         img.alt = "";
+        img.loading = "lazy";    // don't fetch tiles for off-screen cards up front
+        img.decoding = "async";
+        // Fade each tile in once it arrives so the map doesn't pop into place.
+        img.addEventListener("load", () => img.classList.add("loaded"));
         img.src = `https://${sub[((wx + ty) % 4 + 4) % 4]}.basemaps.cartocdn.com/light_all/${z}/${wx}/${ty}@2x.png`;
         img.style.cssText = `position:absolute;width:${TILE}px;height:${TILE}px;left:${tx * TILE - originX}px;top:${ty * TILE - originY}px;`;
+        if (img.complete) img.classList.add("loaded");  // already cached
         bg.appendChild(img);
       }
     }

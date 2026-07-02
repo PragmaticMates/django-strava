@@ -9,7 +9,10 @@
   sport-colored hero band (matching the route's colour on the map) instead of an empty
   band, carrying the sport pill and PR badge.{% endcomment %}
   {% if not map_card or activity.photo_url %}
-  <div class="fc-map{% if map_card %} fc-photo-hero{% endif %}">
+  {% comment %}Pre-apply fc-has-map on route cards so the photo starts as the corner
+  thumbnail — otherwise it renders full-bleed and visibly snaps to the corner once the
+  tile map is drawn client-side.{% endcomment %}
+  <div class="fc-map{% if map_card %} fc-photo-hero{% elif activity.polyline %} fc-has-map{% endif %}">
     {% if activity.photo_url %}<img class="fc-photo" src="{{ activity.photo_url }}" alt="" aria-hidden="true">{% endif %}
     {% if not map_card %}<svg class="fc-route" role="img" aria-label="Route trace"{% if activity.polyline %} data-polyline="{{ activity.polyline }}"{% endif %}></svg>{% endif %}
     {% if activity.pb %}<span class="act-gcard-pr">★ PR</span>{% endif %}
