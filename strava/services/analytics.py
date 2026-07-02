@@ -13,7 +13,7 @@ from django.utils import timezone
 from strava.consts import (
     CO2_KG_PER_KM, EARTH_CIRCUMFERENCE_KM, EVEREST_HEIGHT_M, MAP_MARKER_LIMIT,
     MARATHON_KM, MAX_RIDE_AVG_KMH, MAX_RIDE_TOP_KMH, MONTHS,
-    RIEGEL_EXP, RUN_PERF_DISTANCES,
+    RIEGEL_EXP, RIEGEL_MAX_RATIO, RUN_PERF_DISTANCES,
 )
 from strava.helpers import fmt_hms, fmt_pace, has_gps, haversine_km, hike_pace_ok, local_date
 from strava.sports import RECORDS_SPORT_TYPES
@@ -139,8 +139,14 @@ def run_performance(activities):
         if key in best_by_name:
             t, pk = best_by_name[key]
             row['best'], row['best_id'] = fmt_hms(t), pk
-        if predictors:
-            est = min(pt * (dist / pd) ** RIEGEL_EXP for pd, pt in predictors.items())
+        # Only project from predictors within a sensible extrapolation window;
+        # short splits (e.g. a 1 km burst) would otherwise yield unrealistically
+        # fast long-distance estimates.
+        projections = [pt * (dist / pd) ** RIEGEL_EXP
+                       for pd, pt in predictors.items()
+                       if 1 / RIEGEL_MAX_RATIO <= dist / pd <= RIEGEL_MAX_RATIO]
+        if projections:
+            est = min(projections)
             row['est'] = f'{fmt_hms(est * 0.975)} – {fmt_hms(est * 1.025)}'
         perf.append(row)
     return perf

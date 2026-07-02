@@ -45,6 +45,11 @@ RUN_PERF_DISTANCES = [
     ('Marathon', 'marathon', 42195.0),
 ]
 RIEGEL_EXP = 1.06
+# Riegel is only reliable when the reference and target distances are within
+# roughly this factor of each other. Projecting a marathon from a short sprint
+# split (e.g. a 400 m burst inside a run) yields absurdly fast, unrealistic
+# times, so predictors outside [target / ratio, target * ratio] are ignored.
+RIEGEL_MAX_RATIO = 3.0
 
 # --- "By the Numbers" fun-stat reference values ---
 EARTH_CIRCUMFERENCE_KM = 40075
