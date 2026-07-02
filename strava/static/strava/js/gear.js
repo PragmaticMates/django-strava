@@ -1,7 +1,4 @@
 /* django-strava · gear page — gear detail sheet */
-const BIKE_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round" style="width:100px;height:100px"><circle cx="5.5" cy="15" r="3.5"></circle><circle cx="18.5" cy="15" r="3.5"></circle><polyline points="5.5 11.5 5.5 5.5 11.5 3.5 15.5 8.5 18.5 11.5"></polyline><line x1="10" y1="5.5" x2="10" y2="15"></line></svg>`;
-const SHOE_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round" style="width:100px;height:100px"><path d="M2 17h13l5-5-3-2-3 3H9L6 9H3a1 1 0 0 0-1 1v6a1 1 0 0 0 0 1z"></path><path d="M9 17v1a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-1"></path></svg>`;
-
 function wearColor(pct) {
   if (pct < 40) return '#22C065';
   if (pct < 75) return '#F5A623';
@@ -13,7 +10,9 @@ function openSheet(card) {
   const wear = parseInt(d.wear) || 0;
   document.getElementById('gs-name').textContent = d.name;
   document.getElementById('gs-brand').textContent = d.brand;
-  document.getElementById('gs-img-icon').innerHTML = d.icon === 'bike' ? BIKE_SVG : SHOE_SVG;
+  // Reuse the card's own sport glyph (rendered from strava/sport_icons.py) so the
+  // sheet stays in sync with the card and there's a single source of truth.
+  document.getElementById('gs-img-icon').innerHTML = card.querySelector('.gear-card-img-icon').innerHTML;
   document.getElementById('gs-stats').innerHTML = `
     <div class="gear-sheet-stat">
       <div class="gear-sheet-stat-val">${d.km}</div>

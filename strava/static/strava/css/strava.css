@@ -2006,7 +2006,7 @@ img.act-photo, img.aoty-photo { object-fit: cover; }
   display: grid; place-items: center;
   flex: none;
 }
-.gear-section-icon svg { width: 18px; height: 18px; stroke: var(--ink-2); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.gear-section-icon svg { width: 18px; height: 18px; fill: var(--ink-2); stroke: none; }
 .gear-section-title {
   font-size: 17px;
   font-weight: 700;
@@ -2070,7 +2070,7 @@ img.act-photo, img.aoty-photo { object-fit: cover; }
 .gear-card-img-icon {
   opacity: 0.14;
 }
-.gear-card-img-icon svg { width: 72px; height: 72px; stroke: var(--ink); fill: none; stroke-width: 1.2; }
+.gear-card-img-icon svg { width: 72px; height: 72px; fill: var(--ink); stroke: none; }
 
 /* Wear indicator bar */
 .gear-wear-bar {
@@ -2288,7 +2288,7 @@ img.act-photo, img.aoty-photo { object-fit: cover; }
   position: relative;
 }
 .gear-sheet-img-icon { opacity: 0.12; }
-.gear-sheet-img-icon svg { width: 100px; height: 100px; stroke: var(--ink); fill: none; stroke-width: 1.0; }
+.gear-sheet-img-icon svg { width: 100px; height: 100px; fill: var(--ink); stroke: none; }
 .gear-sheet-close {
   position: absolute; top: 14px; right: 14px;
   appearance: none; border: none; cursor: pointer;

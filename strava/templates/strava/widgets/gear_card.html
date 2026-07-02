@@ -1,4 +1,4 @@
-{% load humanize %}
+{% load humanize strava_icons %}
 <div class="gear-card {{ gear.wear_class }}{% if gear.is_retired %} is-retired{% endif %}"
      data-screen-label="Gear card"
      onclick="openSheet(this)"
@@ -13,11 +13,7 @@
      data-icon="{{ gear.gear_type }}">
   <div class="gear-card-img">
     <div class="gear-card-img-icon">
-      {% if gear.gear_type == 'bike' %}
-        <svg viewBox="0 0 24 24"><circle cx="5.5" cy="15" r="3.5"></circle><circle cx="18.5" cy="15" r="3.5"></circle><polyline points="5.5 11.5 5.5 5.5 11.5 3.5 15.5 8.5 18.5 11.5"></polyline><line x1="10" y1="5.5" x2="10" y2="15"></line></svg>
-      {% else %}
-        <svg viewBox="0 0 24 24"><path d="M2 17h13l5-5-3-2-3 3H9L6 9H3a1 1 0 0 0-1 1v6a1 1 0 0 0 0 1z" fill="none" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"></path><path d="M9 17v1a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-1" fill="none" stroke-width="1.0" stroke-linecap="round"></path></svg>
-      {% endif %}
+      {% if gear.gear_type == 'bike' %}{{ 'ride'|group_glyph }}{% else %}{{ 'run'|group_glyph }}{% endif %}
     </div>
     {% if gear.badge_label %}<span class="gear-status-badge {{ gear.badge_class }}">{{ gear.badge_label }}</span>{% endif %}
     <div class="gear-wear-bar"><div class="gear-wear-bar-fill" style="width:{{ gear.wear_pct }}%"></div></div>
