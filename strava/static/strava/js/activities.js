@@ -7,12 +7,67 @@ function renderRoutes(root) {
 renderRoutes(document);
 document.body.addEventListener('htmx:afterSwap', function(e) { renderRoutes(e.target); });
 
+// ——— Distance range slider (dual handle) ———
+// Two overlapping range inputs. We keep the handles from crossing, paint the fill
+// between them and update the km readout live on `input`; the native `change` event
+// (fired on release) bubbles to #acts-filters, whose hx-trigger includes `change`.
+// `setCeil` lets the sport dropdown rescale the track (max distance is sport-specific).
+var DSDist = (function() {
+  var root = document.getElementById('dist-slider');
+  if (!root) return null;
+  var ceil = Number(root.dataset.ceil) || 1;
+  var track = root.querySelector('.af-dist-track');
+  var lo = root.querySelector('.af-dist-min');
+  var hi = root.querySelector('.af-dist-max');
+  var loOut = root.querySelector('.af-dist-lo');
+  var hiOut = root.querySelector('.af-dist-hi');
+
+  function paint() {
+    track.style.setProperty('--lo-pct', (lo.value / ceil * 100) + '%');
+    track.style.setProperty('--hi-pct', (hi.value / ceil * 100) + '%');
+    loOut.textContent = lo.value;
+    hiOut.textContent = hi.value;
+  }
+
+  lo.addEventListener('input', function() {
+    if (Number(lo.value) > Number(hi.value)) lo.value = hi.value;
+    paint();
+  });
+  hi.addEventListener('input', function() {
+    if (Number(hi.value) < Number(lo.value)) hi.value = lo.value;
+    paint();
+  });
+  paint();
+
+  return {
+    // Rescale to a new upper bound and reset the window to the full range — the old
+    // handle positions are meaningless against a different sport's distances.
+    setCeil: function(newCeil) {
+      ceil = Number(newCeil) || 1;
+      lo.max = hi.max = ceil;
+      root.dataset.ceil = ceil;
+      lo.value = 0;
+      hi.value = ceil;
+      paint();
+    }
+  };
+})();
+
+// Per-sport distance ceilings ('all' / group key / sport_type → km), see ActivitiesView.
+var DSDistCeils = (function() {
+  var el = document.getElementById('dist-ceils-data');
+  return el ? JSON.parse(el.textContent) : {};
+})();
+
 // ——— Sport dropdown drives the filter form ———
 (function() {
   var btn = document.getElementById('acts-sport-btn');
   if (btn && window.DSSport) {
     window.DSSport.build(btn, { onSelect: function(value) {
       document.getElementById('f-sport').value = value;
+      // Rescale the distance slider to the newly-selected sport before submitting, so
+      // the reset dist_min/dist_max ride along in the same request.
+      if (DSDist) DSDist.setCeil(value in DSDistCeils ? DSDistCeils[value] : DSDistCeils.all);
       document.getElementById('acts-filters').requestSubmit();
     }});
   }

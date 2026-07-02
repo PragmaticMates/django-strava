@@ -105,6 +105,46 @@ class TestActivitiesView:
         ctx = list_context(ActivitiesView, sort="dist", dir="desc")
         assert [a.id for a in ctx["activities"]] == [2, 1]
 
+    def test_distance_slider_defaults(self):
+        # Ceiling is the longest activity (metres → km) rounded up to the next 5 km.
+        make_activity(1, distance=10000)
+        make_activity(2, distance=42195)
+        ctx = list_context(ActivitiesView)
+        assert ctx["dist_ceil"] == 45
+        assert ctx["dist_min"] == "0"
+        assert ctx["dist_max"] == "45"
+
+    def test_distance_slider_has_floor_without_data(self):
+        ctx = list_context(ActivitiesView)
+        assert ctx["dist_ceil"] == 5
+
+    def test_distance_slider_narrows_queryset(self):
+        make_activity(1, distance=5000)
+        make_activity(2, distance=25000)
+        ctx = list_context(ActivitiesView, dist_min="10", dist_max="30")
+        assert [a.id for a in ctx["activities"]] == [2]
+
+    def test_distance_ceiling_is_per_sport(self):
+        make_activity(1, "Run", distance=42195)
+        make_activity(2, "Swim", distance=3000)
+        ceils = list_context(ActivitiesView)["dist_ceils"]
+        # per-sport ceilings, rounded up to the next 5 km
+        assert ceils["Run"] == 45
+        assert ceils["Swim"] == 5
+        # a group key expands to its members' longest
+        assert ceils["group-run"] == 45
+        assert ceils["group-swim"] == 5
+        # 'all' spans everything
+        assert ceils["all"] == 45
+
+    def test_distance_ceiling_follows_sport_selection(self):
+        make_activity(1, "Run", distance=42195)
+        make_activity(2, "Swim", distance=3000)
+        ctx = list_context(ActivitiesView, sport="Swim")
+        # the slider rescales to the selected sport, and the max handle defaults to it
+        assert ctx["dist_ceil"] == 5
+        assert ctx["dist_max"] == "5"
+
 
 # --------------------------------------------------------------------------- #
 # GearView

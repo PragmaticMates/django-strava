@@ -1,6 +1,8 @@
 from django.db import models
 from django.db.models import F, Value, Q, CharField, FloatField, Func, ExpressionWrapper
 
+from strava.helpers import to_float
+
 
 class AthleteQuerySet(models.QuerySet):
     def connected(self):
@@ -84,6 +86,19 @@ class ActivityQuerySet(models.QuerySet):
             return self.filter(start_date__year=int(year))
         except (ValueError, TypeError):
             return self
+
+    def for_distance(self, min_km, max_km):
+        # Range filter driven by the distance slider. Bounds arrive in kilometres (the
+        # slider's unit) and are compared against the metres stored on the row. A blank
+        # or non-numeric bound is ignored, so a one-sided range still works.
+        qs = self
+        lower = to_float(min_km)
+        upper = to_float(max_km)
+        if lower is not None:
+            qs = qs.filter(distance__gte=lower * 1000)
+        if upper is not None:
+            qs = qs.filter(distance__lte=upper * 1000)
+        return qs
 
     def sorted_by(self, key, direction='desc'):
         fields = {

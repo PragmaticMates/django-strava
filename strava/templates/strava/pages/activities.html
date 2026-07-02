@@ -59,6 +59,21 @@
       <span class="af-sport-caret"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
     </div>
 
+    <div class="af-sep"></div>
+
+    <div class="af-dist" id="dist-slider" data-ceil="{{ dist_ceil }}">
+      <span class="af-dist-label">Distance</span>
+      <div class="af-dist-track">
+        <div class="af-dist-fill"></div>
+        <input type="range" class="af-dist-range af-dist-min" name="dist_min"
+               min="0" max="{{ dist_ceil }}" step="1" value="{{ dist_min }}">
+        <input type="range" class="af-dist-range af-dist-max" name="dist_max"
+               min="0" max="{{ dist_ceil }}" step="1" value="{{ dist_max }}">
+      </div>
+      <span class="af-dist-value"><output class="af-dist-lo">{{ dist_min }}</output>–<output class="af-dist-hi">{{ dist_max }}</output> km</span>
+    </div>
+    {{ dist_ceils|json_script:"dist-ceils-data" }}
+
     <div class="af-view-toggle">
       <button type="button" class="af-view-btn{% if view != 'table' %} active{% endif %}" id="view-grid" onclick="setView('grid')" title="Grid view">
         <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>

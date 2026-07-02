@@ -1,4 +1,5 @@
 import logging
+import math
 import secrets
 
 from django.contrib import messages
@@ -170,6 +171,7 @@ class ActivitiesView(AthleteScopedMixin, ListView):
             .for_sport_selection(params.get('sport'))
             .for_gear(params.get('gear'))
             .for_month(params.get('month'))
+            .for_distance(params.get('dist_min'), params.get('dist_max'))
             .sorted_by(params.get('sort'), params.get('dir', 'desc'))
         )
 
@@ -196,6 +198,31 @@ class ActivitiesView(AthleteScopedMixin, ListView):
             (d.strftime('%Y-%m'), d.strftime('%b %Y'))
             for d in Activity.objects.for_athlete(self.athlete).dates('start_date', 'month', order='DESC')
         ]
+        # Distance slider bounds, keyed by sport selection so switching sport rescales
+        # the slider (a swim tops out far below an ultra). The top end is the longest
+        # activity in km, rounded up to the next 5 km with a small floor so the track is
+        # never degenerate. ``dist_ceils`` maps every value the sport dropdown can emit
+        # ('all', a group key or an exact sport_type) to its ceiling; the client reads it
+        # to rescale the slider on sport change without a round-trip.
+        per_sport_m = {
+            row['sport_type']: row['distance__max']
+            for row in Activity.objects.for_athlete(self.athlete).values('sport_type').annotate(Max('distance'))
+        }
+
+        def ceil_km(metres):
+            return max(5, math.ceil((metres or 0) / 1000 / 5) * 5)
+
+        dist_ceils = {'all': ceil_km(max(per_sport_m.values(), default=0))}
+        for group in TOP_SPORT_TYPES:
+            dist_ceils[group['key']] = ceil_km(max((per_sport_m.get(t, 0) for t in group['types']), default=0))
+        for sport_type, longest in per_sport_m.items():
+            dist_ceils[sport_type] = ceil_km(longest)
+
+        dist_ceil = dist_ceils.get(context['sport'], dist_ceils['all'])
+        context['dist_ceils'] = dist_ceils
+        context['dist_ceil'] = dist_ceil
+        context['dist_min'] = params.get('dist_min', '0')
+        context['dist_max'] = params.get('dist_max', str(dist_ceil))
         context['summary'] = services.activities.summary(self.object_list, timezone.now().date())
         return context
 

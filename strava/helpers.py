@@ -21,6 +21,15 @@ def has_gps(activity):
     return activity.start_lat is not None
 
 
+def to_float(value):
+    """Parse ``value`` to a float, returning ``None`` for blank/non-numeric input
+    (e.g. an empty or malformed query-string parameter)."""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def unaccent(s):
     """Lowercase and strip diacritics — the server-side twin of the map filter's JS
     ``unaccent()`` so a filtered search here matches what the map shows."""

@@ -120,6 +120,32 @@ class TestForMonth:
 
 
 @pytest.mark.django_db
+class TestForDistance:
+    def test_range_filters_in_km_inclusive(self):
+        # Bounds arrive in km; rows store metres. Both edges are inclusive.
+        make(1, distance=3000)
+        make(2, distance=10000)
+        make(3, distance=25000)
+        make(4, distance=42195)
+        assert set(ids(Activity.objects.for_distance("10", "42"))) == {2, 3}
+
+    def test_one_sided_ranges(self):
+        make(1, distance=3000)
+        make(2, distance=25000)
+        # Only a lower bound.
+        assert ids(Activity.objects.for_distance("10", None)) == [2]
+        # Only an upper bound.
+        assert ids(Activity.objects.for_distance(None, "10")) == [1]
+
+    def test_blank_and_non_numeric_bounds_ignored(self):
+        make(1, distance=3000)
+        make(2, distance=25000)
+        assert set(ids(Activity.objects.for_distance(None, None))) == {1, 2}
+        assert set(ids(Activity.objects.for_distance("", ""))) == {1, 2}
+        assert set(ids(Activity.objects.for_distance("junk", "junk"))) == {1, 2}
+
+
+@pytest.mark.django_db
 class TestActivitySortedBy:
     def test_sort_by_distance_desc(self):
         make(1, distance=5000)
