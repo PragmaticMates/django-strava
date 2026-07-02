@@ -1,9 +1,11 @@
+import json as json_lib
 from datetime import datetime, timezone
-from unittest.mock import patch, MagicMock
+from unittest.mock import mock_open, patch
 
 import pytest
 from django.core.management import call_command
 
+from strava.management.commands.import_strava import Command
 from strava.models import Activity, Gear
 
 
@@ -91,3 +93,21 @@ class TestImportStrava:
 
         assert Activity.objects.count() == 1
         assert Activity.objects.get(id=100).name == "Renamed Run"
+
+
+@pytest.mark.django_db
+class TestImportFromFile:
+    @patch("strava.models.Gear.get_or_create", return_value=None)
+    def test_creates_activities_from_file(self, mock_gear):
+        payload = json_lib.dumps([ACTIVITY_JSON_1, ACTIVITY_JSON_2])
+        with patch("strava.management.commands.import_strava.os.path.exists", return_value=True), \
+             patch("builtins.open", mock_open(read_data=payload)):
+            Command().import_activities_from_file()
+
+        assert Activity.objects.count() == 2
+        assert Activity.objects.get(id=100).name == "Morning Run"
+
+    def test_missing_file_creates_nothing(self):
+        with patch("strava.management.commands.import_strava.os.path.exists", return_value=False):
+            Command().import_activities_from_file()
+        assert Activity.objects.count() == 0

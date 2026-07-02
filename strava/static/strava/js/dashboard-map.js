@@ -6,27 +6,23 @@
   const dataEl = document.getElementById('map-markers');
   const markers = dataEl ? JSON.parse(dataEl.textContent) : [];
 
-  // Sport glyphs, mirroring the marker icons used elsewhere on the dashboard.
-  const ICONS = {
-    ride: '<path d="M2 3h4v1.25h-.566l.429.75h3.972l-.422-1.161A.625.625 0 0110 3h3.5a1.5 1.5 0 010 3H13V4.75h.5a.25.25 0 100-.5h-2.608l1.018 2.8a3.5 3.5 0 11-1.175.427l-.324-.894-2.423 4.11A.625.625 0 017.45 11h-.485a3.5 3.5 0 11-2.39-3.832l.516-.999L3.994 4.25H2z"/>',
-    hike: '<path d="M5.086 1.86C5.45 1.322 6.058 1 6.707 1h.626c.284 0 .532.191.605.465l.568 2.15a4.708 4.708 0 003.206 3.308l2.413.719A2.625 2.625 0 0116 10.157v.253c0 .217-.026.477-.134.738a4.426 4.426 0 01-1.311 1.73C13.775 13.504 12.632 14 11 14H9.333a.625.625 0 01-.16-.02l-2.307-.614-.41.437A.625.625 0 016 14H2.625A2.625 2.625 0 010 11.375v-.24c0-.445.151-.877.43-1.224l.423-.53.415-4.599A1.958 1.958 0 013.218 3h1.095z"/>',
-    swim: '<g><path d="M12.03 1.544a.625.625 0 00-1.06 0c-.277.443-.57.738-.878.924-.305.184-.658.282-1.092.282s-.787-.098-1.092-.282c-.309-.186-.601-.481-.878-.924l-1.06.662c.354.566.776 1.021 1.292 1.332C7.782 3.853 8.364 4 9 4c.636 0 1.217-.147 1.738-.462.28-.169.533-.38.762-.629.23.249.482.46.762.63.52.314 1.102.461 1.738.461s1.217-.147 1.738-.462c.516-.31.938-.766 1.292-1.332z"/><path d="M6.5 6.25c.216 0 .416.111.53.294.277.443.57.738.878.924.305.184.658.282 1.092.282.434 0 .787-.098 1.092-.282.309-.186.601-.481.878-.924a.625.625 0 011.06 0c.277.443.57.738.878.924.305.184.658.282 1.092.282s.787-.098 1.092-.282c.308-.186.601-.481.878-.924l1.06.662c-.354.566-.776 1.021-1.292 1.332C15.218 8.853 14.636 9 14 9s-1.217-.147-1.738-.462c-.28-.169-.533-.38-.762-.629-.23.249-.482.46-.762.63C10.218 8.852 9.636 9 9 9c-.636 0-1.217-.147-1.738-.462-.28-.169-.533-.38-.762-.629-.23.249-.482.46-.762.63C5.218 8.852 4.636 9 4 9s-1.217-.147-1.738-.462c-.516-.311-.938-.766-1.292-1.332l1.06-.662c.277.443.57.738.878.924.305.184.658.282 1.092.282.434 0 .787-.098 1.092-.282.309-.186.601-.481.878-.924a.625.625 0 01.53-.294z"/></g>',
-    run: '<path d="M5.783 0c-.492 0-.969.175-1.344.494l-2 1.7-.013.008L.417 2.91A.625.625 0 000 3.5c0 1.05.134 1.834.387 2.459.258.636.622 1.063 1.009 1.418.193.178.381.331.563.48.545.446 1.04.851 1.488 1.735.693 1.714 1.576 3.093 2.954 4.03C7.784 14.56 9.584 15 12 15c1.368 0 2.312-.306 2.948-.785a2.596 2.596 0 001.002-1.554c.14-.657-.234-1.19-.6-1.484l-2.58-2.073a.708.708 0 01-.234-.346l-2.081-6.842A1.292 1.292 0 009.219 1h-.9c-.348 0-.682.14-.925.39l-.398.408-.335-1.14A.915.915 0 005.783 0z"/>',
-  };
-  function glyph(type) {
-    if (type === 'ride') return ICONS.ride;
-    if (type === 'hike' || type === 'walk') return ICONS.hike;
-    if (type === 'swim') return ICONS.swim;
-    return ICONS.run;
-  }
-  function pinIcon(type) {
+  // Per-sport glyphs, reused from the sport filter's options island (each entry is
+  // [sport_type, label, svg] from strava/sport_icons.py) so the map draws the same icon
+  // as the filter/grid/table/gallery without shipping a copy per marker. The colour still
+  // keys off the broad `type` bucket via the act-marker-<type> class.
+  const GLYPH_BY_SPORT = (function() {
+    const el = document.getElementById('map-sport-options');
+    const map = {};
+    if (el) { try { JSON.parse(el.textContent).forEach(function(o) { map[o[0]] = o[2]; }); } catch (e) {} }
+    return map;
+  })();
+  function pinIcon(m) {
     return L.divIcon({
       className: '',
       iconSize: [34, 34],
       iconAnchor: [17, 17],
       popupAnchor: [0, -18],
-      html: '<span class="map-pin act-marker-' + type + '">' +
-            '<svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14">' + glyph(type) + '</svg></span>',
+      html: '<span class="map-pin act-marker-' + m.type + '">' + (GLYPH_BY_SPORT[m.sport_type] || '') + '</span>',
     });
   }
 
@@ -240,7 +236,7 @@
     if (clusters && map.hasLayer(clusters)) map.removeLayer(clusters);
     if (allRoutesLayer) { map.removeLayer(allRoutesLayer); allRoutesLayer = null; }
     if (selectedMarker) map.removeLayer(selectedMarker);
-    selectedMarker = L.marker([m.lat, m.lng], { icon: pinIcon(m.type) }).addTo(map);
+    selectedMarker = L.marker([m.lat, m.lng], { icon: pinIcon(m) }).addTo(map);
   }
   function restoreMarkers() {
     if (selectedMarker) { map.removeLayer(selectedMarker); selectedMarker = null; }
@@ -315,7 +311,7 @@
       map.fitBounds(cluster.getBounds(), Object.assign({ maxZoom: clusters._maxZoom }, FIT));
     });
     markers.forEach(function(m, i) {
-      const marker = L.marker([m.lat, m.lng], { icon: pinIcon(m.type) })
+      const marker = L.marker([m.lat, m.lng], { icon: pinIcon(m) })
         .bindTooltip(m.title)
         .on('mouseover', function() { showHoverRoute(m, marker); })
         .on('mouseout', function() { clearHoverRoute(); })

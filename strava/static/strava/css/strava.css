@@ -157,6 +157,7 @@ body {
   transition: transform 0.15s;
   display: flex; align-items: center; justify-content: center;
 }
+.map-pin svg { width: 14px; height: 14px; }
 .map-pin:hover { transform: scale(1.4); }
 /* Dim other markers/clusters while a single marker's route is hovered.
    !important overrides the inline opacity markercluster sets during zoom animations. */
@@ -387,6 +388,12 @@ body.modal-open { overflow: hidden; }
   padding: 5px 11px; font-size: 12px; font-weight: 600; color: var(--ink-2);
 }
 .fc-pill svg { width: 13px; height: 13px; }
+/* Shared per-sport glyph (strava/sport_icons.py). These are solid fill="currentColor"
+   icons, so override the stroke-based styling the surrounding pill/table/segment rules
+   apply to their other (outline) icons; size still comes from those context rules. */
+.sport-glyph { display: inline-flex; align-items: center; }
+.sport-glyph:empty { display: none; }
+.sport-glyph svg { fill: currentColor !important; stroke: none !important; }
 /* body */
 .fc-body { padding: 0 20px 0; }
 .fc-close {

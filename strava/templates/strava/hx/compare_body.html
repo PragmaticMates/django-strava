@@ -1,4 +1,4 @@
-{% comment %}
+{% load strava_icons %}{% comment %}
 Compare matrix body: the sport filter bar + the year-over-year table. Rendered in
 place on full page load and swapped into #cmp-body on a sport-filter click (htmx).
 {% endcomment %}
@@ -9,7 +9,7 @@ place on full page load and swapped into #cmp-body on a sport-filter click (htmx
     <button type="button" role="tab" aria-pressed="{% if opt.active %}true{% else %}false{% endif %}"
             hx-get="{% url 'strava:compare' %}?sport={{ opt.key }}"
             hx-target="#cmp-body" hx-swap="innerHTML">
-      {% include "strava/widgets/compare_icon.html" with icon=opt.icon %}{{ opt.label }}
+      <span class="sport-glyph">{{ opt.icon|group_glyph }}</span>{{ opt.label }}
     </button>
     {% endfor %}
   </div>

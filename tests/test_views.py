@@ -35,6 +35,11 @@ def make_activity(id, sport_type="Run", distance=10000, start_date=None,
         average_heartrate=average_heartrate,
         kudos_count=kudos,
         total_photo_count=photos,
+        # calories / achievement / PR counts are promoted model fields (the summary
+        # and AOTY read them directly, not from `json`).
+        calories=calories,
+        achievement_count=achievement_count,
+        pr_count=pr_count,
         start_lat=start_lat,
         start_lng=start_lng,
         gear=gear,
@@ -78,6 +83,16 @@ class TestHomeLocation:
         lat, lng = DashboardView._home_location(acts)
         assert lat == pytest.approx(48.72, abs=0.01)
         assert lng == pytest.approx(21.26, abs=0.01)
+
+    def test_skips_activities_without_gps(self):
+        # Activities missing coords are ignored rather than crashing the clustering.
+        acts = [
+            SimpleNamespace(start_lat=None, start_lng=None),
+            SimpleNamespace(start_lat=48.720, start_lng=21.258),
+            SimpleNamespace(start_lat=48.721, start_lng=21.262),
+        ]
+        lat, lng = DashboardView._home_location(acts)
+        assert lat == pytest.approx(48.72, abs=0.01)
 
 
 class TestFormatters:
@@ -237,6 +252,21 @@ class TestRecords:
         records = dashboard_context()["records"]
         assert self._labels(records, "Cycling")["Top Speed"]["id"] == 2
 
+    def test_hike_without_pace_data_is_kept(self):
+        # A hike missing moving_time can't be disqualified on pace, so it still
+        # competes for the longest-hike record.
+        make_activity(1, "Hike", distance=25000, moving_time=None)
+        make_activity(2, "Hike", distance=10000, moving_time=12000)
+        records = dashboard_context()["records"]
+        assert self._labels(records, "Hiking")["Longest"]["id"] == 1
+
+    def test_swimming_fastest_per_100m(self):
+        make_activity(1, "Swim", distance=2000, moving_time=3000)   # 2:30 /100m
+        make_activity(2, "Swim", distance=1000, moving_time=2000)   # 3:20 /100m
+        records = dashboard_context()["records"]
+        fastest = self._labels(records, "Swimming")["Fastest (per 100 m)"]
+        assert fastest["id"] == 1
+
     def test_run_paced_hike_excluded_from_longest(self):
         make_activity(1, "Hike", distance=30000, moving_time=9000)    # 5:00/km
         make_activity(2, "Hike", distance=20000, moving_time=10800)   # 9:00/km
@@ -293,3 +323,14 @@ class TestRunPerformance:
                       best_efforts=[{"name": "5K", "elapsed_time": 1200, "distance": 5000.0}])
         rows = self._rows(dashboard_context(year="2025"))
         assert rows["5 km"]["best"] == "25:00"  # 2025 effort, not 2024's faster one
+
+    def test_malformed_best_efforts_are_skipped(self):
+        # Entries with a null/zero time or missing distance don't count and don't crash.
+        make_activity(1, "Run", distance=5000, best_efforts=[
+            {"name": "5K", "elapsed_time": None, "distance": 5000.0},   # null time
+            {"name": "10K", "elapsed_time": 0, "distance": 10000.0},    # zero time
+            {"name": "Marathon", "elapsed_time": 9000, "distance": None},  # no distance
+        ])
+        rows = self._rows(dashboard_context())
+        assert rows["5 km"]["best"] == "—"
+        assert rows["10 km"]["best"] == "—"

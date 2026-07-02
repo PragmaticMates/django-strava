@@ -1,4 +1,4 @@
-{% load humanize %}
+{% load humanize strava_icons %}
 <div class="acts-table-wrap" id="feed-table">
   <table class="acts-table">
     <thead>
@@ -20,15 +20,7 @@
       <tr class="at-row" data-activity="{{ activity.id }}" tabindex="0" role="button" aria-label="Open {{ activity.name }}">
         <td class="at-icon-cell">
           <div class="at-type-icon">
-            {% if activity.type == 'ride' %}
-              <svg viewBox="0 0 24 24"><circle cx="5.5" cy="15" r="3.5"></circle><circle cx="18.5" cy="15" r="3.5"></circle><polyline points="5.5 11.5 5.5 5.5 11.5 3.5 15.5 8.5 18.5 11.5"></polyline><line x1="10" y1="5.5" x2="10" y2="15"></line></svg>
-            {% elif activity.type == 'trail' %}
-              <svg viewBox="0 0 24 24"><path d="M3 18 Q6 8 10 12 Q14 16 18 6"></path><polyline points="17 3 21 7 17 11"></polyline></svg>
-            {% elif activity.type == 'hike' %}
-              <svg viewBox="0 0 24 24"><polyline points="3 20 10 7 14 13 17 9 21 20"></polyline><circle cx="17" cy="6" r="1.5"></circle></svg>
-            {% else %}
-              <svg viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.4"></circle><circle cx="18" cy="6" r="2.4"></circle><path d="M8 17 C 13 15, 11 8, 16 7"></path></svg>
-            {% endif %}
+            <span class="sport-glyph">{{ activity.sport_type|sport_glyph }}</span>
           </div>
         </td>
         <td class="at-name">
