@@ -66,20 +66,6 @@ class TestFormatStravaError:
 
 
 # --------------------------------------------------------------------------- #
-# StravaApi.get_token_expiration
-# --------------------------------------------------------------------------- #
-class TestTokenExpiration:
-    def test_parses_iso_z_timestamp(self):
-        with patch.object(api, "STRAVA_TOKEN_EXPIRES", "2025-01-01T00:00:00Z"):
-            # 2025-01-01T00:00:00Z == 1735689600 epoch seconds
-            assert StravaApi.get_token_expiration(SimpleNamespace()) == 1735689600
-
-    def test_none_when_unset(self):
-        with patch.object(api, "STRAVA_TOKEN_EXPIRES", None):
-            assert StravaApi.get_token_expiration(SimpleNamespace()) is None
-
-
-# --------------------------------------------------------------------------- #
 # rate_limited decorator
 # --------------------------------------------------------------------------- #
 class TestRateLimited:
@@ -199,6 +185,9 @@ class Model:
 
 class TestStravaApiClient:
     def _api(self, client):
+        # A real stravalib Client carries a .protocol (StravaApi arms auto-refresh on it);
+        # the SimpleNamespace stand-ins don't, so give them one.
+        client.protocol = SimpleNamespace()
         with patch.object(api, "Client", return_value=client), \
              patch.object(api, "DefaultRateLimiter"):
             return StravaApi()
@@ -225,11 +214,6 @@ class TestStravaApiClient:
             update_activity=lambda activity_id, **kw: calls.update({"id": activity_id, **kw}))
         self._api(client).update_activity(id=7, name="New", sport_type="Run")
         assert calls == {"id": 7, "name": "New", "sport_type": "Run"}
-
-    def test_refresh_access_token_returns_token(self):
-        client = SimpleNamespace(
-            refresh_access_token=lambda **kw: {"access_token": "fresh-token"})
-        assert self._api(client).refresh_access_token() == "fresh-token"
 
     def test_get_athlete_returns_parsed_json(self):
         client = SimpleNamespace(get_athlete=lambda: Model({"id": 42, "firstname": "Erik"}))

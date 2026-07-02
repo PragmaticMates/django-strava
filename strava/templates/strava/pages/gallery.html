@@ -21,6 +21,7 @@
           hx-swap="innerHTML"
           hx-push-url="true"
           hx-trigger="change, keyup delay:300ms from:#gallery-search">
+      <input type="hidden" name="athlete" value="{{ athlete_id }}">
       <input type="hidden" name="sport" id="g-sport" value="{{ sport }}">
 
       <div class="gf-search">

@@ -71,6 +71,16 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="15" cy="8" r="3.5"></circle><path d="M8 21c0-3.5 3.1-6 7-6s7 2.5 7 6"></path><circle cx="6" cy="9" r="2.5"></circle><path d="M1 21c0-2.5 2-4 4.5-4"></path></svg>
         Following{% if athlete.friend_count is not None %} · {{ athlete.friend_count }}{% endif %}
       </a>
+      {% if athletes|length > 1 %}
+      <div class="user-dd-sep" role="separator"></div>
+      <div class="user-dd-label">Switch athlete</div>
+      {% for a in athletes %}
+      <a class="user-dd-item{% if athlete and a.id == athlete.id %} is-active{% endif %}" href="{{ request.path }}?athlete={{ a.id }}" role="menuitem">
+        {% if a.profile %}<img src="{{ a.profile }}" alt="" width="17" height="17">{% else %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4.5"></circle><path d="M3 21c0-4 4-7 9-7s9 3 9 7"></path></svg>{% endif %}
+        {{ a.full_name|default:"Athlete" }}
+      </a>
+      {% endfor %}
+      {% endif %}
     </div>
   </div>
 </header>

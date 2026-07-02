@@ -32,27 +32,38 @@ class Command(BaseCommand):
         self.create_activities(activities)
 
     def import_activities_from_api(self):
-        api = StravaApi()
-        # Refresh the athlete profile (nav name/avatar/counts) on every import.
-        athlete = Athlete.store(api.get_athlete())
-        after = Activity.objects.latest().start_date if Activity.objects.exists() else None
-        for summary in api.get_activities(after=after):
-            self.create_activity_from_json(api.get_activity(summary['id']), athlete)
-        # Backfill rows imported before athlete linking existed. Safe because the app is
-        # single-athlete: every unowned activity/gear belongs to the one athlete.
-        Activity.objects.filter(athlete__isnull=True).update(athlete=athlete)
-        Gear.objects.filter(athlete__isnull=True).update(athlete=athlete)
+        # Import each connected athlete's activities with their own token. An athlete is
+        # "connected" once the OAuth flow has stored tokens on their row.
+        connected = Athlete.objects.exclude(access_token="")
+        if not connected.exists():
+            logger.warning("No connected athletes to import (run the OAuth connect flow first).")
+            return
+
+        single = Athlete.objects.count() == 1
+        for athlete in connected:
+            api = StravaApi(athlete)
+            # Refresh the athlete profile (nav name/avatar/counts) on every import.
+            Athlete.store(api.get_athlete())
+            owned = Activity.objects.for_athlete(athlete)
+            after = owned.latest().start_date if owned.exists() else None
+            for summary in api.get_activities(after=after):
+                self.create_activity_from_json(api.get_activity(summary['id']), athlete, api)
+            # Backfill rows imported before athlete linking existed. Only safe while exactly
+            # one athlete exists (every unowned row is theirs); assign them to the default.
+            if single and athlete.is_default:
+                Activity.objects.filter(athlete__isnull=True).update(athlete=athlete)
+                Gear.objects.filter(athlete__isnull=True).update(athlete=athlete)
 
     def create_activities(self, activities, athlete=None):
         for activity in activities:
             self.create_activity_from_json(activity, athlete)
 
-    def create_activity_from_json(self, json_data, athlete=None):
+    def create_activity_from_json(self, json_data, athlete=None, api=None):
         data = Activity.read_json(json_data)
         data['json'] = json_data
         data['athlete'] = athlete
 
-        sync.gear_ensure(gear_id=data.get('gear_id'), athlete=athlete)
+        sync.gear_ensure(gear_id=data.get('gear_id'), api=api, athlete=athlete)
         activity, created = Activity.objects.update_or_create(
             id=json_data["id"],
             defaults=data,

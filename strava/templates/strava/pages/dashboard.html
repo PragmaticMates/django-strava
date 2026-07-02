@@ -55,6 +55,7 @@ server-side; the response arrives as out-of-band swaps absorbed by #dash-sink.
 <form id="dash-filters" hx-get="{% url 'strava:dashboard' %}" hx-target="#dash-sink"
       hx-swap="innerHTML" hx-trigger="refresh" hx-push-url="false"
       hx-sync="this:replace" style="display:none">
+  <input type="hidden" name="athlete" value="{{ athlete_id }}">
   <input type="hidden" name="q" id="df-q" value="{{ q }}">
   <input type="hidden" name="sport" id="df-sport" value="{{ sport }}">
   <input type="hidden" name="gear" id="df-gear" value="{{ gear }}">
@@ -183,7 +184,7 @@ endpoint the map uses) into .act-modal-host.
     <span id="foot-updated">Last updated: {{ last_updated|date:"F j, Y, H:i" }}</span>
     {% if user.is_superuser %}
     <button type="button" class="foot-refresh" aria-label="Refresh" title="Import latest from Strava"
-            hx-post="{% url 'strava:refresh' %}"
+            hx-post="{% url 'strava:refresh' %}?athlete={{ athlete_id }}"
             hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
             hx-target="#dash-sink" hx-swap="innerHTML"
             hx-disabled-elt="this" hx-indicator="this">⟳</button>

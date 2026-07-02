@@ -17,9 +17,13 @@ from strava.api import StravaApi
 from strava.models import Activity, Athlete, Gear
 
 
-def gear_ensure(*, gear_id: str | None, athlete: Athlete | None = None) -> Gear | None:
-    """Return the ``Gear`` for ``gear_id``, fetching it from Strava and storing it the
-    first time it is seen. An activity without gear (``gear_id`` falsy) returns ``None``."""
+def gear_ensure(*, gear_id: str | None, api: StravaApi | None = None,
+                athlete: Athlete | None = None) -> Gear | None:
+    """Return the ``Gear`` for ``gear_id``, fetching it (via ``api``, so with the owning
+    athlete's token) and storing it the first time it is seen. An activity without gear
+    (``gear_id`` falsy) returns ``None``. Gear ids are globally unique on Strava, so the
+    lookup stays unscoped; ``athlete`` only sets ownership on first store. ``api`` may be
+    omitted — it's built lazily from ``athlete`` only when a fetch is actually needed."""
     if not gear_id:
         return None
 
@@ -27,7 +31,8 @@ def gear_ensure(*, gear_id: str | None, athlete: Athlete | None = None) -> Gear 
     if existing:
         return existing
 
-    data = StravaApi().get_gear(gear_id)
+    api = api or StravaApi(athlete)
+    data = api.get_gear(gear_id)
     fields = Gear.read_json(data)
     fields["json"] = data
     fields["athlete"] = athlete
@@ -36,8 +41,9 @@ def gear_ensure(*, gear_id: str | None, athlete: Athlete | None = None) -> Gear 
 
 
 def gear_fetch(gear: Gear) -> Gear:
-    """Pull ``gear`` from Strava, store the raw payload, and re-derive its columns."""
-    gear.json = StravaApi().get_gear(gear.id)
+    """Pull ``gear`` from Strava (with its owner's token), store the raw payload, and
+    re-derive its columns."""
+    gear.json = StravaApi(gear.athlete).get_gear(gear.id)
     gear.save(update_fields=["json"])
     for attr, value in Gear.read_json(gear.json).items():
         setattr(gear, attr, value)
@@ -46,29 +52,34 @@ def gear_fetch(gear: Gear) -> Gear:
 
 
 @transaction.atomic
-def activity_apply_json(activity: Activity, *, athlete: Athlete | None = None) -> Activity:
+def activity_apply_json(activity: Activity, *, api: StravaApi | None = None) -> Activity:
     """Refresh ``activity``'s promoted columns from its stored ``json`` and make sure its
-    gear exists locally (fetched from Strava on first sight). Persists and returns it."""
+    gear exists locally (fetched from Strava on first sight, with the activity owner's
+    token). Persists and returns it."""
     for attr, value in Activity.read_json(activity.json).items():
         setattr(activity, attr, value)
 
-    gear_ensure(gear_id=activity.gear_id, athlete=athlete or activity.athlete)
+    # gear_ensure builds its own client from the athlete only if the gear is missing, so an
+    # activity whose gear already exists locally never touches the network.
+    gear_ensure(gear_id=activity.gear_id, api=api, athlete=activity.athlete)
 
     activity.save()
     return activity
 
 
 def activity_fetch(activity: Activity) -> Activity:
-    """Pull the detailed activity from Strava, store the raw payload, and re-derive columns."""
-    activity.json = StravaApi().get_activity(activity.id)
+    """Pull the detailed activity from Strava (with its owner's token), store the raw
+    payload, and re-derive columns."""
+    api = StravaApi(activity.athlete)
+    activity.json = api.get_activity(activity.id)
     activity.save(update_fields=["json"])
-    return activity_apply_json(activity)
+    return activity_apply_json(activity, api=api)
 
 
 def activity_push(activity: Activity) -> Activity:
     """Push local edits (name/sport/gear) to Strava, then re-fetch so the row reflects the
     server's truth."""
-    StravaApi().update_activity(
+    StravaApi(activity.athlete).update_activity(
         id=activity.id,
         name=activity.name,
         sport_type=activity.sport_type,
@@ -77,6 +88,6 @@ def activity_push(activity: Activity) -> Activity:
     return activity_fetch(activity)
 
 
-def athlete_sync() -> Athlete:
-    """Fetch the authenticated athlete from Strava and upsert the local row."""
-    return Athlete.store(StravaApi().get_athlete())
+def athlete_sync(athlete: Athlete) -> Athlete:
+    """Fetch ``athlete`` from Strava (with its token) and upsert the local row."""
+    return Athlete.store(StravaApi(athlete).get_athlete())

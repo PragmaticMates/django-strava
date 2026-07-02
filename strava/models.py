@@ -245,11 +245,27 @@ class Athlete(models.Model):
   country = models.CharField(_("country"), max_length=100, blank=True, default="")
   follower_count = models.PositiveIntegerField(_("followers"), null=True, blank=True)
   friend_count = models.PositiveIntegerField(_("following"), null=True, blank=True)
+  # Per-athlete OAuth credentials. Populated by the OAuth connect flow (see strava.views);
+  # refreshed access/refresh tokens are written back here after each API call by StravaApi.
+  # Blank until the athlete is connected — `import_strava` skips athletes without tokens.
+  access_token = models.CharField(_("access token"), max_length=100, blank=True, default="")
+  refresh_token = models.CharField(_("refresh token"), max_length=100, blank=True, default="")
+  token_expires_at = models.DateTimeField(_("token expires at"), null=True, blank=True)
+  scope = models.CharField(_("scope"), max_length=200, blank=True, default="")
+  # The athlete rendered at the site root (and the target of the legacy single-athlete
+  # backfill). Exactly one row is default; the frontend switcher overrides per request.
+  is_default = models.BooleanField(_("default"), default=False)
   json = models.JSONField()
 
   class Meta:
     verbose_name = _("athlete")
     verbose_name_plural = _("athletes")
+    constraints = [
+      # At most one default athlete (a partial unique index over the `True` rows only).
+      models.UniqueConstraint(
+        fields=["is_default"], condition=models.Q(is_default=True), name="one_default_athlete",
+      ),
+    ]
 
   def __str__(self):
     return self.full_name or str(self.id)
@@ -261,6 +277,11 @@ class Athlete(models.Model):
   @property
   def location(self):
     return ", ".join(part for part in (self.city, self.country) if part)
+
+  @property
+  def has_tokens(self):
+    """Whether this athlete has been connected via OAuth (so imports can run for them)."""
+    return bool(self.access_token and self.refresh_token)
 
   @property
   def profile_url(self):
@@ -275,9 +296,28 @@ class Athlete(models.Model):
     return f"https://www.strava.com/athletes/{self.id}/follows?type=following"
 
   @classmethod
+  def default(cls):
+    """The athlete shown at the site root — the one flagged default, else the first row."""
+    return cls.objects.filter(is_default=True).first() or cls.objects.first()
+
+  @classmethod
+  def selected(cls, request):
+    """The athlete for this request: a valid ``?athlete=<pk>`` selection, else the default."""
+    pk = (request.GET.get("athlete") or "").strip()
+    if pk:
+      try:
+        athlete = cls.objects.filter(pk=pk).first()
+      except (ValueError, TypeError):
+        # ``athlete`` isn't a valid PK (the id is an integer) — fall back to the default.
+        athlete = None
+      if athlete:
+        return athlete
+    return cls.default()
+
+  @classmethod
   def current(cls):
-    """The athlete the frontend renders, or None before the first import."""
-    return cls.objects.first()
+    """The athlete the frontend renders by default, or None before the first import."""
+    return cls.default()
 
   @classmethod
   def read_json(cls, json):

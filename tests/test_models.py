@@ -262,9 +262,11 @@ class TestAthleteStore:
         assert athlete.follower_count == 99
 
     def test_sync_from_api_stores_fetched_athlete(self):
+        # athlete_sync refreshes an already-connected athlete using their stored token.
+        existing = Athlete.objects.create(id=42, access_token="x", refresh_token="y", json={})
         with patch("strava.services.sync.StravaApi") as mock_api_cls:
             mock_api_cls.return_value.get_athlete.return_value = ATHLETE_JSON
-            athlete = sync.athlete_sync()
+            athlete = sync.athlete_sync(existing)
         assert athlete.pk == 42
         assert Athlete.current() == athlete
 

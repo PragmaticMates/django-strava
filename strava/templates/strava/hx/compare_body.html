@@ -7,7 +7,7 @@ place on full page load and swapped into #cmp-body on a sport-filter click (htmx
   <div class="seg cmp-seg" role="tablist" aria-label="Filter by sport">
     {% for opt in sport_seg %}
     <button type="button" role="tab" aria-pressed="{% if opt.active %}true{% else %}false{% endif %}"
-            hx-get="{% url 'strava:compare' %}?sport={{ opt.key }}"
+            hx-get="{% url 'strava:compare' %}?sport={{ opt.key }}&athlete={{ athlete_id }}"
             hx-target="#cmp-body" hx-swap="innerHTML">
       <span class="sport-glyph">{{ opt.icon|group_glyph }}</span>{{ opt.label }}
     </button>

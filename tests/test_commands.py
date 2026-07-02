@@ -39,11 +39,22 @@ ACTIVITY_JSON_2 = {
 }
 
 
+def _connect_athlete(athlete_id=42):
+    """Pre-create the connected (token-holding, default) athlete the import loops over.
+
+    The command imports each already-connected athlete rather than auto-creating one from a
+    global token, so tests seed the athlete first; ``get_athlete`` (id 42) then upserts it."""
+    return Athlete.objects.create(
+        id=athlete_id, access_token="tok", refresh_token="ref", is_default=True, json={},
+    )
+
+
 @pytest.mark.django_db
 class TestImportStrava:
     @patch("strava.services.sync.gear_ensure", return_value=None)
     @patch("strava.management.commands.import_strava.StravaApi")
     def test_creates_activities(self, mock_api_cls, mock_gear):
+        _connect_athlete()
         mock_api_cls.return_value.get_athlete.return_value = ATHLETE_JSON
         mock_api_cls.return_value.get_activities.return_value = [
             ACTIVITY_JSON_1,
@@ -71,6 +82,7 @@ class TestImportStrava:
     @patch("strava.services.sync.gear_ensure", return_value=None)
     @patch("strava.management.commands.import_strava.StravaApi")
     def test_imports_athlete(self, mock_api_cls, mock_gear):
+        _connect_athlete()
         mock_api_cls.return_value.get_athlete.return_value = ATHLETE_JSON
         mock_api_cls.return_value.get_activities.return_value = []
 
@@ -84,6 +96,7 @@ class TestImportStrava:
     @patch("strava.services.sync.gear_ensure", return_value=None)
     @patch("strava.management.commands.import_strava.StravaApi")
     def test_backfills_legacy_unowned_rows(self, mock_api_cls, mock_gear):
+        _connect_athlete()
         # Rows imported before athlete linking existed carry no athlete...
         legacy_activity = Activity.objects.create(
             id=100,
@@ -114,7 +127,9 @@ class TestImportStrava:
     @patch("strava.services.sync.gear_ensure", return_value=None)
     @patch("strava.management.commands.import_strava.StravaApi")
     def test_incremental_passes_after(self, mock_api_cls, mock_gear):
-        # Create an existing activity so .exists() is True
+        athlete = _connect_athlete()
+        # An existing activity owned by this athlete so their .exists()/.latest() is found
+        # (the incremental "after" is computed per athlete).
         Activity.objects.create(
             id=100,
             name="Morning Run",
@@ -122,6 +137,7 @@ class TestImportStrava:
             sport_type="Run",
             distance=5000,
             json=ACTIVITY_JSON_1,
+            athlete=athlete,
         )
 
         mock_api_cls.return_value.get_athlete.return_value = ATHLETE_JSON
@@ -136,6 +152,7 @@ class TestImportStrava:
     @patch("strava.services.sync.gear_ensure", return_value=None)
     @patch("strava.management.commands.import_strava.StravaApi")
     def test_updates_existing_activity(self, mock_api_cls, mock_gear):
+        _connect_athlete()
         Activity.objects.create(
             id=100,
             name="Old Name",

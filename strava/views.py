@@ -1,22 +1,49 @@
 import logging
+import secrets
 
+from django.contrib import messages
+from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.mixins import UserPassesTestMixin
 from django.core.management import call_command
 from django.db.models import Count, F, Max, Sum
-from django.shortcuts import render
+from django.http import HttpResponseBadRequest
+from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from django.views.generic import DetailView, ListView, TemplateView
 
 from strava import helpers, services
-from strava.api import format_strava_error
-from strava.models import Activity, Gear
+from strava.api import StravaApi, _from_epoch, format_strava_error
+from strava.models import Activity, Athlete, Gear
 from strava.sports import TOP_SPORT_TYPES, group_data, sport_matches, sport_options
 
 
 logger = logging.getLogger('strava')
 
 
-class DashboardView(TemplateView):
+class AthleteScopedMixin:
+    """Resolve the athlete for the request (``?athlete=<id>`` or the default) and expose it
+    to the view's querysets (``self.athlete``) and template context (``athlete`` /
+    ``athlete_id`` / ``athletes``, the last driving the nav switcher). Resolved lazily off
+    ``self.request`` so it works whether the view runs through the full lifecycle or has its
+    methods called directly (as in unit tests)."""
+
+    @property
+    def athlete(self):
+        if not hasattr(self, '_athlete'):
+            self._athlete = Athlete.selected(self.request)
+        return self._athlete
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['athlete'] = self.athlete
+        context['athlete_id'] = self.athlete.pk if self.athlete else ''
+        context['athletes'] = Athlete.objects.all()
+        return context
+
+
+class DashboardView(AthleteScopedMixin, TemplateView):
     template_name = 'strava/pages/dashboard.html'
 
     def get_template_names(self):
@@ -30,7 +57,9 @@ class DashboardView(TemplateView):
         context = super().get_context_data(**kwargs)
         context['active_page'] = 'dashboard'
 
-        all_activities = list(Activity.objects.select_related('gear').order_by('-start_date'))
+        all_activities = list(
+            Activity.objects.for_athlete(self.athlete).select_related('gear').order_by('-start_date')
+        )
         today = timezone.localdate()
 
         # ---- Filters (mirror the map's client-side search + sport/gear/year pills) ----
@@ -45,7 +74,7 @@ class DashboardView(TemplateView):
         context['q'], context['sport'], context['gear'], context['year'] = q, sport, gear, year
 
         # Sport filter dropdown: every sport in the data (not just GPS-mapped ones) + groups.
-        context['sport_options'] = sport_options(Activity.objects.all())
+        context['sport_options'] = sport_options(Activity.objects.for_athlete(self.athlete))
         context['sport_groups'] = group_data()
 
         activities = services.dashboard.filter_activities(all_activities, q, sport, gear, year)
@@ -121,7 +150,7 @@ class RefreshView(UserPassesTestMixin, DashboardView):
         return self.render_to_response(context)
 
 
-class ActivitiesView(ListView):
+class ActivitiesView(AthleteScopedMixin, ListView):
     model = Activity
     template_name = 'strava/pages/activities.html'
     context_object_name = 'activities'
@@ -134,7 +163,8 @@ class ActivitiesView(ListView):
     def get_queryset(self):
         params = self.request.GET
         return (
-            Activity.objects.select_related('gear')
+            Activity.objects.for_athlete(self.athlete)
+            .select_related('gear')
             .search(params.get('q'))
             .for_sport_selection(params.get('sport'))
             .for_gear(params.get('gear'))
@@ -155,18 +185,21 @@ class ActivitiesView(ListView):
         context['dir'] = params.get('dir', 'desc')
         context['view'] = params.get('view', 'grid')
 
-        context['sport_options'] = sport_options(Activity.objects.all())
+        context['sport_options'] = sport_options(Activity.objects.for_athlete(self.athlete))
         context['sport_groups'] = group_data()
-        context['gear_list'] = Gear.objects.filter(activity__isnull=False).distinct().order_by('brand_name', 'model_name')
+        context['gear_list'] = (
+            Gear.objects.for_athlete(self.athlete)
+            .filter(activity__isnull=False).distinct().order_by('brand_name', 'model_name')
+        )
         context['month_list'] = [
             (d.strftime('%Y-%m'), d.strftime('%b %Y'))
-            for d in Activity.objects.dates('start_date', 'month', order='DESC')
+            for d in Activity.objects.for_athlete(self.athlete).dates('start_date', 'month', order='DESC')
         ]
         context['summary'] = services.activities.summary(self.object_list, timezone.now().date())
         return context
 
 
-class GearView(ListView):
+class GearView(AthleteScopedMixin, ListView):
     model = Gear
     template_name = 'strava/pages/gear.html'
     context_object_name = 'gear_list'
@@ -179,7 +212,8 @@ class GearView(ListView):
     def get_queryset(self):
         params = self.request.GET
         return (
-            Gear.objects.annotate(
+            Gear.objects.for_athlete(self.athlete)
+            .annotate(
                 activity_count=Count('activity'),
                 distance_sum=Sum('activity__distance'),
                 last_activity=Max('activity__start_date'),
@@ -208,7 +242,7 @@ class GearView(ListView):
         return context
 
 
-class GalleryView(ListView):
+class GalleryView(AthleteScopedMixin, ListView):
     model = Activity
     template_name = 'strava/pages/gallery.html'
     context_object_name = 'photos'
@@ -222,7 +256,7 @@ class GalleryView(ListView):
         params = self.request.GET
         # A gallery item is an activity with a primary photo; filter that in SQL.
         qs = (
-            Activity.objects
+            Activity.objects.for_athlete(self.athlete)
             .exclude(photo_url='')
             .search(params.get('q'))
             .for_sport_selection(params.get('sport'))
@@ -249,13 +283,14 @@ class GalleryView(ListView):
         photos = list(context['photos'])
         context['photos'] = photos
         context['count'] = len(photos)
-        context['year_list'] = [d.year for d in Activity.objects.dates('start_date', 'year', order='DESC')]
-        context['sport_options'] = sport_options(Activity.objects.exclude(photo_url=''))
+        scoped = Activity.objects.for_athlete(self.athlete)
+        context['year_list'] = [d.year for d in scoped.dates('start_date', 'year', order='DESC')]
+        context['sport_options'] = sport_options(scoped.exclude(photo_url=''))
         context['sport_groups'] = group_data()
         return context
 
 
-class CompareView(TemplateView):
+class CompareView(AthleteScopedMixin, TemplateView):
     """Year-over-year comparison matrix: one metric per row, one season per column.
 
     Each numeric row is scaled into a bar (relative to the row's best year) and
@@ -280,7 +315,7 @@ class CompareView(TemplateView):
         sport = self.request.GET.get('sport') or 'all'
         context['sport'] = sport
 
-        all_activities = list(Activity.objects.select_related('gear'))
+        all_activities = list(Activity.objects.for_athlete(self.athlete).select_related('gear'))
         activities = [a for a in all_activities if sport_matches(sport, a.sport_type)]
 
         # Sport filter: "All sports" plus the top-sport groups actually present in the
@@ -307,6 +342,8 @@ class ActivityCardView(DetailView):
     context_object_name = 'activity'
 
     def get_queryset(self):
+        # Not athlete-scoped: cards are fetched by PK from JS (which doesn't carry the
+        # selected athlete), and every athlete here is owner-curated public data anyway.
         return Activity.objects.select_related('gear')
 
     def get_context_data(self, **kwargs):
@@ -316,3 +353,48 @@ class ActivityCardView(DetailView):
         # route is already drawn on the map behind the card — and show a full-bleed photo.
         context['map_card'] = self.request.GET.get('map') == '1'
         return context
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def oauth_connect(request):
+    """Kick off the Strava OAuth flow to connect (or reconnect) an athlete. Superuser-only —
+    connecting an athlete grants this site API access to their account. Stores a random
+    ``state`` in the session so the callback can reject forged/replayed redirects."""
+    state = secrets.token_urlsafe(24)
+    request.session['strava_oauth_state'] = state
+    redirect_uri = request.build_absolute_uri(reverse('strava:oauth_callback'))
+    return redirect(StravaApi().authorization_url(redirect_uri, state))
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def oauth_callback(request):
+    """Strava redirects here after the owner authorizes (or cancels). Verifies ``state``,
+    exchanges the code for tokens, stores the athlete and their tokens, and marks the first
+    connected athlete as the default."""
+    if request.GET.get('error'):
+        messages.error(request, _("Strava connection cancelled."))
+        return redirect('admin:strava_athlete_changelist')
+
+    if request.GET.get('state') != request.session.pop('strava_oauth_state', None):
+        return HttpResponseBadRequest("Invalid OAuth state")
+
+    api = StravaApi()
+    try:
+        info = api.exchange_code_for_token(request.GET['code'])
+        api.client.access_token = info['access_token']
+        athlete = Athlete.store(api.get_athlete())
+    except Exception as error:
+        logger.exception("Strava OAuth token exchange failed")
+        messages.error(request, _("Connecting to Strava failed — %(error)s")
+                       % {"error": format_strava_error(error)})
+        return redirect('admin:strava_athlete_changelist')
+
+    athlete.access_token = info['access_token']
+    athlete.refresh_token = info['refresh_token']
+    athlete.token_expires_at = _from_epoch(info['expires_at'])
+    athlete.scope = request.GET.get('scope', '')
+    if not Athlete.objects.filter(is_default=True).exclude(pk=athlete.pk).exists():
+        athlete.is_default = True
+    athlete.save()
+    messages.success(request, _("Connected %(athlete)s.") % {"athlete": athlete})
+    return redirect('admin:strava_athlete_change', athlete.pk)

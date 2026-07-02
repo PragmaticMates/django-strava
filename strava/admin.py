@@ -3,6 +3,7 @@ import logging
 
 from django.contrib import admin, messages
 from django.core.management import call_command
+from django.db import transaction
 from django.db.models import Count, Sum
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
@@ -267,22 +268,49 @@ class GearAdmin(admin.ModelAdmin):
 @admin.register(Athlete)
 class AthleteAdmin(admin.ModelAdmin):
     search_fields = ("id", "firstname", "lastname")
-    actions_list = ["sync_from_api"]
-    actions_row = ["show_activities"]
-    actions_detail = ["show_activities"]
-    list_display = ("id", "full_name", "location", "follower_count", "friend_count")
+    actions_list = ["connect_athlete", "sync_from_api"]
+    actions_row = ["show_activities", "reconnect_athlete", "make_default"]
+    actions_detail = ["show_activities", "reconnect_athlete", "make_default"]
+    list_display = ("id", "full_name", "location", "follower_count", "friend_count",
+                    "show_connected", "is_default")
     readonly_fields = ("id", "firstname", "lastname", "profile", "city", "country",
-                       "follower_count", "friend_count", "json")
+                       "follower_count", "friend_count", "access_token", "refresh_token",
+                       "token_expires_at", "scope", "json")
 
     @action(description=_("Show activities"), url_path="show-activities")
     def show_activities(self, request, object_id):
         url = reverse_lazy("admin:strava_activity_changelist")
         return redirect(f"{url}?athlete__id__exact={object_id}")
 
-    @action(description=_("Sync athlete from Strava"), url_path="sync-strava-athlete")
+    @action(description=_("Connect athlete"), url_path="connect")
+    def connect_athlete(self, request, *args):
+        # Start the Strava OAuth flow (the callback stores the athlete + their tokens).
+        return redirect("strava:oauth_connect")
+
+    @action(description=_("Reconnect"), url_path="reconnect")
+    def reconnect_athlete(self, request, object_id):
+        # Same flow; re-authorizing re-stores by Strava id and refreshes the tokens.
+        return redirect("strava:oauth_connect")
+
+    @action(description=_("Make default"), url_path="make-default")
+    def make_default(self, request, object_id):
+        # One default at a time (enforced by a partial unique index) — clear the others
+        # before setting this one, both in a transaction.
+        with transaction.atomic():
+            Athlete.objects.filter(is_default=True).exclude(pk=object_id).update(is_default=False)
+            Athlete.objects.filter(pk=object_id).update(is_default=True)
+        self.message_user(request, _("Default athlete updated."), level=messages.SUCCESS)
+        return redirect(request.META.get("HTTP_REFERER", reverse_lazy("admin:strava_athlete_changelist")))
+
+    @action(description=_("Sync athletes from Strava"), url_path="sync-strava-athlete")
     def sync_from_api(self, request, *args):
+        connected = Athlete.objects.exclude(access_token="")
+        if not connected.exists():
+            self.message_user(request, _("No connected athletes to sync."), level=messages.WARNING)
+            return redirect(request.META.get("HTTP_REFERER", reverse_lazy("admin:strava_athlete_changelist")))
         try:
-            sync.athlete_sync()
+            for athlete in connected:
+                sync.athlete_sync(athlete)
         except Exception as error:
             logger.exception("Strava athlete sync from the admin action failed")
             self.message_user(
@@ -291,8 +319,13 @@ class AthleteAdmin(admin.ModelAdmin):
                 level=messages.ERROR,
             )
         else:
-            self.message_user(request, _("Athlete synced from Strava."), level=messages.SUCCESS)
+            self.message_user(request, _("Athletes synced from Strava."), level=messages.SUCCESS)
         return redirect(request.META.get("HTTP_REFERER", reverse_lazy("admin:strava_athlete_changelist")))
+
+    @display(description=_("Connected"))
+    def show_connected(self, obj):
+        return obj.has_tokens
+    show_connected.boolean = True
 
     @display(description=_("Name"), ordering="firstname")
     def full_name(self, obj):

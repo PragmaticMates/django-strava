@@ -16,7 +16,11 @@ from strava.models import Athlete
 register = template.Library()
 
 
-@register.simple_tag
-def strava_athlete():
-    """The athlete the frontend renders, or None before the first import."""
+@register.simple_tag(takes_context=True)
+def strava_athlete(context):
+    """The athlete the frontend renders for this request — the ``?athlete=<id>`` selection
+    if present, else the default athlete — or None before the first import."""
+    request = context.get("request")
+    if request is not None:
+        return Athlete.selected(request)
     return Athlete.current()

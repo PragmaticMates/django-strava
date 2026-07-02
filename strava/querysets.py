@@ -3,6 +3,13 @@ from django.db.models import F, Value, Q, CharField, FloatField, Func, Expressio
 
 
 class ActivityQuerySet(models.QuerySet):
+    def for_athlete(self, athlete):
+        # Scope to one athlete's rows. ``None`` (no athlete selected/connected yet) is a
+        # no-op so callers can pass the resolved athlete unconditionally.
+        if athlete is None:
+            return self
+        return self.filter(athlete=athlete)
+
     def gear_unsynced(self):
         # Compare the athlete-editable `gear_id` column against the gear_id in the stored
         # (immutable) Strava payload — a mismatch means an admin edit hasn't been pushed
@@ -92,6 +99,11 @@ class ActivityQuerySet(models.QuerySet):
 
 
 class GearQuerySet(models.QuerySet):
+    def for_athlete(self, athlete):
+        if athlete is None:
+            return self
+        return self.filter(athlete=athlete)
+
     def search(self, query):
         qs = self
         for token in (query or '').split():

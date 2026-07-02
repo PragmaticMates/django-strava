@@ -26,6 +26,7 @@
         hx-swap="innerHTML"
         hx-push-url="true"
         hx-trigger="change, keyup delay:300ms from:#search-input">
+    <input type="hidden" name="athlete" value="{{ athlete_id }}">
     <input type="hidden" name="view" id="f-view" value="{{ view }}">
     <input type="hidden" name="sort" id="f-sort" value="{{ sort }}">
     <input type="hidden" name="dir" id="f-dir" value="{{ dir }}">
