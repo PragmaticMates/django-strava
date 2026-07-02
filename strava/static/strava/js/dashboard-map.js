@@ -112,12 +112,12 @@
       // not only those whose start point is in view — otherwise panning the
       // start point off-screen would drop a route still crossing the viewport.
       if (!bounds.intersects(L.latLngBounds(coords))) return;
-      // Clicking a route selects its activity, just like clicking its marker.
-      // Hovering thickens it and lifts it above the other routes so it stands out.
+      // Clicking a route selects its activity, and hovering it shows the same dashed
+      // preview + dimming as hovering the activity's marker.
       const line = L.polyline(coords, { color: COLORS[m.map_sport_type] || COLORS.other, weight: 2.5, opacity: 0.65 })
         .on('click', function() { selectActivity(m); })
-        .on('mouseover', function() { line.setStyle({ weight: 5, opacity: 0.95 }); line.bringToFront(); })
-        .on('mouseout', function() { line.setStyle({ weight: 2.5, opacity: 0.65 }); });
+        .on('mouseover', function() { showHoverRoute(m, m._marker); })
+        .on('mouseout', function() { clearHoverRoute(); });
       lines.push(line);
     });
     allRoutesLayer = L.layerGroup(lines).addTo(map);
@@ -151,9 +151,11 @@
     if (!coords.length) return;
     setRoutesDimmed(true);
     setMarkersDimmed(true, marker);
+    // Non-interactive so the preview drawn over a hovered route doesn't steal the
+    // pointer from the base line beneath it (which would loop mouseover/mouseout).
     hoverLayer = L.layerGroup([
-      L.polyline(coords, { color: '#fff', weight: 5, opacity: 0.7 }),
-      L.polyline(coords, { color: COLORS[m.map_sport_type] || COLORS.other, weight: 3, opacity: 0.9, dashArray: '4 5' }),
+      L.polyline(coords, { color: COLORS[m.map_sport_type] || COLORS.other, weight: 10, opacity: 0.9, interactive: false }),
+      L.polyline(coords, { color: '#fff', weight: 2.5, opacity: 0.9, interactive: false }),
     ]).addTo(map);
   }
   function clearHoverRoute() {
@@ -320,6 +322,7 @@
         .on('mouseover', function() { showHoverRoute(m, marker); })
         .on('mouseout', function() { clearHoverRoute(); })
         .on('click', function() { selectActivity(m); });
+      m._marker = marker;  // let a route-line hover highlight this same marker
       leafletMarkers.push(marker);
       clusters.addLayer(marker);
     });
