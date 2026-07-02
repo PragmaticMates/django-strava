@@ -1,10 +1,11 @@
-{% load static django_htmx %}
+{% load static django_htmx strava_athlete %}
+{% strava_athlete as athlete %}
 <!DOCTYPE html>
 <html lang="en" data-density="comfortable">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>django-strava · {% block title %}{% endblock %}</title>
+<title>{% block brand %}django-strava{% endblock %} · {% block title %}{% endblock %}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 {% block fonts %}<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">{% endblock %}
@@ -15,6 +16,7 @@
 
 <header class="nav" id="site-nav" data-screen-label="Top nav">
   <a class="logo" href="{% url 'strava:dashboard' %}">
+    {% block logo %}
     <svg width="178" height="32" viewBox="0 0 178 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="django-strava">
       <rect x="2" y="8" width="16" height="16" rx="2.5" transform="rotate(45 10 16)" fill="var(--accent)"/>
       <rect x="5.5" y="11.5" width="9" height="9" rx="1.5" transform="rotate(45 10 16)" fill="white" opacity="0.28"/>
@@ -23,6 +25,7 @@
         <tspan fill="#1F1B18">django</tspan><tspan fill="var(--accent)">-strava</tspan>
       </text>
     </svg>
+    {% endblock %}
   </a>
   <button type="button" class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation" aria-expanded="false" onclick="toggleNav(event)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
@@ -51,22 +54,22 @@
   </nav>
   <div class="nav-user" id="user-menu-trigger" onclick="toggleUserMenu(event)" aria-haspopup="true" aria-expanded="false">
     <span class="avatar-slot" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4.5"></circle><path d="M3 21c0-4 4-7 9-7s9 3 9 7"></path></svg>
+      {% if athlete.profile %}<img src="{{ athlete.profile }}" alt="">{% else %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4.5"></circle><path d="M3 21c0-4 4-7 9-7s9 3 9 7"></path></svg>{% endif %}
     </span>
-    <span class="uname">Erik Telepovsky</span>
+    <span class="uname">{{ athlete.full_name|default:"Athlete" }}</span>
     <span class="caret" id="user-caret">▾</span>
     <div class="user-dropdown" id="user-dropdown" role="menu">
-      <a class="user-dd-item" href="#" role="menuitem">
+      <a class="user-dd-item" href="{% if athlete %}{{ athlete.profile_url }}{% else %}#{% endif %}" role="menuitem"{% if athlete %} target="_blank" rel="noopener"{% endif %}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4.5"></circle><path d="M3 21c0-4 4-7 9-7s9 3 9 7"></path></svg>
         Profile
       </a>
-      <a class="user-dd-item" href="#" role="menuitem">
+      <a class="user-dd-item" href="{% if athlete %}{{ athlete.followers_url }}{% else %}#{% endif %}" role="menuitem"{% if athlete %} target="_blank" rel="noopener"{% endif %}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"></circle><path d="M2 21c0-3.5 3.1-6 7-6s7 2.5 7 6"></path><circle cx="18" cy="9" r="2.5"></circle><path d="M16 21c0-2.5 2-4 4.5-4"></path></svg>
-        Followers
+        Followers{% if athlete.follower_count is not None %} · {{ athlete.follower_count }}{% endif %}
       </a>
-      <a class="user-dd-item" href="#" role="menuitem">
+      <a class="user-dd-item" href="{% if athlete %}{{ athlete.following_url }}{% else %}#{% endif %}" role="menuitem"{% if athlete %} target="_blank" rel="noopener"{% endif %}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="15" cy="8" r="3.5"></circle><path d="M8 21c0-3.5 3.1-6 7-6s7 2.5 7 6"></path><circle cx="6" cy="9" r="2.5"></circle><path d="M1 21c0-2.5 2-4 4.5-4"></path></svg>
-        Following
+        Following{% if athlete.friend_count is not None %} · {{ athlete.friend_count }}{% endif %}
       </a>
     </div>
   </div>

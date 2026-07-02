@@ -168,5 +168,8 @@ class StravaApi:
     )
     return token_response["access_token"]
 
-  def read_athlete(self):
-    return self.get_formatted_json(self.client.get_athlete().model_dump_json())
+  @rate_limited
+  def get_athlete(self):
+    data = json.loads(self.client.get_athlete().model_dump_json())
+    logger.info(self.get_formatted_json(data))
+    return data

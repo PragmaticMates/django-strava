@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import pytest
 
-from strava.models import Activity, Gear
+from strava.models import Activity, Athlete, Gear
 
 
 ACTIVITY_JSON = {
@@ -210,3 +210,111 @@ class TestGearStr:
             json=GEAR_JSON,
         )
         assert str(gear) == "Adidas Ultraboost"
+
+
+ATHLETE_JSON = {
+    "id": 42,
+    "firstname": "Ada",
+    "lastname": "Lovelace",
+    "profile": "https://example.com/avatar.jpg",
+    "city": "London",
+    "country": "UK",
+    "follower_count": 12,
+    "friend_count": 7,
+}
+
+
+class TestAthleteReadJson:
+    def test_parses_json_dict(self):
+        result = Athlete.read_json(ATHLETE_JSON)
+        assert result["firstname"] == "Ada"
+        assert result["lastname"] == "Lovelace"
+        assert result["profile"] == "https://example.com/avatar.jpg"
+        assert result["follower_count"] == 12
+        assert result["friend_count"] == 7
+
+    def test_missing_fields_default_safely(self):
+        result = Athlete.read_json({"id": 1})
+        assert result["firstname"] == ""
+        assert result["profile"] == ""
+        assert result["follower_count"] is None
+
+    def test_relative_placeholder_avatar_is_dropped(self):
+        # Strava sends a relative placeholder (e.g. "avatar/athlete/large.png") when the
+        # athlete has no custom photo; only absolute URLs are kept.
+        result = Athlete.read_json({**ATHLETE_JSON, "profile": "avatar/athlete/large.png"})
+        assert result["profile"] == ""
+
+
+@pytest.mark.django_db
+class TestAthleteStore:
+    def test_creates_then_updates_in_place(self):
+        athlete = Athlete.store(ATHLETE_JSON)
+        assert athlete.pk == 42
+        assert athlete.full_name == "Ada Lovelace"
+
+        # Re-importing the same athlete id updates the row rather than duplicating it.
+        Athlete.store({**ATHLETE_JSON, "firstname": "Augusta", "follower_count": 99})
+        assert Athlete.objects.count() == 1
+        athlete.refresh_from_db()
+        assert athlete.firstname == "Augusta"
+        assert athlete.follower_count == 99
+
+    def test_sync_from_api_stores_fetched_athlete(self):
+        with patch("strava.models.StravaApi") as mock_api_cls:
+            mock_api_cls.return_value.get_athlete.return_value = ATHLETE_JSON
+            athlete = Athlete.sync_from_api()
+        assert athlete.pk == 42
+        assert Athlete.current() == athlete
+
+
+@pytest.mark.django_db
+class TestAthleteProperties:
+    def test_current_is_none_before_import(self):
+        assert Athlete.current() is None
+
+    def test_full_name_and_location_and_urls(self):
+        athlete = Athlete.store(ATHLETE_JSON)
+        assert athlete.full_name == "Ada Lovelace"
+        assert athlete.location == "London, UK"
+        assert athlete.profile_url == "https://www.strava.com/athletes/42"
+        assert athlete.followers_url == "https://www.strava.com/athletes/42/follows?type=followers"
+        assert athlete.following_url == "https://www.strava.com/athletes/42/follows?type=following"
+
+    def test_str_falls_back_to_id_without_name(self):
+        athlete = Athlete.store({"id": 7})
+        assert str(athlete) == "7"
+
+
+@pytest.mark.django_db
+class TestAthleteOwnership:
+    def test_activity_and_gear_reverse_relations(self):
+        athlete = Athlete.store(ATHLETE_JSON)
+        gear = Gear.objects.create(id="g1", primary=False, brand_name="Nike",
+                                   model_name="Pegasus", description="", json={},
+                                   athlete=athlete)
+        activity = Activity.objects.create(
+            id=1, name="Run", start_date=datetime(2024, 6, 15, tzinfo=timezone.utc),
+            sport_type="Run", distance=5000, json={"id": 1}, athlete=athlete, gear=gear,
+        )
+        assert list(athlete.activities.all()) == [activity]
+        assert list(athlete.gear.all()) == [gear]
+
+    def test_get_or_create_sets_gear_owner(self):
+        athlete = Athlete.store(ATHLETE_JSON)
+        with patch("strava.models.StravaApi") as mock_api_cls:
+            mock_api_cls.return_value.get_gear.return_value = GEAR_JSON
+            gear = Gear.get_or_create("g123", athlete)
+        assert gear.athlete_id == athlete.pk
+
+    def test_deleting_athlete_cascades_to_owned_rows(self):
+        athlete = Athlete.store(ATHLETE_JSON)
+        Activity.objects.create(
+            id=1, name="Run", start_date=datetime(2024, 6, 15, tzinfo=timezone.utc),
+            sport_type="Run", distance=5000, json={"id": 1}, athlete=athlete,
+        )
+        Gear.objects.create(id="g1", primary=False, brand_name="Nike", model_name="M",
+                            description="", json={}, athlete=athlete)
+        athlete.delete()
+        assert Activity.objects.count() == 0
+        assert Gear.objects.count() == 0

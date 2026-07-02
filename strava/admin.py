@@ -10,12 +10,12 @@ from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
-from unfold.contrib.filters.admin import RangeNumericListFilter
+from unfold.contrib.filters.admin import RangeNumericListFilter, RelatedDropdownFilter
 from unfold.decorators import action, display
 
 from strava.api import format_strava_error
 from strava.choices import SportType
-from strava.models import Activity, Gear
+from strava.models import Activity, Athlete, Gear
 
 
 logger = logging.getLogger('strava')
@@ -68,9 +68,10 @@ class ActivityAdmin(admin.ModelAdmin):
     list_select_related = ("gear",)
     list_display_links = ("name_and_id",)
     list_editable = ("gear",)
-    list_filter = (ActivitySyncFilter, ActivityDetailFilter, DistanceFilter, "gear", "sport_type")
+    list_filter = (ActivitySyncFilter, ActivityDetailFilter, DistanceFilter,
+                   ("athlete", RelatedDropdownFilter), ("gear", RelatedDropdownFilter), "sport_type")
     list_per_page = 100
-    readonly_fields = ('distance', 'json', 'start_date')
+    readonly_fields = ('distance', 'json', 'start_date', 'athlete')
     # autocomplete_fields = ("gear",)
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
@@ -210,8 +211,8 @@ class GearAdmin(admin.ModelAdmin):
     list_display = ("id", "brand_and_model", "show_gear_type", "description",
                     "show_activity_count", "show_distance", "show_age", "primary")
     list_display_links = ("id", "brand_and_model")
-    list_filter = ("gear_type", "brand_name")
-    readonly_fields = ("primary", "brand_name", "model_name", "description", "json")
+    list_filter = (("athlete", RelatedDropdownFilter), "gear_type", "brand_name")
+    readonly_fields = ("primary", "brand_name", "model_name", "description", "json", "athlete")
 
     def get_queryset(self, request):
         return super().get_queryset(request).annotate(
@@ -260,3 +261,42 @@ class GearAdmin(admin.ModelAdmin):
     def show_age(self, obj):
         return obj.is_old
     show_age.boolean = True
+
+
+@admin.register(Athlete)
+class AthleteAdmin(admin.ModelAdmin):
+    search_fields = ("id", "firstname", "lastname")
+    actions_list = ["sync_from_api"]
+    actions_row = ["show_activities"]
+    actions_detail = ["show_activities"]
+    list_display = ("id", "full_name", "location", "follower_count", "friend_count")
+    readonly_fields = ("id", "firstname", "lastname", "profile", "city", "country",
+                       "follower_count", "friend_count", "json")
+
+    @action(description=_("Show activities"), url_path="show-activities")
+    def show_activities(self, request, object_id):
+        url = reverse_lazy("admin:strava_activity_changelist")
+        return redirect(f"{url}?athlete__id__exact={object_id}")
+
+    @action(description=_("Sync athlete from Strava"), url_path="sync-strava-athlete")
+    def sync_from_api(self, request, *args):
+        try:
+            Athlete.sync_from_api()
+        except Exception as error:
+            logger.exception("Strava athlete sync from the admin action failed")
+            self.message_user(
+                request,
+                _("Athlete sync from Strava failed — %(error)s") % {"error": format_strava_error(error)},
+                level=messages.ERROR,
+            )
+        else:
+            self.message_user(request, _("Athlete synced from Strava."), level=messages.SUCCESS)
+        return redirect(request.META.get("HTTP_REFERER", reverse_lazy("admin:strava_athlete_changelist")))
+
+    @display(description=_("Name"), ordering="firstname")
+    def full_name(self, obj):
+        return obj.full_name
+
+    @display(description=_("Location"))
+    def location(self, obj):
+        return obj.location

@@ -231,10 +231,10 @@ class TestStravaApiClient:
             refresh_access_token=lambda **kw: {"access_token": "fresh-token"})
         assert self._api(client).refresh_access_token() == "fresh-token"
 
-    def test_read_athlete_formats_json(self):
-        client = SimpleNamespace(get_athlete=lambda: Model({"firstname": "Erik"}))
-        out = self._api(client).read_athlete()
-        assert '"firstname": "Erik"' in out
+    def test_get_athlete_returns_parsed_json(self):
+        client = SimpleNamespace(get_athlete=lambda: Model({"id": 42, "firstname": "Erik"}))
+        result = self._api(client).get_athlete()
+        assert result == {"id": 42, "firstname": "Erik"}
 
     def test_get_formatted_json_indents(self):
         api_obj = self._api(SimpleNamespace())

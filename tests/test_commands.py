@@ -6,8 +6,19 @@ import pytest
 from django.core.management import call_command
 
 from strava.management.commands.import_strava import Command
-from strava.models import Activity, Gear
+from strava.models import Activity, Athlete, Gear
 
+
+ATHLETE_JSON = {
+    "id": 42,
+    "firstname": "Ada",
+    "lastname": "Lovelace",
+    "profile": "https://example.com/avatar.jpg",
+    "city": "London",
+    "country": "UK",
+    "follower_count": 12,
+    "friend_count": 7,
+}
 
 ACTIVITY_JSON_1 = {
     "id": 100,
@@ -33,6 +44,7 @@ class TestImportStrava:
     @patch("strava.models.Gear.get_or_create", return_value=None)
     @patch("strava.management.commands.import_strava.StravaApi")
     def test_creates_activities(self, mock_api_cls, mock_gear):
+        mock_api_cls.return_value.get_athlete.return_value = ATHLETE_JSON
         mock_api_cls.return_value.get_activities.return_value = [
             ACTIVITY_JSON_1,
             ACTIVITY_JSON_2,
@@ -52,6 +64,53 @@ class TestImportStrava:
         assert a2.name == "Evening Ride"
         assert a2.sport_type == "Ride"
 
+        # Imported activities are linked to the synced athlete.
+        assert a1.athlete_id == 42
+        assert a2.athlete_id == 42
+
+    @patch("strava.models.Gear.get_or_create", return_value=None)
+    @patch("strava.management.commands.import_strava.StravaApi")
+    def test_imports_athlete(self, mock_api_cls, mock_gear):
+        mock_api_cls.return_value.get_athlete.return_value = ATHLETE_JSON
+        mock_api_cls.return_value.get_activities.return_value = []
+
+        call_command("import_strava")
+
+        athlete = Athlete.objects.get(id=42)
+        assert athlete.full_name == "Ada Lovelace"
+        assert athlete.follower_count == 12
+        assert Athlete.current() == athlete
+
+    @patch("strava.models.Gear.get_or_create", return_value=None)
+    @patch("strava.management.commands.import_strava.StravaApi")
+    def test_backfills_legacy_unowned_rows(self, mock_api_cls, mock_gear):
+        # Rows imported before athlete linking existed carry no athlete...
+        legacy_activity = Activity.objects.create(
+            id=100,
+            name="Morning Run",
+            start_date=datetime(2024, 6, 15, 7, 30, tzinfo=timezone.utc),
+            sport_type="Run",
+            distance=5000,
+            json=ACTIVITY_JSON_1,
+        )
+        legacy_gear = Gear.objects.create(
+            id="g1", primary=False, brand_name="Nike", model_name="Pegasus",
+            description="", json={},
+        )
+        assert legacy_activity.athlete_id is None
+        assert legacy_gear.athlete_id is None
+
+        mock_api_cls.return_value.get_athlete.return_value = ATHLETE_JSON
+        mock_api_cls.return_value.get_activities.return_value = []
+
+        call_command("import_strava")
+
+        # ...and are backfilled to the synced athlete on the next import.
+        legacy_activity.refresh_from_db()
+        legacy_gear.refresh_from_db()
+        assert legacy_activity.athlete_id == 42
+        assert legacy_gear.athlete_id == 42
+
     @patch("strava.models.Gear.get_or_create", return_value=None)
     @patch("strava.management.commands.import_strava.StravaApi")
     def test_incremental_passes_after(self, mock_api_cls, mock_gear):
@@ -65,6 +124,7 @@ class TestImportStrava:
             json=ACTIVITY_JSON_1,
         )
 
+        mock_api_cls.return_value.get_athlete.return_value = ATHLETE_JSON
         mock_api_cls.return_value.get_activities.return_value = []
 
         call_command("import_strava")
@@ -85,6 +145,7 @@ class TestImportStrava:
             json=ACTIVITY_JSON_1,
         )
 
+        mock_api_cls.return_value.get_athlete.return_value = ATHLETE_JSON
         updated_json = {**ACTIVITY_JSON_1, "name": "Renamed Run"}
         mock_api_cls.return_value.get_activities.return_value = [updated_json]
         mock_api_cls.return_value.get_activity.side_effect = lambda activity_id: updated_json

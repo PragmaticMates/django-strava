@@ -5,7 +5,7 @@ import json
 from django.core.management.base import BaseCommand
 
 from strava.api import StravaApi
-from strava.models import Activity, Gear
+from strava.models import Activity, Athlete, Gear
 
 logger = logging.getLogger("file")
 
@@ -32,19 +32,26 @@ class Command(BaseCommand):
 
     def import_activities_from_api(self):
         api = StravaApi()
+        # Refresh the athlete profile (nav name/avatar/counts) on every import.
+        athlete = Athlete.store(api.get_athlete())
         after = Activity.objects.latest().start_date if Activity.objects.exists() else None
         for summary in api.get_activities(after=after):
-            self.create_activity_from_json(api.get_activity(summary['id']))
+            self.create_activity_from_json(api.get_activity(summary['id']), athlete)
+        # Backfill rows imported before athlete linking existed. Safe because the app is
+        # single-athlete: every unowned activity/gear belongs to the one athlete.
+        Activity.objects.filter(athlete__isnull=True).update(athlete=athlete)
+        Gear.objects.filter(athlete__isnull=True).update(athlete=athlete)
 
-    def create_activities(self, activities):
+    def create_activities(self, activities, athlete=None):
         for activity in activities:
-            self.create_activity_from_json(activity)
+            self.create_activity_from_json(activity, athlete)
 
-    def create_activity_from_json(self, json_data):
+    def create_activity_from_json(self, json_data, athlete=None):
         data = Activity.read_json(json_data)
         data['json'] = json_data
+        data['athlete'] = athlete
 
-        Gear.get_or_create(data.get('gear_id', None))
+        Gear.get_or_create(data.get('gear_id', None), athlete)
         activity, created = Activity.objects.update_or_create(
             id=json_data["id"],
             defaults=data,

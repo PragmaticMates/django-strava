@@ -38,6 +38,10 @@ class Activity(models.Model):
   is_detailed = models.BooleanField(_("detailed"), default=False)
   gear = models.ForeignKey("Gear", on_delete=models.SET_NULL,
                            blank=True, null=True, default=None)
+  # The activity's owner. Nullable because rows imported before athlete linking existed
+  # have none until the next import backfills them (see import_strava).
+  athlete = models.ForeignKey("Athlete", on_delete=models.CASCADE,
+                              blank=True, null=True, default=None, related_name="activities")
   json = models.JSONField()
   objects = ActivityQuerySet.as_manager()
 
@@ -97,6 +101,7 @@ class Activity(models.Model):
       gear_data = StravaApi().get_gear(self.gear_id)
       data = Gear.read_json(gear_data)
       data['json'] = gear_data
+      data['athlete'] = self.athlete
       Gear.objects.get_or_create(id=gear_data["id"], defaults=data)
 
     self.save()
@@ -213,6 +218,9 @@ class Gear(models.Model):
   model_name = models.CharField(_("model name"), max_length=50)
   description = models.CharField(_("description"), max_length=100)
   gear_type = models.CharField(_("type"), max_length=4, choices=GEAR_TYPES, default='shoe')
+  # The gear's owner. Nullable for the same reason as Activity.athlete (backfilled on import).
+  athlete = models.ForeignKey("Athlete", on_delete=models.CASCADE,
+                              blank=True, null=True, default=None, related_name="gear")
   json = models.JSONField()
   objects = GearQuerySet.as_manager()
 
@@ -235,7 +243,7 @@ class Gear(models.Model):
     return BIKE_LIFESPAN_KM if self.gear_type == 'bike' else SHOE_LIFESPAN_KM
 
   @classmethod
-  def get_or_create(cls, id):
+  def get_or_create(cls, id, athlete=None):
     if not id:
       return None
     try:
@@ -246,6 +254,7 @@ class Gear(models.Model):
     gear_data = StravaApi().get_gear(id)
     data = Gear.read_json(gear_data)
     data['json'] = gear_data
+    data['athlete'] = athlete
 
     gear, created = Gear.objects.get_or_create(
       id=gear_data["id"],
@@ -273,5 +282,89 @@ class Gear(models.Model):
 
   def update_from_json(self):
     for attr, value in Gear.read_json(self.json).items():
+      setattr(self, attr, value)
+    self.save()
+
+
+class Athlete(models.Model):
+  """The Strava athlete whose activities this app displays.
+
+  The app is single-athlete, so the frontend reads the one athlete via
+  ``Athlete.current()`` — the nav name, avatar and follower/following counts come
+  from here instead of being hardcoded. Populated by ``import_strava`` (and the
+  dashboard refresh button) from the authenticated athlete on the Strava API.
+  """
+
+  # `id` is the default auto PK with Strava's integer athlete id assigned into it on
+  # import (same pattern as Activity) — Gear needs a custom CharField PK only because its
+  # Strava ids are strings ("b1234567").
+  firstname = models.CharField(_("first name"), max_length=50, blank=True, default="")
+  lastname = models.CharField(_("last name"), max_length=50, blank=True, default="")
+  profile = models.URLField(_("avatar URL"), max_length=500, blank=True, default="")
+  city = models.CharField(_("city"), max_length=100, blank=True, default="")
+  country = models.CharField(_("country"), max_length=100, blank=True, default="")
+  follower_count = models.PositiveIntegerField(_("followers"), null=True, blank=True)
+  friend_count = models.PositiveIntegerField(_("following"), null=True, blank=True)
+  json = models.JSONField()
+
+  class Meta:
+    verbose_name = _("athlete")
+    verbose_name_plural = _("athletes")
+
+  def __str__(self):
+    return self.full_name or str(self.id)
+
+  @property
+  def full_name(self):
+    return f"{self.firstname} {self.lastname}".strip()
+
+  @property
+  def location(self):
+    return ", ".join(part for part in (self.city, self.country) if part)
+
+  @property
+  def profile_url(self):
+    return f"https://www.strava.com/athletes/{self.id}"
+
+  @property
+  def followers_url(self):
+    return f"https://www.strava.com/athletes/{self.id}/follows?type=followers"
+
+  @property
+  def following_url(self):
+    return f"https://www.strava.com/athletes/{self.id}/follows?type=following"
+
+  @classmethod
+  def current(cls):
+    """The athlete the frontend renders, or None before the first import."""
+    return cls.objects.first()
+
+  @classmethod
+  def read_json(cls, json):
+    return {
+      'firstname': json.get('firstname') or '',
+      'lastname': json.get('lastname') or '',
+      # A real (non-default) avatar; Strava sends a relative placeholder otherwise.
+      'profile': (json.get('profile') or '') if str(json.get('profile') or '').startswith('http') else '',
+      'city': json.get('city') or '',
+      'country': json.get('country') or '',
+      'follower_count': json.get('follower_count'),
+      'friend_count': json.get('friend_count'),
+    }
+
+  @classmethod
+  def store(cls, json_data):
+    """Create/update the athlete from a Strava athlete payload."""
+    data = cls.read_json(json_data)
+    data['json'] = json_data
+    athlete, _created = cls.objects.update_or_create(id=json_data['id'], defaults=data)
+    return athlete
+
+  @classmethod
+  def sync_from_api(cls):
+    return cls.store(StravaApi().get_athlete())
+
+  def update_from_json(self):
+    for attr, value in Athlete.read_json(self.json).items():
       setattr(self, attr, value)
     self.save()

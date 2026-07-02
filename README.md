@@ -132,6 +132,17 @@ The app registers `Activity` and `Gear` models in the Django admin with:
 
 **Gear** - Stores gear details (brand, model, description). Automatically fetched from the API when first referenced by an activity.
 
+**Athlete** - Stores the authenticated athlete's profile (name, avatar, city/country, follower and following counts). Populated by `import_strava` (and the dashboard refresh button) so the site chrome shows the real athlete instead of a hardcoded name. The frontend reads it via `Athlete.current()`; the app is single-athlete.
+
+`Activity` and `Gear` carry a nullable `athlete` foreign key (`on_delete=CASCADE`) identifying their owner. It's set during import; rows imported before athlete linking existed are backfilled to the athlete on the next import.
+
+### Customising the site chrome
+
+The nav name, avatar and follower/following counts are driven by the imported `Athlete` — nothing is hardcoded. The two branding elements in `strava/pages/base.html` are exposed as template blocks, so a consuming project can override them by extending the base template:
+
+- `{% block brand %}` — the name shown in the page `<title>` (defaults to `django-strava`)
+- `{% block logo %}` — the header logo SVG
+
 ## License
 
 [GNU General Public License v3](LICENSE)
