@@ -11,7 +11,6 @@ A filter value is one of: ``'all'``, a group key (``'group-run'`` …) or an exa
 ``sport_type`` (``'Run'``, ``'TrailRun'`` …).
 """
 
-from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 
 from strava.choices import SportType
@@ -24,20 +23,21 @@ def _is_cycling(sport_type):
 # --------------------------------------------------------------------------- #
 # Broad activity categories
 # --------------------------------------------------------------------------- #
-# The coarse bucket a sport falls in, used for map-marker styling (Activity.type) and
-# the category filter (ActivityQuerySet.for_sport_category). Each sport maps to exactly
-# one bucket: the first matching rule wins, and anything unmatched is DEFAULT_CATEGORY.
-# A rule is either a substring test ("contains") or an explicit membership set ("values").
-# This is the single source of truth — Activity.type and the queryset filter both derive
-# from it, so the Python and SQL views of "what category is this?" can't drift apart.
-ACTIVITY_CATEGORIES = (
+# The coarse bucket a sport falls in, used for map-marker styling (Activity.type). Each
+# sport maps to exactly one bucket: the first matching rule wins, and anything unmatched
+# is DEFAULT_MAP_SPORT_TYPE ('other') — the grab-bag for sports (Yoga, Tennis, AlpineSki,
+# Velomobile …) that have no dedicated bucket, so they get their own marker colour rather
+# than borrowing 'run's. A rule is either a substring test ("contains") or an explicit
+# membership set ("values"). This is the single source of truth behind Activity.type.
+MAP_SPORT_TYPES = (
     ("trail", {"contains": "Trail"}),
     ("hike", {"values": ("Hike", "Snowshoe")}),
     ("walk", {"values": ("Walk",)}),
     ("ride", {"contains": "Ride"}),
     ("swim", {"contains": "Swim"}),
+    ("run", {"values": ("Run", "VirtualRun")}),
 )
-DEFAULT_CATEGORY = "run"
+DEFAULT_MAP_SPORT_TYPE = "other"
 
 
 def _rule_matches(rule, sport_type):
@@ -46,40 +46,19 @@ def _rule_matches(rule, sport_type):
     return sport_type in rule["values"]
 
 
-def _rule_q(rule):
-    if "contains" in rule:
-        return Q(sport_type__contains=rule["contains"])
-    return Q(sport_type__in=list(rule["values"]))
-
-
 def category_for(sport_type):
-    """The broad category ('trail'/'hike'/'walk'/'ride'/'swim'/'run') for a sport_type."""
-    for name, rule in ACTIVITY_CATEGORIES:
+    """The broad category ('trail'/'hike'/'walk'/'ride'/'swim'/'run'/'other') for a sport_type."""
+    for name, rule in MAP_SPORT_TYPES:
         if _rule_matches(rule, sport_type):
             return name
-    return DEFAULT_CATEGORY
-
-
-def category_q(category):
-    """A ``Q`` selecting activities in a broad ``category``, or ``None`` for an unknown
-    one (so callers pass the queryset through unfiltered). ``DEFAULT_CATEGORY`` ('run') is
-    the catch-all: everything matching none of the explicit category rules."""
-    rules = dict(ACTIVITY_CATEGORIES)
-    if category in rules:
-        return _rule_q(rules[category])
-    if category == DEFAULT_CATEGORY:
-        q = Q()
-        for _name, rule in ACTIVITY_CATEGORIES:
-            q &= ~_rule_q(rule)
-        return q
-    return None
+    return DEFAULT_MAP_SPORT_TYPE
 
 
 # Exact sport types per personal-records / compare tab. An explicit allow-list (rather
-# than the coarse categories above, whose "run" fallback would swallow every unlisted
+# than the coarse categories above, whose "other" catch-all would swallow every unlisted
 # sport) keeps unrelated fast activities out of the running/cycling PRs, and lets e-bikes
 # be excluded from cycling (motor assistance would unfairly dominate the records).
-RECORD_SPORTS = {
+RECORDS_SPORT_TYPES = {
     "Running": {"Run", "TrailRun", "VirtualRun"},
     "Cycling": {"Ride", "GravelRide", "MountainBikeRide", "VirtualRide", "Velomobile", "Handcycle"},
     "Hiking": {"Hike", "Snowshoe", "Walk"},
@@ -88,7 +67,7 @@ RECORD_SPORTS = {
 
 
 # Ordered "Top sports" groups. ``icon`` names a glyph in sport-filter.js.
-SPORT_GROUPS = [
+TOP_SPORT_TYPES = [
     {"key": "group-run", "label": _("Running"), "icon": "run", "types": ["Run", "TrailRun", "VirtualRun"]},
     {"key": "group-ride", "label": _("Cycling"), "icon": "ride",
      "types": [s for s in SportType.values if _is_cycling(s)]},
@@ -97,7 +76,7 @@ SPORT_GROUPS = [
      "types": [s for s in SportType.values if "Swim" in s]},
 ]
 
-_GROUP_BY_KEY = {group["key"]: group for group in SPORT_GROUPS}
+_GROUP_BY_KEY = {group["key"]: group for group in TOP_SPORT_TYPES}
 
 
 def types_for(value):
@@ -120,7 +99,7 @@ def group_data():
     return [
         {"key": g["key"], "label": str(g["label"]), "icon": g["icon"],
          "glyph": GROUP_GLYPHS[g["icon"]], "types": g["types"]}
-        for g in SPORT_GROUPS
+        for g in TOP_SPORT_TYPES
     ]
 
 

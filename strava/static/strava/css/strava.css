@@ -361,6 +361,7 @@ body.modal-open { overflow: hidden; }
 .fc-hero--swim { background: linear-gradient(135deg, #007FB6, #005f8a); }
 .fc-hero--hike,
 .fc-hero--walk { background: linear-gradient(135deg, #3A8050, #2c6440); }
+.fc-hero--other { background: linear-gradient(135deg, #8a8a8a, #6d6d6d); }
 /* Full-screen overlay shown when the activity photo is clicked. */
 .fc-lightbox {
   position: fixed; inset: 0; z-index: 2000;

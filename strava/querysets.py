@@ -71,16 +71,6 @@ class ActivityQuerySet(models.QuerySet):
         except (ValueError, TypeError):
             return self
 
-    def for_sport_category(self, sport):
-        # Broad-category filter (trail/hike/walk/ride/swim/run), the SQL twin of the
-        # Activity.type property. Both derive from strava.sports.ACTIVITY_CATEGORIES, so
-        # they stay in lockstep. An unknown (non-'all') category falls through unfiltered.
-        from strava.sports import category_q
-        if not sport or sport == 'all':
-            return self
-        q = category_q(sport)
-        return self.filter(q) if q is not None else self
-
     def sorted_by(self, key, direction='desc'):
         fields = {
             'name': F('name'),

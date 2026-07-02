@@ -27,7 +27,7 @@
   }
 
   // Route stroke color per sport, matching the marker palette.
-  const COLORS = { run: '#FC5200', trail: '#7C4DB8', ride: '#007FB6', hike: '#3A8050', walk: '#3A8050', swim: '#007FB6' };
+  const COLORS = { run: '#FC5200', trail: '#7C4DB8', ride: '#007FB6', hike: '#3A8050', walk: '#3A8050', swim: '#007FB6', other: '#8a8a8a' };
 
   // Decode a Google-encoded polyline into [lat, lng] pairs for Leaflet.
   function decodePolyline(str) {

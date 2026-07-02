@@ -42,7 +42,9 @@ class TestActivityType:
         ("GravelRide", "ride"),
         ("Swim", "swim"),
         ("Run", "run"),
-        ("Workout", "run"),   # unlisted sports fall through to "run"
+        ("VirtualRun", "run"),
+        ("Workout", "other"),   # unlisted sports fall through to "other"
+        ("Velomobile", "other"),  # no "Ride" substring → not the ride bucket
     ])
     def test_type(self, sport_type, expected):
         assert activity(sport_type=sport_type).type == expected

@@ -120,56 +120,6 @@ class TestForMonth:
 
 
 @pytest.mark.django_db
-class TestForSportCategory:
-    def test_trail(self):
-        make(1, "TrailRun")
-        make(2, "Run")
-        assert ids(Activity.objects.for_sport_category("trail")) == [1]
-
-    def test_hike_includes_snowshoe(self):
-        make(1, "Hike")
-        make(2, "Snowshoe")
-        make(3, "Run")
-        assert set(ids(Activity.objects.for_sport_category("hike"))) == {1, 2}
-
-    def test_ride(self):
-        make(1, "GravelRide")
-        make(2, "Run")
-        assert ids(Activity.objects.for_sport_category("ride")) == [1]
-
-    def test_swim(self):
-        make(1, "Swim")
-        make(2, "Run")
-        assert ids(Activity.objects.for_sport_category("swim")) == [1]
-
-    def test_walk(self):
-        make(1, "Walk")
-        make(2, "Run")
-        assert ids(Activity.objects.for_sport_category("walk")) == [1]
-
-    def test_run_excludes_other_categories(self):
-        make(1, "Run")
-        make(2, "TrailRun")   # trail
-        make(3, "Ride")       # ride
-        make(4, "Swim")       # swim
-        make(5, "Hike")       # hike
-        make(6, "Walk")       # walk
-        # "run" is the catch-all minus the explicit buckets.
-        assert ids(Activity.objects.for_sport_category("run")) == [1]
-
-    def test_all_passthrough(self):
-        make(1, "Run")
-        make(2, "Ride")
-        assert set(ids(Activity.objects.for_sport_category("all"))) == {1, 2}
-
-    def test_unknown_category_passthrough(self):
-        make(1, "Run")
-        make(2, "Ride")
-        # An unrecognised (non-'all') category falls through to no filtering.
-        assert set(ids(Activity.objects.for_sport_category("bogus"))) == {1, 2}
-
-
-@pytest.mark.django_db
 class TestActivitySortedBy:
     def test_sort_by_distance_desc(self):
         make(1, distance=5000)

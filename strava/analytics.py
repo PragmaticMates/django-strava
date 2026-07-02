@@ -16,7 +16,7 @@ from strava.consts import (
     RIEGEL_EXP, RUN_PERF_DISTANCES,
 )
 from strava.helpers import fmt_hms, fmt_pace, has_gps, haversine_km, hike_pace_ok, local_date
-from strava.sports import RECORD_SPORTS
+from strava.sports import RECORDS_SPORT_TYPES
 
 
 # --------------------------------------------------------------------------- #
@@ -34,7 +34,7 @@ def records(activities, home=None):
     (lat, lng) the "furthest from home" record measures against."""
     return {
         name: _sport_records(name, [a for a in activities if a.sport_type in sports], home)
-        for name, sports in RECORD_SPORTS.items()
+        for name, sports in RECORDS_SPORT_TYPES.items()
     }
 
 
@@ -118,7 +118,7 @@ def run_performance(activities):
     the activity that set it, for the click-to-open card) plus a Riegel estimate range
     projected from the athlete's best efforts at every recorded distance. Best/estimate
     are ``'—'`` when there's nothing to compute."""
-    runs = [a for a in activities if a.sport_type in RECORD_SPORTS['Running']]
+    runs = [a for a in activities if a.sport_type in RECORDS_SPORT_TYPES['Running']]
 
     best_by_name = {}   # lowercased effort name -> (elapsed_seconds, activity_pk)
     predictors = {}     # effort distance (m) -> fastest elapsed_seconds seen
@@ -156,7 +156,7 @@ def by_the_numbers(activities):
     total_km = sum(a.distance for a in activities) / 1000
     total_elev = sum((a.total_elevation_gain or 0) for a in activities)
     cycling_km = sum(a.distance for a in activities
-                     if a.sport_type in RECORD_SPORTS['Cycling']) / 1000
+                     if a.sport_type in RECORDS_SPORT_TYPES['Cycling']) / 1000
 
     # Heart rate averaged across activities, weighted by moving time.
     hr = [a for a in activities if a.average_heartrate and a.moving_time]

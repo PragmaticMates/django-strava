@@ -133,7 +133,7 @@ class Activity(models.Model):
 
   @property
   def type(self):
-    # Broad category (trail/hike/walk/ride/swim/run); defined once in strava.sports.
+    # Broad category (trail/hike/walk/ride/swim/run/other); defined once in strava.sports.
     return category_for(self.sport_type)
 
   @property

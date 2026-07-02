@@ -12,7 +12,7 @@ from strava import analytics, helpers
 from strava.api import format_strava_error
 from strava.consts import MONTHS
 from strava.models import Activity, Gear
-from strava.sports import SPORT_GROUPS, group_data, sport_matches, sport_options
+from strava.sports import TOP_SPORT_TYPES, group_data, sport_matches, sport_options
 
 
 logger = logging.getLogger('strava')
@@ -413,7 +413,7 @@ class CompareView(TemplateView):
         # data (an empty group would filter to nothing, so it's hidden).
         present = {a.sport_type for a in all_activities}
         seg = [{'key': 'all', 'label': 'All sports', 'icon': 'all', 'active': sport == 'all'}]
-        for group in SPORT_GROUPS:
+        for group in TOP_SPORT_TYPES:
             if present.intersection(group['types']):
                 seg.append({'key': group['key'], 'label': str(group['label']),
                             'icon': group['icon'], 'active': sport == group['key']})

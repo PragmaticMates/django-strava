@@ -12,7 +12,7 @@ so the client never carries its own copy.
 
 from django.utils.safestring import mark_safe
 
-from strava.sports import SPORT_GROUPS
+from strava.sports import TOP_SPORT_TYPES
 
 # sport_type -> full <svg> markup (currentColor fill; sized 16x16). Sports absent here
 # (indoor/gym types with no bespoke glyph) fall back to their group glyph via icon_for.
@@ -69,7 +69,7 @@ GROUP_GLYPHS = {
 
 
 def _group_icon_name(sport_type):
-    for group in SPORT_GROUPS:
+    for group in TOP_SPORT_TYPES:
         if sport_type in group['types']:
             return group['icon']
     return 'run'
